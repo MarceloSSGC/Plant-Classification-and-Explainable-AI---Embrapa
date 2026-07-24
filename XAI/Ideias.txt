@@ -1,0 +1,126 @@
+O que eu pensei como estratégia/modelo, juntar duas explicabilidades numa só. A partir das imagens, eu aplico diferentes filtro, digamos: cor (RGB), textura e shape, logo tenho 3 fontes de informação (os 3 filtros) da mesma imagem. Tendo um modelo treinado, posso com ajuda de SHAP descobrir qual filtro foi o mais contribuinte e ter algo assim:
+
+A imagem X foi classificada como sendo da espécie E na qual
+- 15% veio de cor;
+- 58% veio da textura;
+- 27% veio do shape;
+
+Mas eu pensei em adicionar CBM para dar uma resposta mais completa:
+
+A imagem X foi classificada como sendo da espécie E, pois apresenta:
+- Folhas alongadas
+- Caules pequenos
+- Coloração vermelha
+na qual a predição foi baseada em x% em cor, y% em textura, z% em shape.
+
+
+Pensei num modelos que aplica SHAP aos filtros e/ou as bandas e extrair os conceitos também. Acho que daria também ter as porcentagens de (x, y, z) de cada conceito.
+O que você acha e o que eu poderia melhorar?
+O que você acha das relações contribuição dos "views" (filtros) para cada conceito? Pensei em algo como "se um conceito de textura tem como contribuição maior a fonte de cor ou shape, algo tem de errado, se tem o filtro de textura, então o modelo está aprendeu corretamente" 
+
+======================================================================
+
+Nível 1
+
+Bandas
+
+↓
+
+Qual banda foi importante?
+
+-------------------------
+
+Nível 2
+
+Streams
+
+↓
+
+Shape
+
+Texture
+
+Spectrum
+
+↓
+
+Quanto cada stream contribuiu?
+
+-------------------------
+
+Nível 3
+
+Conceitos
+
+↓
+
+Folha estreita
+
+Margem serrilhada
+
+Textura rugosa
+
+Pigmentação avermelhada
+
+↓
+
+Quais conceitos sustentaram a decisão?
+
+-------------------------
+
+Nível 4
+
+Interações
+
+↓
+
+Shape × Spectrum
+
+Texture × Banda
+
+Shape × Banda
+
+↓
+
+Como diferentes evidências se combinaram?
+
+======================================================================
+Sanity Checks for Saliency Maps (Adebayo et al., NeurIPS 2018).
+
+Exemplos de Sanity Checks
+ - Randomizar os pesos da rede.
+ - Treinar com rótulos embaralhados.
+ - Remover uma banda espectral.
+ - Remover um dos streams (Shape, Texture ou Spectrum).
+ - Alterar uma etapa da arquitetura e verificar se a explicação muda de forma coerente.
+
+#------------------------------------------------------------
+
+Sua hipótese:
+"Se um conceito de textura (ex: nervuras) recebe maior contribuição da view de cor 
+ou de forma, algo está errado na aprendizagem do modelo."
+
+Isso é uma excelente contribuição científica. Você não está apenas usando o CBM para 
+explicar a decisão final, mas está usando a relação View ──► Conceito para auditar 
+se a rede aprendeu os conceitos pelos motivos certos ou se ela aprendeu atalhos 
+(spurious correlations / shortcut learning).
+
+Concept-View Consistency (CVC)
+
+métrica de auditoria semântica de arquiteturas multi-view. Essa narrativa é mais ampla, 
+conecta-se à literatura de trustworthy AI
+
+#------------------------------------------------------------
+
+                  ┌─► View 1: Espectro/Cor  (Convolução 1x1 ou Pixel-wise)
+Imagem Original ──┼─► View 2: Textura       (Filtros Gabor / LBP / GLCM / High-pass)
+(5 Bandas TIF)    └─► View 3: Forma/Shape    (Máscara Binária / Edge Detection / Contorno)
+
+
+[Inputs/Views]            [Concept Layer (CBM)]           [Classificação Final]
+View Espectral (E) ────┐
+View Textura (T)   ────┼──► [Bottleneck de Conceitos] ──► Espécie E
+View Forma (S)     ────┘    (c1: Folha alongada)          (Predição)
+                            (c2: Nervuras salientes)
+                            (c3: Margem serrilhada)
+

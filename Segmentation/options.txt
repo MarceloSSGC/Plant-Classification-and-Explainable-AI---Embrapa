@@ -1,0 +1,72 @@
+=========================================================
+1 BANDA
+=========================================================
+
+[SIMPLES]
+- Threshold manual
+- Otsu ⭐
+- Triangle
+- Yen
+
+[MÉDIO]
+- CLAHE + Otsu + Morfologia ⭐⭐⭐ (RECOMENDADO)
+- Canny + Fill Holes
+- Watershed
+- Active Contours (Snake)
+
+Recomendação:
+✔ CLAHE → Gaussian → Otsu → Abertura/Fechamento morfológico
+
+
+=========================================================
+3 BANDAS (RGB)
+=========================================================
+
+[SIMPLES]
+- ExG (Excess Green) + Otsu ⭐⭐⭐ (RECOMENDADO)
+- VARI + Otsu
+- Threshold em HSV
+
+[MÉDIO]
+- K-Means ⭐⭐
+- GrabCut
+- Mean Shift
+- SLIC + Merge
+
+Recomendação:
+✔ ExG → Otsu → Morfologia
+✔ Se necessário: K-Means
+
+
+=========================================================
+5 BANDAS
+=========================================================
+
+[SIMPLES]
+- Melhor banda + Otsu ⭐⭐
+- Soma ponderada das bandas
+- PCA (1º componente) + Otsu ⭐⭐⭐ (RECOMENDADO)
+
+[MÉDIO]
+- K-Means (5D) ⭐⭐
+- Gaussian Mixture Model (GMM)
+- SLIC + K-Means
+- Random Forest pixel a pixel
+
+Recomendação:
+✔ PCA → CLAHE → Otsu → Morfologia
+✔ Alternativa: K-Means nas 5 bandas
+
+
+=========================================================
+RECOMENDAÇÃO GERAL PARA O SEU ARTIGO
+=========================================================
+
+1º) Melhor banda + CLAHE + Otsu
+    (mais simples e robusto)
+
+2º) PCA + Otsu
+    (melhor exploração da informação multiespectral)
+
+3º) K-Means (5 bandas)
+    (caso queira comparar um método espectral)

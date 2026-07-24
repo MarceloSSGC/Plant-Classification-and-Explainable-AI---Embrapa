@@ -1,0 +1,272 @@
+ANÁLISE DA DISTRIBUIÇÃO DO NÚMERO DE IMAGENS POR ESPÉCIE
+========================================================
+
+Valores observados:
+
+5, 16, 18, 22, 22, 23, 24, 26, 27,
+28, 28, 30, 31, 38, 39, 43, 52, 53
+
+--------------------------------------------------
+
+ESTATÍSTICAS BÁSICAS
+--------------------
+
+Número de espécies:
+18
+
+Total de amostras:
+525
+
+Média:
+29,2 imagens por espécie
+
+Mediana:
+27,5 imagens por espécie
+
+Mínimo:
+5 imagens
+
+Máximo:
+53 imagens
+
+Razão entre a maior e a menor classe:
+53 / 5 = 10,6
+
+--------------------------------------------------
+
+1. CLASSE EXTREMAMENTE SUB-REPRESENTADA
+---------------------------------------
+
+A espécie:
+
+02_Vassourinha_botao_Agua_Boa_02 = 5 imagens
+
+representa um problema importante.
+
+Com apenas 5 amostras:
+
+- Não é possível realizar uma divisão treino/validação/teste adequada.
+- O modelo tende a memorizar as imagens em vez de aprender padrões gerais.
+- As métricas dessa classe terão alta variabilidade e pouca confiabilidade.
+
+Exemplo de divisão 70/15/15:
+
+Treino:      3 imagens
+Validação:   1 imagem
+Teste:       1 imagem
+
+Esse cenário é praticamente inviável para avaliação robusta.
+
+--------------------------------------------------
+
+2. CLASSES POUCO REPRESENTADAS
+------------------------------
+
+Também merecem atenção as espécies:
+
+01_malva_branca_Agua_Boa_01      16
+08_malicia_Agua_Boa_08           18
+05_Salsa_Agua_Boa_05             22
+17_Ruziziensis_Agua_Boa_17       22
+09_pe_galinha_Agua_Boa_09        23
+
+De forma geral, classes com menos de aproximadamente
+20 a 25 amostras costumam ser mais difíceis para CNNs,
+principalmente em cenários multiclasse.
+
+--------------------------------------------------
+
+3. CLASSES COM QUANTIDADE RAZOÁVEL
+----------------------------------
+
+Faixa aproximada:
+
+24 a 31 imagens
+
+Espécies:
+
+03_brizantha_Agua_Boa_03         26
+04_cipo_fogo_Agua_Boa_04         24
+06_capim_navalha_Agua_Boa_06     28
+10_carrapico_Agua_Boa_10         30
+12_Andropogon_Agua_Boa_12        31
+13_Traquipoon_Agua_Boa_13        28
+15_Quicuio_Agua_Boa_15           27
+
+Essas classes apresentam uma quantidade de amostras
+mais equilibrada para treinamento.
+
+--------------------------------------------------
+
+4. CLASSES DOMINANTES
+---------------------
+
+14_Jaragua_Agua_Boa_14           43
+16_Massai_Agua_Boa_16            53
+18_Brizantha_Agua_Boa_18         52
+
+Essas espécies possuem aproximadamente o dobro de
+exemplos em comparação com muitas das demais classes.
+
+Durante o treinamento elas tendem a exercer maior
+influência sobre a função de perda e podem induzir
+viés nas predições do modelo.
+
+--------------------------------------------------
+
+5. O DATASET É PEQUENO PARA DEEP LEARNING
+-----------------------------------------
+
+Total de amostras:
+
+525
+
+Embora pareça um número razoável inicialmente,
+para classificação multiespectral com:
+
+- 18 classes
+- 525 amostras
+
+temos aproximadamente:
+
+29 imagens por espécie
+
+Em termos de Deep Learning, isso caracteriza um
+dataset relativamente pequeno.
+
+--------------------------------------------------
+
+6. RECOMENDAÇÕES PARA O PIPELINE
+--------------------------------
+
+6.1 Evitar divisão treino/validação/teste fixa
+
+Recomendação:
+
+Stratified K-Fold Cross Validation
+
+k = 5
+
+Benefício:
+
+Permite utilizar praticamente todas as imagens
+ao longo do treinamento e da validação.
+
+--------------------------------------------------
+
+6.2 Utilizar Data Augmentation Forte
+
+Transformações recomendadas:
+
+- Rotação 90°
+- Rotação 180°
+- Rotação 270°
+- Flip horizontal
+- Flip vertical
+- Pequenas transformações geométricas
+
+Objetivo:
+
+Aumentar artificialmente a variabilidade dos dados
+e reduzir overfitting.
+
+--------------------------------------------------
+
+6.3 Utilizar Pesos de Classe
+
+Exemplo em PyTorch:
+
+CrossEntropyLoss(weight=class_weights)
+
+Objetivo:
+
+Compensar o desbalanceamento existente entre classes,
+principalmente entre:
+
+Vassourinha_botao = 5 imagens
+
+e
+
+Massai = 53 imagens
+
+--------------------------------------------------
+
+6.4 Avaliar com F1 Macro
+
+Não utilizar apenas Accuracy.
+
+Métricas recomendadas:
+
+- Accuracy
+- Precision Macro
+- Recall Macro
+- F1 Macro
+- Matriz de Confusão
+
+O F1 Macro fornece uma avaliação mais justa quando
+as classes possuem quantidades diferentes de amostras.
+
+--------------------------------------------------
+
+7. UMA OBSERVAÇÃO IMPORTANTE
+----------------------------
+
+Foi identificado o seguinte:
+
+03_brizantha_Agua_Boa_03      26
+18_Brizantha_Agua_Boa_18      52
+
+Aparentemente existem duas classes relacionadas:
+
+- brizantha
+- Brizantha
+
+Antes de iniciar qualquer treinamento é recomendável
+verificar cuidadosamente se:
+
+- São realmente espécies diferentes;
+ou
+- Houve duplicação ou inconsistência na nomenclatura.
+
+Caso representem a mesma espécie, seria possível
+unificar as classes.
+
+Nesse cenário:
+
+26 + 52 = 78 imagens
+
+Consequências:
+
+- O número total de classes cairia de 18 para 17.
+- A distribuição do dataset ficaria mais consistente.
+- O treinamento e a avaliação poderiam ser simplificados.
+
+Essa verificação deve ser realizada antes da etapa de
+divisão dos dados e treinamento do modelo.
+
+--------------------------------------------------
+
+RESUMO EXECUTIVO
+----------------
+
+Características do conjunto:
+
+- 18 espécies
+- 525 amostras
+- Média de aproximadamente 29 imagens por espécie
+- 1 classe crítica com apenas 5 imagens
+- Algumas classes abaixo de 20 imagens
+- Desbalanceamento moderado (fator 10,6 entre a maior e a menor classe)
+
+Estratégia recomendada:
+
+- Transfer Learning (ResNet18 ou EfficientNet)
+- Entrada com 5 bandas espectrais
+- Stratified 5-Fold Cross Validation
+- Pesos de classe na função de perda
+- Data Augmentation
+- F1 Macro como principal métrica de avaliação
+
+Essa configuração tende a produzir resultados mais
+robustos do que um treinamento tradicional com divisão
+fixa dos dados.

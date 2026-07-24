@@ -1,0 +1,103 @@
+ARTIGOS RELACIONADOS
+
+1. Concept Explainability for Plant Diseases Classification (Amara et al., 2023)
+
+Este é provavelmente o artigo mais próximo da ideia de utilizar conceitos interpretáveis, embora utilize TCAV em vez de Concept Bottleneck Models (CBM).
+
+O que os autores fazem:
+
+- Treinam uma CNN para classificar doenças em plantas.
+- Definem conceitos compreensíveis por humanos, como:
+  - cor;
+  - textura;
+  - características da doença.
+- Aplicam TCAV (Testing with Concept Activation Vectors) para medir o quanto cada conceito influencia cada classe.
+
+Relação com a pesquisa:
+
+A principal diferença é que eles respondem:
+
+"Qual conceito foi importante?"
+
+Enquanto a proposta deste trabalho pretende responder:
+
+"Qual conceito foi importante e de qual stream (Shape, Texture ou Spectrum) ele veio?"
+
+Ou seja, a proposta adiciona uma camada hierárquica de interpretação que o artigo não possui.
+
+======================================================================
+
+2. Evaluating Explainable AI Methods for Multi-label Deep Learning Classification Tasks in Remote Sensing (Kakogeorgiou & Karantzalos, 2021)
+
+Este artigo é uma importante referência para XAI aplicado a imagens multiespectrais e sensoriamento remoto.
+
+O que os autores fazem:
+
+Comparam diferentes técnicas de Explainable AI, incluindo:
+
+- Grad-CAM;
+- LIME;
+- Occlusion;
+- outros métodos.
+
+O objetivo é avaliar:
+
+- qualidade das explicações;
+- robustez;
+- confiabilidade.
+
+Relação com a pesquisa:
+
+O artigo mostra como avaliar explicações produzidas por diferentes métodos de XAI.
+
+Já a proposta deste trabalho busca produzir uma explicação hierárquica em múltiplos níveis, utilizando SHAP, streams interpretáveis e conceitos.
+
+======================================================================
+
+3. Multi-Spectral Band Selection and Spatial Explanations Using XAI Algorithms in Remote Sensing Applications (IGARSS, 2023)
+
+Este artigo é bastante próximo da proposta relacionada ao primeiro nível da explicabilidade (bandas espectrais).
+
+O que os autores fazem:
+
+Utilizam um Vision Transformer para imagens multiespectrais e aplicam SHAP em dois níveis:
+
+1. Importância das bandas espectrais.
+2. Importância espacial dentro de cada banda.
+
+Com isso conseguem responder:
+
+- quais bandas foram importantes;
+- quais regiões dessas bandas influenciaram a decisão.
+
+Relação com a pesquisa:
+
+O artigo produz explicações do tipo:
+
+Bandas → Regiões.
+
+A proposta deste trabalho pretende expandir essa ideia para uma estrutura mais completa:
+
+Bandas → Streams (Shape, Texture e Spectrum) → Conceitos → Decisão.
+
+
+OBSERVAÇÃO
+
+Até onde esses trabalhos mostram, nenhum integra simultaneamente:
+
+- importância das bandas espectrais;
+- importância de diferentes streams (Shape, Texture e Spectrum);
+- conceitos botânicos interpretáveis;
+- relações entre esses diferentes níveis de explicação em uma única estrutura hierárquica.
+
+Caso uma revisão mais ampla confirme essa lacuna, a principal contribuição do trabalho poderá ser justamente a proposição de um framework hierárquico de explicabilidade para classificação de plantas daninhas em imagens multiespectrais, conectando informações espectrais, atributos visuais e conceitos semânticos em uma única cadeia de interpretação.
+
+
+======================================================================
+======================================================================
+======================================================================
+
+
+
+
+

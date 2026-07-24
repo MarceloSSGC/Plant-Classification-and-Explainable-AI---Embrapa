@@ -1,0 +1,325 @@
+ROTEIRO PARA CLASSIFICAÇÃO DE ERVAS DANINHAS COM IMAGENS MULTIESPECTRAIS (5 BANDAS TIFF)
+
+1. ENTENDER E ORGANIZAR OS DADOS
+--------------------------------
+Objetivo:
+- Organizar as imagens por espécie.
+- Garantir que cada amostra possua as 5 bandas correspondentes.
+
+Estrutura recomendada:
+
+dataset/
+├── especie_1/
+│   ├── planta001_B1.tif
+│   ├── planta001_B2.tif
+│   ├── planta001_B3.tif
+│   ├── planta001_B4.tif
+│   ├── planta001_B5.tif
+│   └── ...
+├── especie_2/
+│   └── ...
+└── especie_n/
+
+Cada conjunto de 5 bandas representa uma única amostra.
+
+Entrada esperada pelo modelo:
+(H, W, 5)
+
+Saída:
+Classe da espécie.
+
+--------------------------------------------------
+
+2. ANÁLISE EXPLORATÓRIA DOS DADOS
+---------------------------------
+Antes do treinamento:
+
+Verificar:
+- Número de espécies.
+- Número de amostras por espécie.
+- Resolução das imagens.
+- Faixa de valores dos pixels.
+- Dados ausentes.
+- Arquivos corrompidos.
+- Balanceamento entre classes.
+
+Objetivo:
+Entender a qualidade e distribuição dos dados antes da modelagem.
+
+--------------------------------------------------
+
+3. EMPILHAMENTO DAS BANDAS
+--------------------------
+Como cada banda está em um arquivo TIFF separado:
+
+Passos:
+- Ler cada banda individualmente.
+- Empilhar as 5 bandas em um único tensor.
+
+Resultado:
+
+Imagem:
+(H, W, 5)
+
+Onde:
+Canal 1 = Banda 1
+Canal 2 = Banda 2
+Canal 3 = Banda 3
+Canal 4 = Banda 4
+Canal 5 = Banda 5
+
+Objetivo:
+Transformar as bandas individuais em uma imagem multiespectral utilizável pela rede neural.
+
+--------------------------------------------------
+
+4. NORMALIZAÇÃO
+---------------
+Importância:
+Fundamental para estabilizar e acelerar o treinamento.
+
+Métodos comuns:
+
+A) Min-Max
+- Escala os valores entre 0 e 1.
+
+B) Z-score
+- Subtrai a média.
+- Divide pelo desvio padrão.
+
+Recomendação:
+Utilizar Z-score por banda.
+
+Procedimento:
+- Calcular média e desvio padrão utilizando apenas o conjunto de treinamento.
+- Aplicar a normalização em treino, validação e teste.
+
+--------------------------------------------------
+
+5. DIVISÃO DOS DADOS
+--------------------
+Separar os dados em:
+
+Opção 1:
+- 70% Treino
+- 15% Validação
+- 15% Teste
+
+Opção 2:
+- 80% Treino
+- 10% Validação
+- 10% Teste
+
+Importante:
+- Utilizar divisão estratificada.
+- Garantir representação de todas as espécies em todos os conjuntos.
+
+Objetivo:
+Avaliar corretamente a capacidade de generalização do modelo.
+
+--------------------------------------------------
+
+6. DATA AUGMENTATION
+--------------------
+Aplicar transformações para aumentar a variabilidade dos dados.
+
+Transformações recomendadas:
+- Rotação.
+- Flip horizontal.
+- Flip vertical.
+- Zoom.
+- Translação.
+- Pequenas mudanças geométricas.
+
+Observação:
+As transformações devem ser aplicadas simultaneamente às 5 bandas.
+
+Objetivo:
+Reduzir overfitting e melhorar a capacidade de generalização.
+
+--------------------------------------------------
+
+7. CRIAÇÃO DO DATASET PERSONALIZADO
+-----------------------------------
+Implementar uma classe de carregamento dos dados.
+
+Responsabilidades:
+- Carregar as 5 bandas.
+- Empilhar as bandas.
+- Aplicar normalização.
+- Aplicar augmentations.
+- Retornar imagem e rótulo.
+
+Formato esperado para PyTorch:
+
+(C, H, W)
+
+Neste caso:
+
+(5, H, W)
+
+Objetivo:
+Automatizar o carregamento durante o treinamento.
+
+--------------------------------------------------
+
+8. ESCOLHA DA ARQUITETURA
+-------------------------
+Opção A: CNN Tradicional
+- ResNet18
+- ResNet34
+
+Vantagens:
+- Simples.
+- Rápida.
+- Excelente ponto de partida.
+
+Ajuste necessário:
+Modificar a primeira camada para receber 5 canais.
+
+--------------------------------------------------
+
+Opção B: Transfer Learning
+--------------------------
+Modelos:
+- ResNet50
+- EfficientNet
+- ConvNeXt
+
+Vantagens:
+- Melhor aproveitamento de conhecimento prévio.
+- Geralmente produz melhores resultados.
+
+Ajuste necessário:
+Modificar a primeira convolução de 3 canais para 5 canais.
+
+--------------------------------------------------
+
+Opção C: Vision Transformer
+---------------------------
+Modelos:
+- ViT
+- Swin Transformer
+
+Indicado quando:
+- Há grande quantidade de dados.
+- Existe poder computacional suficiente.
+
+--------------------------------------------------
+
+9. TREINAMENTO
+--------------
+Função de perda:
+- Cross Entropy Loss.
+
+Otimizador:
+- AdamW.
+
+Parâmetros iniciais sugeridos:
+- Learning Rate: 1e-4
+- Batch Size: 16
+- Épocas: 50
+
+Monitorar:
+- Loss de treino.
+- Loss de validação.
+- Accuracy.
+- F1-score.
+
+Objetivo:
+Aprender padrões espectrais e espaciais que diferenciam as espécies.
+
+--------------------------------------------------
+
+10. EARLY STOPPING
+------------------
+Objetivo:
+Interromper o treinamento quando não houver melhoria.
+
+Exemplo:
+- patience = 10
+
+Funcionamento:
+Se a métrica de validação não melhorar durante 10 épocas consecutivas:
+- Parar treinamento.
+- Restaurar melhor modelo salvo.
+
+Benefícios:
+- Evita overfitting.
+- Economiza tempo computacional.
+
+--------------------------------------------------
+
+11. AVALIAÇÃO
+-------------
+Métricas recomendadas:
+
+1. Accuracy
+   - Taxa geral de acertos.
+
+2. Precision
+   - Qualidade das predições positivas.
+
+3. Recall
+   - Capacidade de encontrar todas as amostras da classe.
+
+4. F1-score
+   - Equilíbrio entre Precision e Recall.
+
+5. Matriz de Confusão
+   - Identifica quais espécies são mais confundidas.
+
+Objetivo:
+Medir desempenho real do modelo.
+
+--------------------------------------------------
+
+12. INTERPRETABILIDADE
+----------------------
+Ferramentas:
+- Grad-CAM
+- Score-CAM
+
+Objetivo:
+Visualizar quais regiões da imagem influenciaram a decisão do modelo.
+
+Benefícios:
+- Verificar se o modelo está focando na planta.
+- Detectar dependência indevida do fundo ou ruídos.
+- Aumentar a confiabilidade dos resultados.
+
+--------------------------------------------------
+
+FLUXO FINAL DO PIPELINE
+-----------------------
+
+1. Organizar dados
+2. Análise exploratória
+3. Empilhar bandas
+4. Normalizar dados
+5. Dividir treino/validação/teste
+6. Aplicar data augmentation
+7. Criar Dataset personalizado
+8. Escolher arquitetura
+9. Treinar modelo
+10. Aplicar Early Stopping
+11. Avaliar desempenho
+12. Interpretar resultados
+
+Pipeline de inferência:
+
+Nova amostra
+    ↓
+Carregar 5 TIFFs
+    ↓
+Empilhar bandas
+    ↓
+Normalizar
+    ↓
+Tensor (5,H,W)
+    ↓
+Modelo treinado
+    ↓
+Probabilidades
+    ↓
+Classe predita

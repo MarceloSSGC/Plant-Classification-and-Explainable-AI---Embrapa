@@ -1,0 +1,135 @@
+Aqui estamos no contexto de classificação de imagens de plantas daninhas com deep learning. Eu tenho um conjunto de 31 pastas onde cada uma contém imagens de uma única espécie de planta daninha. Cada imaem é composta por 5 bandas onde cada banda é um arquivo tif (por exemplo: IMG_0003_1.tif,...,  IMG_0003_5.tif). Eu já treinei uma CNN simples e já atingi 95% de acurácia, então testar outros modelos mais modernos como VIT provavelmente terei alguns ganhos de acurácia, mas não muitos já que estou acertando quase tudo com a CNN. Com a intensão de construir um artigo científico, eu gostaria de explorar a parte de XAI, ou seja, se explicabilidade. Pensei em explorar a morfologia (forma, textura,...) e os espectros. 
+
+Existe outra informação que eu esqueci de mencionar. Cada imagem é única e exclusiva de cada daninha, ou seja, em cada imagem tem exatamente 1 espécie, não há misturas de espécies, e não há chão ou outro elementos, a imagem é completamente "cheia" para planta daninha. Neste caso, não sei se faz sentido usar Grad-cam pois toda imagem é a daninha.
+
+Explique minha situação
+
+------------------------------------------------
+O que eu gostaria:
+
+- correspondência semântica ou morfológica entre imagens: localizar, 
+nas duas plantas, regiões que apresentam características visuais 
+semelhantes e destacar essas correspondências.
+
+- protótipos morfoespectrais
+
+
+Esta imagem contém regiões parecidas com quais protótipos?
+
+------------------------------------------------
+
+Como o modelo diferencia as espécies?
+Quais características morfológicas são realmente utilizadas?
+Quais bandas espectrais são mais importantes?
+Existe complementaridade entre forma e espectro?
+O modelo toma decisões biologicamente coerentes?
+
+------------------------------------------------
+domain adaptation
+icml
+
+------------------------------------------------
+Teste importante
+Rode sua CNN em três versões:
+
+A) bandas originais desalinhadas
+B) bandas alinhadas
+C) bandas alinhadas + segmentação
+
+------------------------------------------------
+
+Estrutura para o artigo
+
+Uma narrativa consistente seria:
+
+1- Desenvolvimento do modelo
+CNN de referência (e eventualmente comparação com um ViT ou outro backbone moderno para contextualizar o estado da arte).
+2- Desempenho 
+Acurácia, F1-score, matriz de confusão, análise das classes mais confundidas.
+3- Análise morfológica (XAI espacial)
+Grad-CAM/Score-CAM/LayerCAM para verificar quais estruturas da planta são destacadas, discutindo folhas, nervuras, bordas e regiões de interesse.
+4- Análise espectral (XAI por bandas)
+Avaliar a importância de cada banda por meio de ablação, Integrated Gradients ou SHAP, identificando quais comprimentos de onda são mais relevantes para cada espécie.
+5- Análise do espaço de características
+Visualizar os embeddings com UMAP ou t-SNE para investigar se espécies morfologicamente ou taxonomicamente semelhantes se agrupam naturalmente.
+6- Discussão biológica
+Relacionar as explicações do modelo com características morfológicas e espectrais conhecidas na literatura, mostrando que a rede não apenas classifica bem, mas utiliza informações coerentes com o conhecimento agronômico.
+
+------------------------------------------------
+
+======================================================================
+           PROVÁVEL IDENTIDADE DAS 5 BANDAS (PADRÃO MICASENSE)
+======================================================================
+
+BANDA 1 (Índice [:, :, 0])
+Nome: Blue (Azul)
+Comprimento de Onda: ~475 nm
+Função: Absorvida fortemente pela clorofila. Muito utilizada para 
+        mapear solo exposto, topografia e massas de água.
+
+BANDA 2 (Índice [:, :, 1])
+Nome: Green (Verde)
+Comprimento de Onda: ~560 nm
+Função: Faixa que a vegetação saudável reflete. Excelente para 
+        detectar o vigor inicial das plantas e pigmentação.
+
+BANDA 3 (Índice [:, :, 2])
+Nome: Red (Vermelho)
+Comprimento de Onda: ~668 nm
+Função: Canal crucial da fotossíntese (alta absorção). Oferece o 
+        melhor contraste estrutural, sendo a RECOMENDADA como 
+        banda de referência para o alinhamento.
+
+BANDA 4 (Índice [:, :, 3])
+Nome: Red Edge (Borda do Vermelho)
+Comprimento de Onda: ~717 nm
+Função: Transição fina entre o Vermelho e o Infravermelho. Altamente 
+        sensível a variações clorofilianas e estresse hídrico/saúde 
+        da planta antes mesmo de ser visível a olho nu.
+
+BANDA 5 (Índice [:, :, 4])
+Nome: NIR (Infravermelho Próximo)
+Comprimento de Onda: ~842 nm
+Função: Onde ocorre o maior reflexo da estrutura celular interna das 
+        folhas saudáveis. Banda fundamental para o cálculo de 
+        índices agrícolas como o NDVI.
+
+
+band_mapping = {
+    1: "Blue",
+    2: "Green",
+    3: "Red",
+    4: "Red Edge",
+    5: "NIR",
+}
+
+trocar 4 pela 5, centralizar red edge
+
+#------------------------------------------------------------
+New Map
+
+band_mapping = {
+    1: "Blue",
+    2: "Green",
+    3: "Red",
+    4: "NIR",
+    5: "Red Edge",
+}
+
+centralizar em 5
+
+#------------------------------------------------------------
+
+manual
+Band 1 Shows imager #1 (Blue filter)
+Band 2 Shows imager #2 (Green filter)
+Band 3 Shows imager #3 (Red filter)
+Band 4 Shows imager #4 (Near IR filter)
+Band 5 Shows imager #5 (Red Edge filter)
+
+
+======================================================================
+# Revistas
+
+- Computers and Electronics in Agriculture, Plant Methods, Remote Sensing ou IEEE JSTARS
+

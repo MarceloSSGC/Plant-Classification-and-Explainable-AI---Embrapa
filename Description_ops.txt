@@ -1,0 +1,15 @@
+Minha recomendação metodológica
+
+Para o seu artigo, eu seguiria esta estratégia:
+
+Manteria a CNN convencional como baseline de desempenho.
+Criaria um modelo interpretável com três ramos: morfológico, textural e espectral.
+Restringiria a entrada de cada ramo para reduzir vazamento de informação entre conceitos.
+Calcularia a contribuição local de cada ramo usando Group Shapley.
+Normalizaria as contribuições positivas para gerar percentuais.
+Apresentaria também as interações, como forma × espectro.
+Validaria o modelo com testes de ablação e perturbações controladas.
+
+ProtoPNet
+
+
