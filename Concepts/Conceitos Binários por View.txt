@@ -1,0 +1,125 @@
+┌─── Shape View (Silhueta) ─────────► [C1, C2, C3, C4]
+                       ├─── Texture View (Patch Grayscale) ─► [C5, C6, C7]
+Multi-Band Input ──────┼─── Color View (Patch RGB) ────────► [C8, C9, C10]
+                       └─── Spectral View (Patch NIR/RE) ──► [C11, C12]
+
+
+====================================================================
+           DITIONÁRIO DE CONCEITOS BOTÂNICOS POR VIEW
+====================================================================
+
+--- VIEW 1: MORFOLOGIA E FORMA (SHAPE VIEW) ---
+Fonte de dados: Silhueta / Máscara binarizada da imagem inteira
+Objetivo: Isolar contornos e geometria externa sem ruído de cor/textura
+
+[C1] Folha Alongada / Lanceolada (0 = Não, 1 = Sim)
+     Descrição: A razão comprimento/largura do limbo foliar é alta (folha fina e estendida) em oposição a folhas arredondadas/ovais.
+
+[C2] Margem Recortada / Dentada (0 = Não, 1 = Sim)
+     Descrição: A borda exterior da folha possui dentes, reentrâncias ou serrilhados visíveis, em vez de uma margem lisa e contínua.
+
+[C3] Folha Lobada / Divisão Profunda (0 = Não, 1 = Sim)
+     Descrição: A silhueta apresenta divisões ou reentrâncias profundas (réplicas/recortes) ao longo do corpo da folha.
+
+[C4] Base Cordata / Formato Coração (0 = Não, 1 = Sim)
+     Descrição: A região de inserção do pecíolo/cabo na base da folha apresenta uma reentrância curva em formato de "V" ou "U".
+
+
+--- VIEW 2: TEXTURA FOLIAR (TEXTURE VIEW) ---
+Fonte de dados: Patch interno do limbo em escala de cinza + Filtro de Frequência/Borda
+Objetivo: Capturar a microtopografia, arranjo de rugosidade e nervuras
+
+[C5] Nervuras Salientes / Estriadas (0 = Não, 1 = Sim)
+     Descrição: Presença de linhas ou estrias contínuas com alto contraste que cruzam a superfície do patch.
+
+[C6] Superfície Rugosa / Aveludada (0 = Não, 1 = Sim)
+     Descrição: Superfície com padrão granular, micro-ondulações ou textura áspera/pilosidade, em oposição a uma superfície lisa/cerosa.
+
+[C7] Padrão Reticulado de Nervuras (0 = Não, 1 = Sim)
+     Descrição: As nervuras formam uma malha/rede em várias direções (padrão cruzado de dicotiledôneas), em vez de linhas paralelas.
+
+
+--- VIEW 3: COR VISÍVEL (COLOR VIEW) ---
+Fonte de dados: Patch RGB do centro do limbo foliar
+Objetivo: Capturar a resposta de reflexância no espectro visível (pigmentação)
+
+[C8] Pigmentação Avermelhada / Purpúrea (0 = Não, 1 = Sim)
+     Descrição: Presença visível de tons purpúreos, avermelhados ou castanhos na lâmina foliar ou nas nervuras.
+
+[C9] Tonalidade Verde-Escuro (0 = Não, 1 = Sim)
+     Descrição: O tom dominante do limbo foliar é um verde fechado/escuro, em vez de verde-claro, amarelado ou límido.
+
+[C10] Variegada / Padrão Bicolor (0 = Não, 1 = Sim)
+     Descrição: A folha exibe manchas, áreas heterogêneas ou variações nítidas de tonalidade de cor dentro do mesmo patch.
+
+
+--- VIEW 4: FISIOLOGIA E ESPECTRO NÃO-VISÍVEL (SPECTRAL VIEW) ---
+Fonte de dados: Patch composto pelas bandas NIR (Banda 4), Red Edge (Banda 5) e NDRE
+Objetivo: Capturar estrutura celular e absorção fisiológica invisíveis ao olho humano
+
+[C11] Alta Refletância no Infravermelho Próximo (0 = Não, 1 = Sim)
+     Descrição: O valor médio da resposta da Banda 4 (NIR) no patch é elevado, indicando alta densidade celular no mesófilo foliar.
+
+[C12] Alto Índice Red Edge / NDRE (0 = Não, 1 = Sim)
+     Descrição: O valor calculado do NDRE no patch é elevado, associado a maiores níveis de concentração de clorofila e atividade fotossintética.
+====================================================================
+ChatGPT:
+    Shape (6)
+
+        Folhas estreitas
+        Margem irregular
+        Folhas lobadas
+        Ápice pontiagudo
+        Arquitetura em roseta
+        Folhas compostas
+
+    Textura (3)
+
+        Nervura central evidente
+        Nervuras secundárias evidentes
+        Textura heterogênea
+
+    Cor (3)
+
+        Pigmentação avermelhada
+        Pigmentação amarelada
+        Heterogeneidade de cor
+
+====================================================================
+9 Conceitos
+
+ChatGPT:
+    Shape
+        Folhas estreitas
+        Margem irregular
+        Arquitetura em roseta
+    Textura
+        Nervura central evidente
+        Nervuras secundárias evidentes
+        Textura heterogênea
+    Cor
+        Pigmentação avermelhada
+        Pigmentação amarelada
+        Heterogeneidade de cor
+
+----------------------------------------------------------------
+
+Gemini
+
+### **Shape View** *(Silhueta binarizada)*
+
+1. **Folha Alongada ($0/1$):** Razão comprimento/largura alta (fina/estendida vs. arredondada).
+2. **Margem Dentada ($0/1$):** Borda exterior com dentes/serrilhado (vs. margem lisa).
+3. **Base Cordata ($0/1$):** Reentrância em "V" ou "U" no ponto de inserção da folha (formato de coração).
+
+### **Textura View** *(Patch em escala de cinza)*
+
+4. **Nervuras Salientes ($0/1$):** Linhas de alto contraste cruzando a lâmina.
+5. **Superfície Rugosa ($0/1$):** Microtopografia áspera/granular (vs. superfície lisa/cerosa).
+6. **Nervuras Paralelas ($0/1$):** Padrão linear longitudinal (monocotiledôneas) vs. malha reticulada.
+
+### **Cor View** *(Patch RGB)*
+
+7. **Pigmentação Purpúrea ($0/1$):** Presença de tons avermelhados, arroxeadas ou castanhos.
+8. **Verde-Escuro ($0/1$):** Tom dominante fechado/escuro (vs. verde-claro/amarelado).
+9. **Heterogeneidade de Cor ($0/1$):** Presença de manchas ou variação de tom no mesmo patch (vs. cor homogênea).

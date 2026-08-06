@@ -1,0 +1,282 @@
+A ideia faz sentido, mas há um ponto metodológico central: não é
+possível garantir exclusividade biológica absoluta entre forma, textura
+e espectro, porque essas propriedades podem ser correlacionadas. Uma
+espécie com folhas estreitas pode também ter uma textura e uma resposta
+espectral típicas.
+
+O que você pode garantir é uma exclusividade operacional:
+
+  cada característica-alvo deve ser calculada diretamente apenas a
+  partir do view correspondente, enquanto os outros views devem ter essa
+  informação removida ou fortemente reduzida.
+
+Assim, o experimento passa a avaliar se cada representação contém a
+informação esperada.
+
+Estrutura recomendada
+
+Imagem multiespectral original
+
+├── View de forma ───────► características morfológicas
+
+├── View de textura ─────► características texturais
+
+└── View espectral ──────► características espectrais
+
+Cada view deve ser construído para preservar uma categoria e suprimir as
+outras duas.
+
+1. View de forma
+
+O view de forma deve conter apenas a geometria da planta, sem
+intensidade, cor ou textura.
+
+A representação mais adequada é uma máscara binária.
+
+Se a imagem está completamente preenchida pela planta e não existe uma
+separação clara entre planta e fundo, será necessário definir unidades
+morfológicas menores, como folhas, regiões foliares ou componentes
+conectados. Caso contrário, uma máscara da imagem inteira será quase um
+retângulo e não terá informação útil de forma.
+
+Características exclusivas do view de forma
+
+Podem ser calculadas somente a partir da máscara:
+
+-   área;
+-   perímetro;
+-   circularidade;
+-   compacidade;
+-   excentricidade;
+-   orientação;
+-   comprimento do eixo maior;
+-   comprimento do eixo menor;
+-   razão entre os eixos;
+-   diâmetro equivalente;
+-   extensão;
+-   solidez;
+-   convexidade;
+-   área do casco convexo;
+-   número de componentes conectados;
+-   número de cavidades;
+-   comprimento do esqueleto;
+-   número de ramificações;
+-   complexidade do contorno;
+-   dimensão fractal do contorno.
+
+Exemplos de fórmulas:
+
+Circularidade = 4πA / P²
+
+Solidez = A / Área do casco convexo
+
+Razão dos eixos = eixo maior / eixo menor
+
+Esses alvos não devem depender dos valores radiométricos das cinco
+bandas.
+
+O que não usar nesse view
+
+-   imagem Sobel em escala de cinza;
+-   valores de intensidade;
+-   nervuras;
+-   gradientes internos;
+-   mapas de variância.
+
+O Sobel mistura contorno externo com estrutura interna. Portanto, não
+constitui um view exclusivamente morfológico, a menos que você aplique
+Sobel somente sobre a máscara binária e retenha apenas o contorno
+externo.
+
+2. View de textura
+
+O view de textura deve preservar as variações espaciais locais, mas
+remover:
+
+-   a forma global;
+-   a intensidade média;
+-   a informação espectral absoluta.
+
+Esse é o view mais difícil de tornar independente.
+
+Representação adequada
+
+Uma estratégia robusta seria:
+
+1.  escolher uma banda;
+2.  normalizar a intensidade por imagem;
+3.  retirar tendências de baixa frequência;
+4.  extrair patches internos;
+5.  evitar que o contorno externo apareça.
+
+Depois, você pode trabalhar com:
+
+-   LBP;
+-   filtros de Gabor;
+-   Laws;
+-   wavelets;
+-   variância local;
+-   entropia local;
+-   gradientes internos;
+-   resíduos de alta frequência.
+
+Idealmente, o view de textura deve ser calculado somente dentro da
+região vegetal e deve excluir uma faixa próxima ao contorno. Isso evita
+que o modelo use a silhueta como atalho.
+
+Características exclusivas do view de textura
+
+GLCM/Haralick
+
+-   contraste;
+-   dissimilaridade;
+-   homogeneidade;
+-   energia;
+-   correlação;
+-   ASM;
+-   entropia da GLCM.
+
+LBP
+
+-   proporção de padrões uniformes;
+-   histogramas LBP;
+-   entropia do histograma;
+-   frequência de padrões planos;
+-   frequência de bordas locais;
+-   frequência de cantos locais.
+
+Gabor
+
+-   energia por frequência;
+-   energia por orientação;
+-   orientação dominante;
+-   frequência espacial dominante;
+-   anisotropia textural.
+
+Wavelets
+
+-   energia horizontal;
+-   energia vertical;
+-   energia diagonal;
+-   energia por escala;
+-   razão entre altas e baixas frequências.
+
+Estatísticas locais
+
+-   variância local média;
+-   desvio-padrão local;
+-   entropia local;
+-   rugosidade;
+-   uniformidade;
+-   autocorrelação espacial;
+-   comprimento de correlação;
+-   dimensão fractal da textura.
+
+Essas características requerem relações espaciais entre pixels. Elas não
+podem ser obtidas adequadamente apenas por um vetor de médias
+espectrais.
+
+Sobre Sobel
+
+O Sobel pode entrar no view de textura apenas se você trabalhar com
+gradientes internos, removendo o contorno da planta.
+
+Mesmo assim, eu nomearia esse view como:
+
+-   textura/estrutura local; ou
+-   gradiente estrutural;
+
+e não como textura pura.
+
+3. View de cor/espectro
+
+O view espectral deve preservar os valores radiométricos das cinco
+bandas, mas eliminar a organização espacial e a forma.
+
+A forma mais clara de fazer isso é transformar a imagem em um conjunto
+ou distribuição de vetores espectrais.
+
+Depois, você pode:
+
+-   calcular estatísticas por banda;
+-   amostrar pixels aleatoriamente;
+-   embaralhar espacialmente os pixels;
+-   usar histogramas;
+-   usar um vetor médio espectral.
+
+O embaralhamento espacial é particularmente importante. Ele preserva a
+distribuição espectral, mas destrói a forma e a textura.
+
+Características exclusivas do view espectral
+
+-   média de cada banda;
+-   mediana de cada banda;
+-   desvio-padrão por banda;
+-   percentis por banda;
+-   assimetria;
+-   curtose;
+-   amplitude;
+-   coeficiente de variação;
+-   área sob a curva espectral;
+-   inclinação entre bandas;
+-   diferença entre bandas;
+-   razão entre bandas;
+-   índices espectrais;
+-   posição do máximo espectral;
+-   banda dominante;
+-   ângulo espectral em relação a uma referência;
+-   componentes espectrais de PCA;
+-   distância espectral entre pixels e centroides.
+
+Essas características podem ser calculadas sem conhecer a posição
+espacial dos pixels.
+
+Como construir views realmente separados
+
+View de forma
+
+Entrada: máscara binária.
+
+Preserva: geometria.
+
+Remove: intensidade, textura e espectro.
+
+View de textura
+
+Entrada: banda normalizada ou resíduo de alta frequência.
+
+Preserva: relações espaciais locais.
+
+Remove: contorno, intensidade média e identidade espectral.
+
+View espectral
+
+Entrada: pixels multibanda embaralhados espacialmente.
+
+Preserva: distribuição espectral.
+
+Remove: forma e organização textural.
+
+Essa construção é mais defensável do que simplesmente aplicar três
+filtros visuais sobre a imagem.
+
+Como verificar se um alvo pertence apenas a um view
+
+Você pode treinar uma matriz de modelos cruzados:
+
+  Alvo                 Forma   Textura   Espectro
+  ------------------ ------- --------- ----------
+  Circularidade         alto     baixo      baixo
+  Contraste GLCM       baixo      alto      baixo
+  Média da banda 4     baixo     baixo       alto
+  Energia Gabor        baixo      alto      baixo
+  Solidez               alto     baixo      baixo
+
+O resultado esperado não é necessariamente erro aleatório nos views
+incorretos, porque podem existir correlações. O objetivo é obter uma
+diferença clara:
+
+R²(view correto) >> R²(views incorretos)
+
+Essa análise pode se tornar uma contribuição importante do artigo,
+porque mede a seletividade informacional de cada view.

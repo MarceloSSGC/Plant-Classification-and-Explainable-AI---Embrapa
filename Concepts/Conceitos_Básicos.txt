@@ -1,0 +1,52 @@
+====================================================================
+      GUIA PRÁTICO DE CLASSIFICAÇÃO DE CONCEITOS BOTÂNICOS
+====================================================================
+
+--- VIEW DE FORMA (SHAPE VIEW) ---
+Fonte de análise: Silhueta / contorno da folha inteira
+
+[C1] Folha Alongada
+     - SIM (1): A folha é fina, esticada e comprida (lembra uma folha de capim ou de milho).
+     - NÃO (0): A folha é gordinha, arredondada, oval ou em formato de gota.
+
+[C2] Margem Dentada
+     - SIM (1): A borda da folha parece uma serra de serrote, cheia de dentes, pontinhas ou recortes pequenos.
+     - NÃO (0): A borda é lisa, contínua e reta do começo ao fim.
+
+[C3] Base em Formato de Coração
+     - SIM (1): No pé da folha (onde fica o cabinho), existe um fundo curvado para dentro, parecendo o topo do desenho de um coração.
+     - NÃO (0): O pé da folha é reto, pontudo ou arredondado sem essa reentrância.
+
+
+--- VIEW DE TEXTURA (TEXTURE VIEW) ---
+Fonte de análise: Pedaço interno da folha em preto e branco
+
+[C4] Nervuras Salientes
+     - SIM (1): As "veias" da folha são muito marcadas, saltando aos olhos como listras bem destacadas.
+     - NÃO (0): A folha é lisa por dentro e quase não dá para ver as linhas das veias.
+
+[C5] Superfície Rugosa
+     - SIM (1): A folha parece áspera, "amassada", aveludada ou cheia de pequenos caroços/ondulações.
+     - NÃO (0): A folha parece esticada, lisa, plastificada ou cerosa.
+
+[C6] Nervuras Paralelas
+     - SIM (1): As veias da folha correm lado a lado no mesmo sentido, como linhas de um caderno ou trilhos de trem.
+     - NÃO (0): As veias se espalham criando uma teia ou rede em várias direções.
+
+
+--- VIEW DE COR (COLOR VIEW) ---
+Fonte de análise: Pedaço interno colorido da folha
+
+[C7] Pigmentação Purpúrea / Roxa
+     - SIM (1): Dá para ver qualquer tom de vermelho, roxo, marrom ou vinho (seja na folha toda ou só nas veias).
+     - NÃO (0): A folha é 100% verde (ou verde com amarelo).
+
+[C8] Verde-Escuro
+     - SIM (1): É um verde bem fechado, profundo e escuro (tom de espinafre ou couve).
+     - NÃO (0): É um verde claro, aberto, vivo ou esverdeado-amarelado (tom de alface).
+
+[C9] Manchas de Cor (Coloração Mista)
+     - SIM (1): O pedaço da folha tem mais de um tom diferente misturado (ex: partes mais claras e partes mais escuras, ou manchas salpicadas).
+     - NÃO (0): A cor é uniforme e igualzinha no pedaço inteiro.
+     
+====================================================================

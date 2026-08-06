@@ -1,0 +1,89 @@
+Vamos recaptular. Eu sei que para cada view vou precisar de um tratamento especial do view, isso para garantir que dado uma característica (de algum view), um modelo preditivo ou extrator de features consiga usar somente as informações do respectivo view. Eu sei que é difícil garantir que uma característica do view i (i =1, 2, 3) venha exclusivamente do view i, mas quero garantir que o input/view i seja o maior contribuidor para a predição da característica i (Isso é o mais importante!). Desta forma, eu preciso fazer alguns passos:
+                                  -> transformações 1 -> View 1
+imagem original -> transformações 2 -> View 2
+                                 -> transofrmações 3 -> View 3
+
+O modelo preditivo vai recever como input o concatenado [View 1, View 2, View 3] e vai predizer algumas características:
+C_11, C_12, ..., C_1a
+C_21, C_22, ..., C_2b
+C_31, C_32, ..., C_3c
+
+Eu gostaria que cada conjunto de características preditas, digamos C_21, C_22, ..., C_2b, quando se faz SHAP Values ou outro avaliador de contribuição, o view que mais contribui seja o View 2. Para acontecer esse comprtamente nos 3 níveis,  eu preciso escolher bem as transformações de cada input/View e quais serão as características. 
+
+Objetivo:
+Temos um problema de alinhamento entre views e grupos de alvos, objetivo é maximizar a contribuição:
+Contribuição(View_i -> C_i) > Contribuição(View_j -> C_i), para j diferente de i
+
+Dado esse objetivo de "matching", quais características C_ij você recomenda (separe por view)?
+
+
+==============================================================================================
+Grupo 1: Características de Forma (extraídas de View 1)
+
+ - $C_{11}$ — Folha Alongada / Lanceolada ($0/1$): Razão comprimento/largura alta (fina e comprida vs. arredondada/oval).
+
+ - $C_{12}$ — Margem Dentada / Recortada ($0/1$): Borda externa com serrote/dentes vs. borda totalmente lisa/contínua.
+
+ - $C_{13}$ — Base Cordata / Recortada ($0/1$): Presença de reentrância em formato de "V" ou "U" no ponto onde a folha se une ao pequíolo (formato de coração).
+
+ - $C_{14}$ — Folha Composta / Lobada ($0/1$): A silhueta apresenta divisões em folíolos/recortes profundos vs. lâmina única e sólida.
+
+Grupo 2: Características de Textura (extraídas de View 2)
+
+ - $C_{21}$ — Nervuras Salientes / Marcadas ($0/1$): Presença de linhas de alto contraste/sulcos bem definidos atravessando a superfície do patch.
+
+ - $C_{22}$ — Superfície Rugosa / Ondulada ($0/1$): Granulometria áspera, rugosa ou em blocos vs. superfície lisa/cerosa.
+
+ - $C_{23}$ — Padrão de Nervuras Paralelas ($0/1$): Nervuras alinhadas em sentido único longitudinal (típico de monocotiledôneas) vs. rede/teia reticulada.
+
+Grupo 3: Características de Cor / Visível (extraídas de View 3)
+
+ - $C_{31}$ — Pigmentação Purpúrea / Avermelhada ($0/1$): Presença visível de tons vermelhos, arroxeadas ou marrons na lâmina ou nervuras centrais.
+
+ - $C_{32}$ — Tonalidade Verde-Escuro ($0/1$): Tom dominante do verde é escuro/fechado vs. verde-claro/amarelado/clorótico.
+
+ - $C_{33}$ — Heterogeneidade de Cor / Variegada ($0/1$): Presença de manchas, manchas de pigmentação ou variação de tonalidade dentro do mesmo patch.
+(Opcional - Se quiser incluir 1 característica espectral sem precisar rotular a mão):
+
+ - $C_{34}$ (ou de View Espectral) — Alta Absorção/Refletância NIR ($0/1$): Pode ser rotulado via regra automática com base no valor médio da Banda 4 no patch.
+
+
+
+| View     | Característica                    | Informação principal                   |
+| -------- | --------------------------------- | -------------------------------------- |
+| Forma    | Solidez                           | Concavidade e compactação              |
+| Forma    | Razão entre eixos                 | Alongamento                            |
+| Forma    | Densidade de ramificações         | Arquitetura estrutural                 |
+| Forma    | Dimensão fractal do contorno      | Complexidade geométrica                |
+| Textura  | Contraste GLCM                    | Intensidade das variações locais       |
+| Textura  | Entropia GLCM                     | Complexidade espacial                  |
+| Textura  | Entropia LBP                      | Diversidade de microtexturas           |
+| Textura  | Anisotropia Gabor                 | Orientação de nervuras e estruturas    |
+| Espectro | PC1 do espectro médio             | Variação espectral dominante           |
+| Espectro | Inclinação espectral              | Tendência entre comprimentos de onda   |
+| Espectro | Centroide espectral               | Região espectral predominante          |
+| Espectro | Diferença normalizada selecionada | Separação entre bandas discriminativas |
+
+
+Alvos que eu evitaria
+
+Algumas características têm baixa seletividade entre views.
+
+| Característica                          | Problema                                                                       |
+| --------------------------------------- | ------------------------------------------------------------------------------ |
+| Gradiente Sobel global                  | mistura forma e textura                                                        |
+| Entropia simples da imagem              | mistura distribuição espectral e textura                                       |
+| Variância global de intensidade         | é majoritariamente espectral, mas pode variar com estrutura espacial e sombras |
+| Número de bordas                        | depende de forma, sobreposição e textura                                       |
+| Densidade de pixels claros              | combina área, iluminação e espectro                                            |
+| Histograma de gradientes global         | pode representar contorno e textura                                            |
+| PCA aplicada à imagem completa          | mistura os três tipos de informação                                            |
+| Média do Grad-CAM                       | não representa uma propriedade física específica                               |
+| Área de vegetação sem escala controlada | pode refletir recorte e distância da câmera                                    |
+
+
+
+Como avaliar o matching
+- 1. SHAP agrupado por view
+- 2. Ablação por view
+- 3. Modelos unimodais

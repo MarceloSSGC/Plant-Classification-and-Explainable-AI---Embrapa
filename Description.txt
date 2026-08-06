@@ -1,8 +1,36 @@
-Aqui estamos no contexto de classificação de imagens de plantas daninhas com deep learning. Eu tenho um conjunto de 31 pastas onde cada uma contém imagens de uma única espécie de planta daninha. Cada imaem é composta por 5 bandas onde cada banda é um arquivo tif (por exemplo: IMG_0003_1.tif,...,  IMG_0003_5.tif). Eu já treinei uma CNN simples e já atingi 95% de acurácia, então testar outros modelos mais modernos como VIT provavelmente terei alguns ganhos de acurácia, mas não muitos já que estou acertando quase tudo com a CNN. Com a intensão de construir um artigo científico, eu gostaria de explorar a parte de XAI, ou seja, se explicabilidade. Pensei em explorar a morfologia (forma, textura,...) e os espectros. 
+Aqui estamos no contexto de classificação de imagens de plantas daninhas com deep 
+learning. Eu tenho um conjunto de 31 pastas onde cada uma contém imagens de uma única 
+espécie de planta daninha. Cada imaem é composta por 5 bandas onde cada banda é um 
+arquivo tif (por exemplo: IMG_0003_1.tif,...,  IMG_0003_5.tif). Eu já treinei uma 
+CNN simples e já atingi 92% de acurácia, então testar outros modelos mais modernos 
+como VIT provavelmente terei alguns ganhos de acurácia, mas não muitos já que estou 
+acertando quase tudo com a CNN. Com a intensão de construir um artigo científico, 
+eu gostaria de explorar a parte de XAI, ou seja, se explicabilidade. Pensei em explorar 
+a morfologia (forma, textura,...) e os espectros. 
 
-Existe outra informação que eu esqueci de mencionar. Cada imagem é única e exclusiva de cada daninha, ou seja, em cada imagem tem exatamente 1 espécie, não há misturas de espécies, e não há chão ou outro elementos, a imagem é completamente "cheia" para planta daninha. Neste caso, não sei se faz sentido usar Grad-cam pois toda imagem é a daninha.
+Existe outra informação que eu esqueci de mencionar. Cada imagem é única e exclusiva 
+de cada daninha, ou seja, em cada imagem tem exatamente 1 espécie, não há misturas 
+de espécies, e não há chão ou outro elementos (na maioria das fotos, mas há uma ou 
+outra que há mistura ou solo), a imagem é completamente "cheia" para planta daninha 
+(na esmagadora maioria). 
 
-Explique minha situação
+Esse é o contexto. Não precisa responder.
+
+------------------------------------------------
+
+Morfologia
+ - Máscara da planta
+ - Área, perímetro, convexidade, circularidade, esqueleto
+
+Textura
+ - Gabor (várias orientações)
+ - LBP
+ - GLCM (Haralick)
+
+Espectral
+ - Média por banda
+ - Desvio padrão
+ - Índices entre bandas
 
 ------------------------------------------------
 O que eu gostaria:

@@ -1,3 +1,27 @@
+
+
+
+Vamos recaptular. Eu sei que para cada view vou precisar de um tratamento especial do view, isso para garantir que dado uma característica (de algum view), um modelo preditivo ou extrator de features consiga usar somente as informações do respectivo view. Eu sei que é difícil garantir que uma característica/conceito do view i (i =1, 2, 3) venha exclusivamente do view i, mas quero garantir que o input/view i seja o maior contribuidor para a predição da característica i (Isso é o mais importante!). Desta forma, eu preciso fazer alguns passos:
+                                  -> transformações 1 -> View 1
+imagem original -> transformações 2 -> View 2
+                                 -> transofrmações 3 -> View 3
+
+O modelo preditivo vai recever como input o concatenado [View 1, View 2, View 3] e vai predizer algumas características:
+C_11, C_12, ..., C_1a
+C_21, C_22, ..., C_2b
+C_31, C_32, ..., C_3c
+
+Eu gostaria que cada conjunto de características preditas, digamos C_21, C_22, ..., C_2b, quando se faz SHAP Values ou outro avaliador de contribuição, o view que mais contribui seja o View 2. Para acontecer esse comprtamente nos 3 níveis,  eu preciso escolher bem as transformações de cada input/View e quais serão as características. 
+
+Objetivo:
+Temos um problema de alinhamento entre views e grupos de alvos/características/conceitos, objetivo é maximizar a contribuição:
+Contribuição(View_i -> C_i) > Contribuição(View_j -> C_i), para j diferente de i
+
+Dado esse objetivo de "matching" e maximização, quais características C_ij você recomenda (separe por view)? Lembre-se que vou precisar rotular manualmente as 31 espécies, não faça mais de 12 características 
+
+
+
+
 Minha recomendação metodológica
 
 Para o seu artigo, eu seguiria esta estratégia:

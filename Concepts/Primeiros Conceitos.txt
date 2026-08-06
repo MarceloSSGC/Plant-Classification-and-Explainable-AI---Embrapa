@@ -1,0 +1,171 @@
+Aqui está a transcrição completa da resposta anterior formatada em texto simples (sem trechos ou blocos de código Python):
+
+# ================================================================================
+ESTRATÉGIA DE PRÉ-PROCESSAMENTO E CARACTERÍSTICAS (C_ij)
+
+ESTRATÉGIA DE PRÉ-PROCESSAMENTO POR VIEW
+
+1. View 1 (Forma/Morfologia): Binarização/Silhueta (Otsu Threshold na banda do Red ou NIR). A imagem vira 100% preto e branco. Elimina cor e textura interna, restando apenas silhueta/contorno.
+2. View 2 (Textura): Crop/Patch central interno da folha em escala de cinza + Filtro CLAHE ou Laplaciano/Sobel. Elimina cor e borda externa da folha.
+3. View 3 (Cor e Espectro): Crop/Patch central da folha em RGB/Falsa-Cor (RGB + NIR). Elimina o contorno externo para não vazar forma.
+
+# ================================================================================
+MAPEAMENTO DAS CARACTERÍSTICAS (C_ij)
+
+---
+
+## View 1 — Forma/morfologia
+
+* C_11: Folha Estreita e Filiforme / Graminóide
+Instrução: Olhe para o formato geral do contorno das folhas principais na silhueta binarizada. Verifique se a folha é muito mais longa do que larga, parecendo uma lâmina de grama ou capim.
+--- (1) Folhas nitidamente finas, compridas, com formato de fita ou lâmina fina (típico de gramíneas/monocotiledôneas).
+--- (0) Folhas largas, ovais, arredondadas ou recortadas (lâmina foliar expandida).
+
+* C_12: Borda/Margem Dentada ou Serrilhada
+Instrução: Observe o perímetro/contorno externo das folhas na silhueta. Verifique se o contorno possui pequenos "dentes de serra" ou recortes serrilhados.
+--- (1) A borda externa apresenta dentes, serrilhas ou pequenas pontas ao longo da margem.
+--- (0) A borda externa é totalmente lisa, contínua e uniforme (margem inteira).
+
+* C_13: Base Cordata ou Recortada (Formato de Coração / V)
+Instrução: Observe a inserção da haste/pequíolo na base da folha na silhueta. Verifique se existe uma reentrância em formato de "V" ou "U" invertido.
+--- (1) Base da folha possui duas orelhas/lobos arredondados com um encaixe fundo em formato de coração.
+--- (0) Base da folha é reta, cônica (afunilada) ou arredondada sem reentrância.
+
+* C_14: Arquitetura de Lâmina Composta ou Altamente Recortada
+Instrução: Observe o corpo principal da folha na silhueta binarizada. Verifique se a estrutura se divide em múltiplos folíolos separados ou recortes profundos que chegam perto do centro.
+--- (1) Folha dividida em sub-unidades (folíolos) ou recortes profundos que fragmentam a silhueta principal.
+--- (0) Folha única, inteira e contínua (mesmo que seja larga ou oval).
+
+#----------------------
+C_15: Folhagem miúda e densamente distribuída
+
+Instrução: observe o tamanho predominante das folhas e a quantidade de unidades foliares visíveis. Verifique se a planta forma uma cobertura composta por muitas folhas ou folíolos pequenos, produzindo uma silhueta visualmente fina e fragmentada.
+
+(1) Sim
+Predominam folhas ou folíolos pequenos.
+Há muitas unidades foliares próximas umas das outras.
+A cobertura apresenta aparência fina, fragmentada ou “granulada”.
+É difícil destacar poucas folhas grandes dominando a imagem.
+(0) Não
+Predominam folhas médias ou grandes ou ada folha é facilmente distinguível.
+Poucas folhas ocupam uma área relativamente grande.
+
+A cobertura apresenta unidades foliares largas e visualmente dominantes.
+Observação de anotação
+
+O conceito deve considerar o tamanho relativo das folhas em relação à imagem e às demais folhas da planta, e não o tamanho físico absoluto em centímetros.
+
+Não devem ser considerados como folhas pequenas:
+
+segmentos causados por oclusão;
+fragmentos de folhas parcialmente escondidas;
+ruídos da segmentação;
+vegetação de fundo que não pertence à espécie principal.
+
+#----------------------
+C_16: Folhas predominantemente elípticas ou ovais
+
+Mantendo o conceito anterior:
+
+Instrução: observe o formato predominante das folhas. Verifique se a maioria apresenta uma lâmina oval ou elíptica, mais larga no centro e afunilada ou arredondada nas extremidades.
+
+(1) Sim
+Folhas ovais ou elípticas.
+Lâmina contínua e aproximadamente simétrica.
+Maior largura localizada próxima ao centro da folha.
+Ausência de lobos profundos ou base fortemente cordiforme.
+(0) Não
+Folhas cordiformes.
+Folhas lineares ou filiformes.
+Folhas profundamente recortadas.
+Folhagem com segmentos muito estreitos.
+Formato predominante não oval ou elíptico.
+
+#----------------------
+C₁₇: Folhas emergem radialmente de um único centro (touceira)
+
+Instrução: observe a origem das folhas. Verifique se a maioria emerge de um ponto basal comum, formando uma roseta ou touceira claramente definida.
+
+(1) Sim
+
+As folhas partem de um único centro.
+Organização radial.
+Existe um "miolo" claramente identificável.
+A planta forma uma touceira compacta.
+
+(0) Não
+
+As folhas encontram-se distribuídas ao longo da imagem.
+Não existe centro evidente.
+A cobertura é espalhada ou rasteira.
+Diversos pontos de crescimento independentes.
+
+#----------------------
+C_18: Folhas predominantemente arqueadas ou pendentes
+
+Instrução: observe a orientação das folhas. Verifique se a maior parte apresenta curvatura acentuada formando arcos, ao invés de permanecer reta.
+
+(1) Sim
+
+Folhas longas e curvas.
+Muitas folhas tocam ou quase tocam o solo.
+Aspecto de cascata.
+Curvatura predominante.
+
+(0) Não
+
+Folhas predominantemente retas.
+Folhas rígidas.
+Orientação radial quase linear.
+Pouca curvatura.
+
+# ==========================================================================================================================================================================
+
+## View 2 — Textura
+
+* C_21: Nervuras Proeminentes / Sulcadas
+Instrução: Olhe para o patch interno da folha após aplicar o filtro de contraste/borda (Sobel/Laplaciano) em escala de cinza. Verifique a presença de linhas/sulcos bem marcados de alto contraste atravessando o patch.
+--- (1) Redes de linhas finas e claras/escuras nitidamente demarcadas e com alto contraste em relação à lâmina.
+--- (0) Superfície lisa ou homogênea, onde as nervuras quase não aparecem ou são indistintas.
+* C_22: Superfície Rugosa / Ondulada (Micro-relevo)
+Instrução: Olhe para a textura geral do patch em escala de cinza. Verifique se a superfície parece crespa, áspera, amassada ou cheia de pequenos altos e baixos relevos.
+--- (1) Padrão granulado, irregular e de alta variação local de tom, parecendo papel amassado ou couro rugoso.
+--- (0) Padrão suave, uniforme e plano (aparência cerosa ou aveludada contínua).
+* C_23: Padrão de Nervuras Paralelas
+Instrução: Observe a direção das linhas de textura/nervuras que cortam o patch interno.
+--- (1) As linhas seguem um caminho paralelo rigorosamente no mesmo sentido longitudinal.
+--- (0) As linhas se ramificam forming uma rede reticulada (teia de aranha) ou não há linhas direcionais visíveis.
+
+---
+# ==========================================================================================================================================================================
+
+## View 3 — Cor e Espectro
+
+* C_31: Presença de Pigmentação Purpúrea / Avermelhada / Arroxeada
+Instrução: Olhe para a foto RGB natural do patch ou da lâmina foliar. Verifique se há manchas, bordas ou centro com tons de vermelho, roxo, vinho ou marrom.
+--- (1) Áreas visíveis com tons purpúreos, avermelhados ou violetas no limbo ou nas nervuras.
+--- (0) A planta é estritamente em variações de verde (ou verde-amarelado), sem pigmento purpúreo.
+* C_32: Tonalidade Dominante Verde-Escuro (Claro vs. Escuro)
+Instrução: Olhe para a cor verde dominante do patch RGB. Compare com o verde médio de vegetação saudável.
+--- (1) Verde fechado, escuro, intenso ou profundo (alta absorção no visível).
+--- (0) Verde claro, amarelado, pálido ou com aspectos cloróticos/esverdeados claros.
+* C_33: Heterogeneidade de Cor / Variegada (Manchas / Mosaico)
+Instrução: Observe a distribuição de cor no patch RGB. Verifique se a cor é uniforme ou se existem manchas de cores e tons diferentes espalhadas.
+--- (1) Presença de mofo/pólens visíveis, manchas claras/escuras em mosaico ou variação brusca de pigmentos.
+--- (0) Coloração contínua e homogênea por toda a superfície do patch.
+* C_34: Resposta Espectral NIR Elevada (Métrica Automática/Opcional)
+Instrução: Média da intensidade dos pixels do patch na Banda 4 (NIR) dividida pelo brilho total (calculada via limiar da mediana do dataset).
+--- (1) Valor médio da Banda 4 acima do limiar da mediana do dataset.
+--- (0) Valor médio da Banda 4 abaixo do limiar da mediana.
+
+# ================================================================================
+POR QUE ESTA LISTA ATENDE AOS REQUISITOS?
+
+1. Facilidade para Leigos: Qualquer aluno de iniciação científica ou anotador leigo consegue preencher essa tabela de 11 colunas olhando para as espécies em alguns minutos.
+2. Separação Rígida para SHAP:
+* C_11 a C_14 só requerem a margem/silhueta (View 1).
+* C_21 a C_23 só requerem detalhes de alto contraste em cinza (View 2).
+* C_31 a C_34 só requerem os canais de cor/espectrais (View 3).
+
+
+3. Isolamento de Vazamento: O uso de crop/patch central para Textura e Cor garante que View 2 e View 3 não entreguem a silhueta para o modelo, forçando a contribuição SHAP a ficar travada na View 1 para os conceitos de forma.

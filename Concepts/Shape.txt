@@ -1,0 +1,83 @@
+====================================================================
+           CONCEITOS DE FORMA (SHAPE VIEW) REVISADOS
+====================================================================
+
+[C1] Folha Alongada
+     - SIM (1): Folha fina e comprida, típica de gramíneas (ex: Brizantha, Capim Navalha).
+     - NÃO (0): Folha de formato largo, oval, arredondado ou em formato de gota (ex: Salsa, Cipó Fogo, Malva Branca).
+
+[C2] Margem Recortada
+     - SIM (1): A borda externa da folha possui recortes, dentes ou lobos visíveis (ex: Cipó Fogo).
+     - NÃO (0): A borda da folha é lisa, contínua e uniforme (ex: Salsa, Malva Branca).
+
+[C3] Ponta Afiada (Ápice Acuminado)
+     - SIM (1): A extremidade final da folha termina em uma ponta fina e afiada (ex: Capim Navalha, Brizantha, Malva Branca).
+     - NÃO (0): A extremidade final da folha é curva, arredondada ou suave (ex: Salsa).
+
+[C4] Base Simétrica
+     - SIM (1): Os dois lados da folha no ponto de união com o cabinho são espelhados e iguais.
+     - NÃO (0): Um dos lados da base da folha é visivelmente diferente, mais curto ou desalinhado em relação ao outro.
+
+====================================================================
+                              RESUMO
+====================================================================
+
+1. Folha Alongada (0/1): Fina e comprida (capim) vs. Larga (oval/redonda).
+2. Margem Recortada (0/1): Borda com recortes/lobos vs. Borda lisa/inteira.
+3. Ponta Afiada (0/1): Ápice termina em ponta vs. Ápice arredondado.
+4. Base Simétrica (0/1): Lados da base iguais vs. Lados diferentes.
+====================================================================
+
+
+
+====================================================================
+  GUIA DE CLASSIFICAÇÃO DE SHAPE PARA IMAGENS SEGMENTADAS (SIM/NÃO)
+====================================================================
+
+[C1] Folha Linear / Tipo Capim
+     - CRITÉRIO: O elemento foliar é longo e muito fino, parecendo uma tira de grama/milho?
+     - SIM (1): Brizantha, Capim Navalha.
+     - NÃO (0): Salsa, Cipó Fogo, Malva Branca (possuem folhas largas/arredondadas).
+
+[C2] Formato em Roseta / Leque Central
+     - CRITÉRIO: As folhas saem todas juntas de um único centro, formando uma "estrela" ou "leque"?
+     - SIM (1): Capim Navalha.
+     - NÃO (0): As folhas estão espalhadas pela imagem sem um ponto central único.
+
+[C3] Raminhos Finos / Estrutura em Teia
+     - CRITÉRIO: A imagem parece uma "teia" de galhos e folhinhas minúsculas, sem folhas médias ou grandes?
+     - SIM (1): Vassourinha de Botão.
+     - NÃO (0): Dá para ver claramente o formato individual de folhas maiores.
+
+[C4] Tapete Fechado de Folhas
+     - CRITÉRIO: As folhas cobrem quase a tela inteira, deixando raros espaços pretos no fundo?
+     - SIM (1): Salsa, Cipó Fogo.
+     - NÃO (0): Existem muitos buracos/espaços pretos de fundo entre as plantas.
+
+--------------------------------------------------------------------------
+
+[C5] Margem Recortada / Borda Densa
+
+* CRITÉRIO: O contorno da folha é cheio de dentes, recortes ou pontas (parecendo uma serra)?
+* SIM (1): Malva Branca, Vassourinha de Botão.
+* NÃO (0): Calapogônio, Salsa, Brizantha (possuem bordas lisas e contínuas).
+
+[C6] Padrão Lineal Orientado / Ramificação em Guia
+
+* CRITÉRIO: É possível ver galhos compridos, hastes ou cipós cruzando a tela em uma direção clara?
+* SIM (1): Cipó Fogo, Calapogônio.
+* NÃO (0): Mata Pasto, Malva Branca (crescem espalhados em todas as direções sem formar guias).
+
+[C7] Inflorescência / Presença de Flores ou Botões
+
+* CRITÉRIO: Existem flores, "bolinhas" de botões ou espigas amarelas/brancas bem visíveis na imagem?
+* SIM (1): Apaga Fogo, Vassourinha de Botão.
+* NÃO (0): Mata Pasto, Calapogônio, Brizantha (imagem apenas com folhas verdes).
+
+[C8] Nervura Central / Riscos Visíveis na Folha
+
+* CRITÉRIO: Dá para ver claramente a "espinha" central ou os "riscos/veias" desenhados no meio das folhas?
+* SIM (1): Calapogônio, Cipó Fogo, Ruziziensis.
+* NÃO (0): Mata Pasto, Apaga Fogo (a superfície da folha parece lisa/sem riscos destacados).
+
+====================================================================

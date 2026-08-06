@@ -1,0 +1,35 @@
+## 1 banda
+
+* **Simples**
+
+  * Variância local
+  * Desvio-padrão local
+  * Entropia local
+  * Amplitude local
+  * Sobel
+  * Laplaciano
+  * Diferença para a média local
+  * Coeficiente de variação local
+
+**Recomendação simples:** **Entropia local**
+
+* **Médio**
+
+  * GLCM
+  * LBP
+  * Filtros de Gabor
+  * Transformada Wavelet
+  * Filtros de Laws
+  * LPQ
+  * HOG
+  * Banco de filtros multiescala
+
+**Recomendação média:** **GLCM**
+
+**Aplicação:** usar cada banda separadamente e calcular os descritores somente na região segmentada da planta.
+
+=============================================================
+
+
+
+

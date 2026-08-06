@@ -1,4 +1,5 @@
 import os
+import numpy as np
 import rasterio
 import matplotlib.pyplot as plt
 from skimage.filters import threshold_otsu
@@ -6,7 +7,7 @@ from skimage.filters import threshold_otsu
 #======================================================================
 #======================================================================
 
-print(f"\n\033[100;40m\t     --- Auxiliar ---     \t\033[0m\n")
+print(f"\n\033[100;40m\t     --- Auxiliar Segmentation---     \t\033[0m\n")
 
 #======================================================================
 # 1 Band
