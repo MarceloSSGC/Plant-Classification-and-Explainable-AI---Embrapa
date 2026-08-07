@@ -13,7 +13,7 @@ import torch.nn.functional as F
 from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
 
 import argparse
-from time import sleep
+from time import sleep, time
 
 os.chdir("/home/marcelo/Documents/VSCode_python/Agro/SIMIDS/Planta_Daninha_Boa_Vista/Concepts/First_Model/No_View__Shape_01")
 
@@ -167,7 +167,8 @@ in_channels = 5  # número de bandas
 
 
 if "model_trained" not in infos.keys() or not infos["model_trained"]:
-    print(f"\n\t \033[100;01m  Initialize Training  \033[0m")
+
+    print(f"\n\t \033[96;01m  Initialize Training  \033[0m")
     
     # ======================================================================
     # Instanciação do modelo
@@ -181,12 +182,13 @@ if "model_trained" not in infos.keys() or not infos["model_trained"]:
     # ======================================================================
     # Treino (fit)
         
-    epochs = 30
+    epochs = 2
 
     best_model_dir = str(DIR_EXP / "best_model.pt")
     history_dir = str(DIR_EXP / "history.pkl")
     loss_dir = str(DIR_EXP / "df_loss.csv")
 
+    t_0 = time()
     history = model.fit(
         train_loader=train_loader,
         val_loader=val_loader,
@@ -199,6 +201,8 @@ if "model_trained" not in infos.keys() or not infos["model_trained"]:
         patience=7,        # early stopping opcional; remova/None se não quiser
         verbose=True,
     )
+    t_1 = time()
+    time_train = round(t_1-t_0)
 
     infos["model_trained"] = True
 
@@ -215,6 +219,7 @@ if "model_trained" not in infos.keys() or not infos["model_trained"]:
     total_params = sum(p.numel() for p in model.parameters())
     trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)   
     
+    print(f"time_train: {time_train}")
     print(f"best_epoch: {best_epoch}")
     print(f"train_loss: {train_loss:.4f}")
     print(f"val_loss: {val_loss:.4f}")
@@ -226,15 +231,17 @@ if "model_trained" not in infos.keys() or not infos["model_trained"]:
     print(f"Parâmetros treináveis: {trainable_params:,}")
 
     infos["model"] = {
+        "device": str(device),
+        "time_train": time_train,
         "epochs": epochs,
         "best_epoch": best_epoch,
+        "total_params": total_params,
+        "trainable_params": trainable_params,
         "train_loss": train_loss,
         "val_loss": val_loss,
         "val_f1_macro": val_f1_macro,
         "val_f1_micro": val_f1_micro,
         "val_exact_match": val_exact_match,
-        "total_params": total_params,
-        "trainable_params": trainable_params,
     }
 
     with open(DIR_INFOS, "w") as file:
@@ -243,6 +250,9 @@ if "model_trained" not in infos.keys() or not infos["model_trained"]:
 else:
 
     # Load Model
+
+    print(f"\n\t --- \033[96;01m  Loading Model --- \033[0m")
+
 
     # 1. Recriar a arquitetura com os MESMOS hiperparâmetros do treino original
     model = MultioutputSmallCNN(
@@ -256,51 +266,116 @@ else:
     model.load_state_dict(state_dict)
     model.to(device)
 
-# ======================================================================
-# Predicting
-
-# Train
-train_results = model.predict(
-    loader=train_loader,
-    device=device,
-    threshold=0.5,
-)
-
-# Validation
-val_results = model.predict(
-    loader=val_loader,
-    device=device,
-    threshold=0.5,
-)
-
-# Test
-test_results = model.predict(
-    loader=test_loader,
-    device=device,
-    threshold=0.5,
-)
-# 'probs', 'preds', 'true', 'species', 'filenames'
-
-# ======================================================================
+#======================================================================
 # Metrics
 
 df_metric_train_dir = str(DIR_EXP / "df_metric_train.csv")
 df_metric_val_dir = str(DIR_EXP / "df_metric_val.csv")
 df_metric_test_dir = str(DIR_EXP / "df_metric_test.csv")
 
-if not os.path.isfile(df_metric_train_dir) or \
-    
+if not os.path.isfile(df_metric_val_dir) or not os.path.isfile(df_metric_test_dir):
 
-df_metric_train = multioutput_classification_metrics_dataframe(train_results)
-df_metric_val = multioutput_classification_metrics_dataframe(val_results)
-df_metric_test = multioutput_classification_metrics_dataframe(test_results)
+    # Predicting
+
+    # # Train
+    # train_results = model.predict(
+    #     loader=train_loader,
+    #     device=device,
+    #     threshold=0.5,
+    # )
+
+    # Validation
+    val_results = model.predict(
+        loader=val_loader,
+        device=device,
+        threshold=0.5,
+    )
+
+    # Test
+    test_results = model.predict(
+        loader=test_loader,
+        device=device,
+        threshold=0.5,
+    )
+    # 'probs', 'preds', 'true', 'species', 'filenames'
+                
+
+    # df_metric_train = multioutput_classification_metrics_dataframe(train_results)
+    df_metric_val = multioutput_classification_metrics_dataframe(val_results)
+    df_metric_test = multioutput_classification_metrics_dataframe(test_results)
+
+    # df_metric_train.to_csv(df_metric_train_dir, index=False)
+    df_metric_val.to_csv(df_metric_val_dir, index=False)
+    df_metric_test.to_csv(df_metric_test_dir, index=False)
 
 
+#======================================================================
+#======================================================================
 
+import shap
+import numpy as np
+import torch
 
 # ======================================================================
+# 1. Preparar dados de background e de explicação
 # ======================================================================
+
+model.eval()
+model.to(device)
+
+# Background: pequena amostra de imagens de treino (SHAP usa como "referência" de baseline)
+# Poucas amostras já bastam (ex. 20-50) — GradientExplainer não precisa de muitas
+
+background_imgs = []
+for imgs, Ys, c_is, n_is in train_loader:
+    background_imgs.append(imgs)
+    if len(background_imgs) * imgs.size(0) >= 32:
+        break
+background_imgs = torch.cat(background_imgs)[:32].to(device)
+
+# Amostras que você quer explicar (ex. um batch do conjunto de teste)
+explain_imgs, explain_Ys, explain_c_is, explain_n_is = next(iter(test_loader))
+explain_imgs = explain_imgs.to(device)
+
 # ======================================================================
+# 2. Criar o explainer (modelo como um todo -> soma/média sobre as 5 saídas)
+# ======================================================================
+
+explainer = shap.GradientExplainer(model, background_imgs)
+
+# shap_values: lista com um array por output (5 outputs -> lista de 5 arrays)
+# cada array tem shape (N, 5, H, W) -> mesma shape da imagem de entrada
+shap_values = explainer.shap_values(explain_imgs)
+
+# ======================================================================
+# 3. Agregar em importância por banda (modelo como um todo)
+# ======================================================================
+
+# shap_values é uma lista (uma entrada por output) de arrays (N, C=5, H, W)
+# Passo 1: empilhar os outputs -> (num_outputs, N, C, H, W)
+shap_stack = np.stack(shap_values, axis=0)
+
+# Passo 2: valor absoluto (não importa a direção do efeito, só a magnitude)
+shap_abs = np.abs(shap_stack)
+
+# Passo 3: média sobre outputs, amostras (N) e pixels (H, W) -> sobra só por banda (C=5)
+band_importance = shap_abs.mean(axis=(0, 1, 3, 4))  # shape: (5,)
+
+# ======================================================================
+# 4. Resultado
+# ======================================================================
+
+band_names = ["Band_1", "Band_2", "Band_3", "Band_4", "Band_5"]  # ajuste para seus nomes reais
+
+for name, val in zip(band_names, band_importance):
+    print(f"{name}: {val:.6f}")
+
+# Importância relativa (%) -- soma 100%
+band_importance_pct = 100 * band_importance / band_importance.sum()
+for name, val in zip(band_names, band_importance_pct):
+    print(f"{name}: {val:.2f}%")
+
+#======================================================================
 
 
 

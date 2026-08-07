@@ -457,7 +457,7 @@ class MultioutputSmallCNN(nn.Module):
             # ---- checkpoint do melhor modelo (critério: F1 macro na validação) ----
             if val_f1_macro > best_val_f1_macro:
                 best_val_f1_macro = val_f1_macro
-                best_state = copy.deepcopy(self.state_dict())
+                best_state = deepcopy(self.state_dict())
                 torch.save(best_state, checkpoint_path)
                 epochs_no_improve = 0
                 if verbose:
