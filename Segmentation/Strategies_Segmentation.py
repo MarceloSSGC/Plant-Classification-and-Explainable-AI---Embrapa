@@ -3,14 +3,14 @@ import rasterio
 import matplotlib.pyplot as plt
 
 os.chdir("/home/marcelo/Documents/VSCode_python/Agro/SIMIDS/Planta_Daninha_Boa_Vista/Segmentation")
-from auxiliar import *
+from Segmentation.auxiliar_segmentation import *
 
 #======================================================================
 #======================================================================
 # Dataset
 
-# DATA_DIR = "/home/marcelo/Documents/Datasets/PlantaDaninha_BoaVista"
-DATA_DIR = "/media/marcelo/HD_8t/Marcelo__Seagate_8tb/Embrapa/Embrapa_Experimentos/Datasets/PlantaDaninha_BoaVista_Aligned_ecc_affine"
+DATASET_NAME = "PlantaDaninha_BoaVista_Aligned_ecc_affine_interch_45_cen_5"
+DATA_DIR = f"/media/marcelo/HD_8t/Marcelo__Seagate_8tb/Embrapa/Embrapa_Experimentos/Datasets/{DATASET_NAME}"
 
 #======================================================================
 #======================================================================
@@ -42,7 +42,7 @@ plot_tif_dir(specie_dir, file_name)
 file_path = os.path.join(specie_dir, file_name)
 
 with rasterio.open(file_path) as src:
-    band = src.read(1)  # Lê a primeira (ou única) banda do arquivo
+    band = src.read(1)      # Lê a primeira (ou única) banda do arquivo
 
 print(f"max pixel: {band.max()}")
 print(f"min pixel: {band.min()}")
@@ -171,26 +171,62 @@ plot_segmentation(rgb_img, rgb_img_masked)
 #======================================================================
 #======================================================================
 #======================================================================
+# 5 Bandas
 
-# =========================================================
-# 5 BANDAS
-# =========================================================
+# Plot Band
 
-# [SIMPLES]
-# - Melhor banda + Otsu ⭐⭐
-# - Soma ponderada das bandas
-# - PCA (1º componente) + Otsu ⭐⭐⭐ (RECOMENDADO)
+species = sorted(os.listdir(DATA_DIR))
 
-# [MÉDIO]
-# - K-Means (5D) ⭐⭐
-# - Gaussian Mixture Model (GMM)
-# - SLIC + K-Means
-# - Random Forest pixel a pixel
+specie = "01_malva_branca_Agua_Boa_01"
+specie_dir = DATA_DIR + f"/{specie}"
 
-# Recomendação:
-# ✔ PCA → CLAHE → Otsu → Morfologia
-# ✔ Alternativa: K-Means nas 5 bandas
+file_names = [x[:-6] for x in sorted(os.listdir(specie_dir))]
 
+file_name = file_names[-1]
+
+img_5b = load_5b_from_dir(specie_dir, file_name)
+print(f"img_5b.shape : {img_5b.shape}")
+
+plot_rgb(img_5b)
+
+#======================================================================
+# Otsu em cada banda
+
+img_5b_seg_otsu, mask = segment_otsu_5b(img_5b)
+plot_rgb(img_5b)
+plot_rgb(img_5b_seg_otsu)
+plot_segmentation(img_5b, img_5b_seg_otsu)
+
+
+#======================================================================
+# KMeans
+
+img_5b_seg_kmean, mask = segment_kmeans_5b(img_5b)
+
+
+plot_rgb(img_5b)
+plot_rgb(img_5b_seg_kmean)
+plot_segmentation(img_5b, img_5b_seg_kmean)
+
+#======================================================================
+# PCA (1º componente) + Otsu
+
+img_5b_seg_pca_otsu, mask = segment_pca_otsu_5b(img_5b)
+
+
+plot_rgb(img_5b, (3, 2, 1))
+plot_rgb(img_5b_seg_pca_otsu, (3, 2, 1))
+plot_segmentation(img_5b, img_5b_seg_pca_otsu)
+
+
+#======================================================================
+# Melhor banda + Otsu
+
+img_5b_seg_best_band_otsu, mask = segment_best_band_otsu(img_5b)
+
+plot_rgb(img_5b, (3, 2, 1))
+plot_rgb(img_5b_seg_best_band_otsu, (3, 2, 1))
+plot_segmentation(img_5b, img_5b_seg_best_band_otsu)
 
 
 #======================================================================

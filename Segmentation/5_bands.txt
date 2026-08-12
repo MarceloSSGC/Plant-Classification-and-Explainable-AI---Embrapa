@@ -1,0 +1,80 @@
+SUGESTÕES DE SEGMENTAÇÃO MULTIBANDA (5 BANDAS)
+
+1. K-means multiespectral
+   - Entrada: 5 bandas simultaneamente
+   - Cada pixel é representado por [B1, B2, B3, B4, B5]
+   - Clustering em 2 ou mais grupos
+   - Método não supervisionado
+
+2. Gaussian Mixture Model (GMM)
+   - Entrada: 5 bandas simultaneamente
+   - Modela os pixels como mistura de distribuições gaussianas
+   - Pode separar planta/fundo considerando o perfil espectral completo
+   - Método não supervisionado
+
+3. Fuzzy C-Means (FCM)
+   - Entrada: 5 bandas simultaneamente
+   - Semelhante ao K-means, mas permite pertencimento parcial aos clusters
+   - Interessante para pixels de borda da planta
+   - Método não supervisionado
+
+4. PCA + Otsu
+   - Entrada: 5 bandas
+   - PCA combina a informação das cinco bandas
+   - Seleciona-se uma componente (ex.: PC1)
+   - Aplica-se Otsu para gerar a máscara
+   - Método simples e interpretável
+
+5. PCA + K-means
+   - Entrada: 5 bandas
+   - PCA reduz/transforma o espaço espectral
+   - K-means é aplicado sobre os componentes principais
+   - Permite analisar os loadings das bandas
+
+6. PCA + GMM
+   - Entrada: 5 bandas
+   - Redução espectral com PCA
+   - Segmentação utilizando GMM no espaço das componentes principais
+
+7. Índices espectrais + thresholding
+   - Combina duas ou mais bandas para construir índices espectrais
+   - Exemplo: (Bi - Bj) / (Bi + Bj)
+   - Aplicar Otsu ou outro threshold para obter a máscara
+   - Especialmente interessante para avaliar quais relações entre bandas
+     melhor separam planta e fundo
+
+8. U-Net com entrada de 5 canais
+   - Entrada: H x W x 5
+   - Primeira camada convolucional adaptada para receber 5 canais
+   - Saída: máscara de segmentação
+   - Método supervisionado
+   - Exige máscaras ground truth para treinamento
+
+9. DeepLab com entrada de 5 canais
+   - Entrada: H x W x 5
+   - Arquitetura adaptada para dados multiespectrais
+   - Saída: máscara de segmentação
+   - Método supervisionado
+   - Exige máscaras ground truth
+
+ORDEM SUGERIDA PARA OS EXPERIMENTOS:
+
+1º K-means multiespectral
+2º GMM multiespectral
+3º Fuzzy C-Means
+4º PCA + Otsu
+5º PCA + K-means
+6º Índices espectrais + Otsu
+7º U-Net 5 canais (caso existam máscaras ground truth)
+
+COMPARAÇÃO/ABLAÇÃO:
+
+- Otsu aplicado individualmente em B1, B2, B3, B4 e B5
+- K-means utilizando cada banda individualmente
+- K-means utilizando 3 bandas
+- K-means utilizando as 5 bandas
+
+Objetivo:
+comparar segmentação uniespectral versus multiespectral e verificar
+quanto a utilização conjunta das 5 bandas melhora a separação
+planta/fundo.

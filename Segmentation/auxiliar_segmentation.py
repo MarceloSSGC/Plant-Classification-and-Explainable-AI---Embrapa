@@ -482,6 +482,557 @@ def slic_merge_segmentation(rgb_img):
 
     return rgb_img_masked
 
+
+#======================================================================
+#======================================================================
+#======================================================================
+
+# 5 bands
+
+def load_5b_from_dir(image_dir: str, base_name: str):
+
+    channels = []
+
+    for band in range(1, 6):
+        band_file = f"{base_name}_{band}.tif"
+        band_path = os.path.join(image_dir, band_file)
+
+        with rasterio.open(band_path) as src:
+            img = src.read(1).astype(np.float32)
+
+        channels.append(img)
+
+    img = np.dstack(channels)
+
+    return img
+
+
+#======================================================================
+# Otsu em cada banda
+
+# B1 → Otsu → M1 ─┐
+# B2 → Otsu → M2 ─┤
+# B3 → Otsu → M3 ─┼→ votação ≥ 3 → MASK → aplicada às 5 bandas
+# B4 → Otsu → M4 ─┤
+# B5 → Otsu → M5 ─┘
+
+def segment_otsu_5b(img_5b):
+    """
+    Segmentação aplicando Otsu independentemente nas 5 bandas
+    e combinando os resultados por votação majoritária.
+
+    Parâmetros
+    ----------
+    img_5b : np.ndarray
+        Imagem multiespectral com shape (H, W, 5).
+
+    Retorna
+    -------
+    img_5b_seg : np.ndarray
+        Imagem segmentada com shape (H, W, 5).
+
+    mask : np.ndarray
+        Máscara binária final com shape (H, W).
+        1 = planta
+        0 = fundo
+    """
+
+    if img_5b.ndim != 3 or img_5b.shape[2] != 5:
+        raise ValueError(
+            f"Esperado shape (H, W, 5), recebido {img_5b.shape}"
+        )
+
+    H, W, _ = img_5b.shape
+
+    # Armazena uma máscara para cada banda
+    masks = np.zeros((H, W, 5), dtype=bool)
+
+    # ------------------------------------------
+    # 1. Otsu independentemente em cada banda
+    # ------------------------------------------
+    for b in range(5):
+
+        band = img_5b[:, :, b].astype(np.float32)
+
+        threshold = threshold_otsu(band)
+
+        band_mask = band > threshold
+
+        # Assumimos que a planta ocupa a maior parte
+        # da imagem. Se necessário, inverte a máscara.
+        if band_mask.sum() < band_mask.size / 2:
+            band_mask = ~band_mask
+
+        masks[:, :, b] = band_mask
+
+    # ------------------------------------------
+    # 2. Votação entre as 5 bandas
+    #
+    # Planta se >= 3 bandas concordarem
+    # ------------------------------------------
+    votes = np.sum(masks, axis=2)
+
+    mask = votes >= 3
+
+    # ------------------------------------------
+    # 3. Aplica a máscara final às 5 bandas
+    # ------------------------------------------
+    img_5b_seg = img_5b.copy()
+
+    img_5b_seg[mask] = 0
+
+    mask = mask.astype(np.uint8)
+
+    return img_5b_seg, mask
+
+
+#======================================================================
+# KMeans
+
+from sklearn.cluster import KMeans
+
+def segment_kmeans_5b(img_5b, n_clusters=2, random_state=42):
+    """
+    Segmentação multiespectral usando K-means nas 5 bandas.
+
+    Parâmetros
+    ----------
+    img_5b : np.ndarray
+        Imagem com shape (H, W, 5).
+
+    n_clusters : int
+        Número de clusters do K-means.
+        Default = 2 (planta e fundo).
+
+    random_state : int
+        Semente para reprodutibilidade.
+
+    Retorna
+    -------
+    img_5b_seg : np.ndarray
+        Imagem segmentada com shape (H, W, 5).
+        Pixels considerados fundo recebem valor 0.
+
+    mask : np.ndarray
+        Máscara binária com shape (H, W).
+        1 = planta
+        0 = fundo.
+    """
+
+    if img_5b.ndim != 3 or img_5b.shape[2] != 5:
+        raise ValueError(
+            f"Esperado shape (H, W, 5), recebido {img_5b.shape}"
+        )
+
+    H, W, C = img_5b.shape
+
+    # ---------------------------------------
+    # 1. Transforma a imagem em uma matriz:
+    #
+    # (H, W, 5) -> (H*W, 5)
+    #
+    # Cada linha representa um pixel:
+    # [B1, B2, B3, B4, B5]
+    # ---------------------------------------
+
+    pixels = img_5b.reshape(-1, C).astype(np.float32)
+
+    # ---------------------------------------
+    # 2. K-means no espaço espectral 5D
+    # ---------------------------------------
+
+    kmeans = KMeans(
+        n_clusters=n_clusters,
+        random_state=random_state,
+        n_init=10
+    )
+
+    labels = kmeans.fit_predict(pixels)
+
+    # ---------------------------------------
+    # 3. Identifica o maior cluster
+    #
+    # Assumimos que o maior cluster
+    # corresponde à planta.
+    # ---------------------------------------
+
+    counts = np.bincount(labels)
+
+    plant_cluster = np.argmax(counts)
+
+    # ---------------------------------------
+    # 4. Cria máscara binária
+    # ---------------------------------------
+
+    mask = (labels == plant_cluster)
+
+    mask = mask.reshape(H, W)
+
+    # ---------------------------------------
+    # 5. Aplica a mesma máscara às 5 bandas
+    # ---------------------------------------
+
+    img_5b_seg = img_5b.copy()
+
+    img_5b_seg[mask] = 0
+
+    # máscara como uint8: 0 = fundo, 1 = planta
+    mask = mask.astype(np.uint8)
+
+    return img_5b_seg, mask
+
+#======================================================================
+# PCA (1º componente) + Otsu
+
+import numpy as np
+from sklearn.decomposition import PCA
+from skimage.filters import threshold_otsu
+
+
+def segment_pca_otsu_5b(img_5b):
+    """
+    Segmentação multiespectral usando:
+        5 bandas -> PCA -> PC1 -> Otsu
+
+    Parâmetros
+    ----------
+    img_5b : np.ndarray
+        Imagem multiespectral com shape (H, W, 5).
+
+    Retorna
+    -------
+    img_5b_seg : np.ndarray
+        Imagem segmentada com shape (H, W, 5).
+        Pixels considerados fundo recebem valor 0.
+
+    mask : np.ndarray
+        Máscara binária com shape (H, W).
+        1 = planta
+        0 = fundo.
+    """
+
+    if img_5b.ndim != 3 or img_5b.shape[2] != 5:
+        raise ValueError(
+            f"Esperado shape (H, W, 5), recebido {img_5b.shape}"
+        )
+
+    H, W, C = img_5b.shape
+
+    # ------------------------------------------------
+    # 1. Transforma:
+    #
+    # (H, W, 5) -> (H*W, 5)
+    #
+    # Cada pixel:
+    # [B1, B2, B3, B4, B5]
+    # ------------------------------------------------
+
+    pixels = img_5b.reshape(-1, C).astype(np.float32)
+
+    # ------------------------------------------------
+    # 2. PCA utilizando as 5 bandas
+    # ------------------------------------------------
+
+    pca = PCA(n_components=1)
+
+    pc1 = pca.fit_transform(pixels).ravel()
+
+    # Volta para o formato espacial
+    pc1_img = pc1.reshape(H, W)
+
+    # ------------------------------------------------
+    # 3. Otsu no primeiro componente principal
+    # ------------------------------------------------
+
+    threshold = threshold_otsu(pc1_img)
+
+    mask = pc1_img > threshold
+
+    # ------------------------------------------------
+    # 4. Como o sinal do PCA é arbitrário, verificamos
+    #    qual lado ocupa maior área.
+    #
+    #    Assumimos que a planta ocupa a maior parte
+    #    da imagem.
+    # ------------------------------------------------
+
+    if np.sum(mask) < mask.size / 2:
+        mask = ~mask
+
+    # ------------------------------------------------
+    # 5. Aplica a máscara às cinco bandas
+    # ------------------------------------------------
+
+    img_5b_seg = img_5b.copy()
+
+    img_5b_seg[mask] = 0
+
+    mask = mask.astype(np.uint8)
+
+    return img_5b_seg, mask
+
+#======================================================================
+# Melhor banda + Otsu
+
+import numpy as np
+from skimage.filters import threshold_otsu
+
+
+def segment_best_band_otsu(img_5b):
+    """
+    Segmentação por seleção automática da melhor banda + Otsu.
+
+    ATENÇÃO:
+    As 5 bandas são avaliadas, mas apenas UMA banda é usada
+    para gerar a máscara final. Portanto, não é uma segmentação
+    multibanda propriamente dita.
+
+    Parâmetros
+    ----------
+    img_5b : np.ndarray
+        Imagem multiespectral com shape (H, W, 5).
+
+    Retorna
+    -------
+    img_5b_seg : np.ndarray
+        Imagem segmentada com shape (H, W, 5).
+
+    mask : np.ndarray
+        Máscara binária (H, W), com:
+        1 = região mantida
+        0 = fundo
+    """
+
+    if img_5b.ndim != 3 or img_5b.shape[2] != 5:
+        raise ValueError(
+            f"Esperado shape (H, W, 5), recebido {img_5b.shape}"
+        )
+
+    best_score = -np.inf
+    best_band = None
+    best_mask = None
+
+    # Avalia individualmente as 5 bandas
+    for b in range(5):
+
+        band = img_5b[:, :, b].astype(np.float32)
+
+        # Limiar de Otsu
+        threshold = threshold_otsu(band)
+
+        mask_low = band <= threshold
+        mask_high = band > threshold
+
+        # Evita casos degenerados
+        if mask_low.sum() == 0 or mask_high.sum() == 0:
+            continue
+
+        # Probabilidade de cada classe
+        w0 = mask_low.mean()
+        w1 = mask_high.mean()
+
+        # Média de cada classe
+        mu0 = band[mask_low].mean()
+        mu1 = band[mask_high].mean()
+
+        # Variância entre classes
+        # Quanto maior, melhor a separação causada pelo Otsu
+        score = w0 * w1 * (mu0 - mu1) ** 2
+
+        if score > best_score:
+
+            best_score = score
+            best_band = b
+            best_mask = mask_high
+
+    if best_band is None:
+        raise RuntimeError("Não foi possível selecionar uma banda válida.")
+
+    # ------------------------------------------------
+    # Como suas imagens tendem a ser preenchidas
+    # principalmente pela planta, mantemos inicialmente
+    # a maior das duas regiões.
+    # ------------------------------------------------
+
+    if best_mask.sum() < best_mask.size / 2:
+        best_mask = ~best_mask
+
+    # Aplicação da máscara às CINCO bandas
+    img_5b_seg = img_5b.copy()
+    img_5b_seg[best_mask] = 0
+
+    mask = best_mask.astype(np.uint8)
+
+    return img_5b_seg, mask
+
+#======================================================================
+
+
+def segment_best_band_otsu_green(img_5b):
+    """
+    Segmentação por:
+    1. seleção automática da melhor banda para Otsu;
+    2. uso de Excess Green para decidir qual lado da máscara é vegetação;
+    3. aplicação da máscara final às 5 bandas.
+
+    Mapeamento esperado:
+        banda 1 = Blue
+        banda 2 = Green
+        banda 3 = Red
+        banda 4 = NIR
+        banda 5 = Red Edge
+
+    Parâmetros
+    ----------
+    img_5b : np.ndarray
+        Imagem multiespectral com shape (H, W, 5).
+
+    Retorna
+    -------
+    img_5b_seg : np.ndarray
+        Imagem segmentada com shape (H, W, 5).
+
+    mask : np.ndarray
+        Máscara binária com shape (H, W).
+        1 = planta
+        0 = fundo.
+
+    best_band : int
+        Banda selecionada pelo critério de separabilidade.
+        Retornada no padrão 1..5.
+    """
+
+    if img_5b.ndim != 3 or img_5b.shape[2] != 5:
+        raise ValueError(
+            f"Esperado shape (H, W, 5), recebido {img_5b.shape}"
+        )
+
+    img_float = img_5b.astype(np.float32)
+
+    best_score = -np.inf
+    best_mask = None
+    best_band = None
+
+    # -------------------------------------------------
+    # 1. Avalia Otsu em cada uma das 5 bandas
+    # -------------------------------------------------
+    for b in range(5):
+
+        band = img_float[:, :, b]
+
+        threshold = threshold_otsu(band)
+
+        mask_high = band > threshold
+        mask_low = ~mask_high
+
+        if mask_high.sum() == 0 or mask_low.sum() == 0:
+            continue
+
+        # Proporção de pixels em cada classe
+        w_high = mask_high.mean()
+        w_low = mask_low.mean()
+
+        # Média radiométrica de cada classe
+        mu_high = band[mask_high].mean()
+        mu_low = band[mask_low].mean()
+
+        # Variância entre classes
+        score = (
+            w_high *
+            w_low *
+            (mu_high - mu_low) ** 2
+        )
+
+        if score > best_score:
+            best_score = score
+            best_mask = mask_high
+            best_band = b
+
+    if best_mask is None:
+        raise RuntimeError(
+            "Não foi possível selecionar uma banda válida."
+        )
+
+    # -------------------------------------------------
+    # 2. Excess Green
+    #
+    # Bandas:
+    # B1 = Blue  -> índice 0
+    # B2 = Green -> índice 1
+    # B3 = Red   -> índice 2
+    # -------------------------------------------------
+    B = img_float[:, :, 0]
+    G = img_float[:, :, 1]
+    R = img_float[:, :, 2]
+
+    exg = 2 * G - R - B
+
+    # -------------------------------------------------
+    # 3. Mede o verdor dos dois lados do Otsu
+    # -------------------------------------------------
+    green_high = np.mean(exg[best_mask])
+    green_low = np.mean(exg[~best_mask])
+
+    # O lado com maior ExG é considerado planta
+    if green_low > green_high:
+        best_mask = ~best_mask
+
+    # -------------------------------------------------
+    # 4. Aplica a máscara às cinco bandas
+    # -------------------------------------------------
+    img_5b_seg = img_5b.copy()
+
+    img_5b_seg[~best_mask] = 0
+
+    mask = best_mask.astype(np.uint8)
+
+    # converte índice 0..4 para banda 1..5
+    best_band = best_band + 1
+
+    return img_5b_seg, mask, best_band
+
+#======================================================================
+#======================================================================
+#======================================================================
+
+import os
+import tifffile
+
+
+
+def save_segmented_bands(img_5b_seg, base_dir, file_name):
+    """
+    Salva as 5 bandas segmentadas como TIFF uint16.
+    """
+
+    if img_5b_seg.ndim != 3 or img_5b_seg.shape[2] != 5:
+        raise ValueError(
+            f"Esperado shape (H, W, 5), recebido {img_5b_seg.shape}"
+        )
+
+    os.makedirs(base_dir, exist_ok=True)
+
+    file_name = os.path.splitext(file_name)[0]
+
+    for band_idx in range(5):
+
+        band = img_5b_seg[:, :, band_idx]
+
+        # Converte de volta para uint16
+        band = np.clip(band, 0, 65535).astype(np.uint16)
+
+        output_path = os.path.join(
+            base_dir,
+            f"{file_name}_{band_idx + 1}.tif"
+        )
+
+        tifffile.imwrite(
+            output_path,
+            band,
+            photometric="minisblack",
+            metadata=None
+        )
+
 #======================================================================
 #======================================================================
 #======================================================================

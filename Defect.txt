@@ -1,0 +1,66 @@
+'01_malva_branca_Agua_Boa_01',
+ '02_Vassourinha_botao_Agua_Boa_02',
+ '03_brizantha_Agua_Boa_03',
+ '04_cipo_fogo_Agua_Boa_04',
+ '05_Salsa_Agua_Boa_05',
+
+ '07_capim_capeta_Agua_Boa_07',
+ '08_malicia_Agua_Boa_08',
+ '09_pe_galinha_Agua_Boa_09',
+ '10_carrapico_Agua_Boa_10',
+ '11_apaga_fogo_Agua_Boa_11',
+ '12_Andropogon_Agua_Boa_12',
+ '13_Traquipoon_Agua_Boa_13',
+ '14_Jaragua_Agua_Boa_14',
+ '15_Quicuio_Agua_Boa_15',
+ '16_Massai_Agua_Boa_16',
+ '17_Ruziziensis_Agua_Boa_17',
+ '20_Guanxuma_Paludo_02',
+ '21_Mata_Pasto_Paludo_03',
+ '23_Braquiarinha_Paludo_04',
+ '24_Mombaça_Paludo_05',
+ '26_Calapogonio_Paludo_07',
+ '27_Mavuno_Paludo_08',
+ '28_Corda_de_viola_Paludo_09',
+ '29_Paiaguas_Paludo_10',
+ '30_Inaja_Serra_da_Prata_01',
+ '31_Cipo_Serra_da_Prata_02',
+ '32_Jurubebinha_Serra_da_Prata_03',
+ '33_Capim_gengibre_Serra_da_Prata_04',
+ '35_Chumbinho_Serra_da_Prata_05',
+ '36_Unha_de_gato_Serra_da_Prata_06'
+
+#======================================================================
+
+06_capim_navalha_Agua_Boa_06
+IMG_0135    -> 09_pe_galinha_Agua_Boa_09
+IMG_0136    -> 09_pe_galinha_Agua_Boa_09
+
+#======================================================================
+13_Traquipoon_Agua_Boa_13
+
+segmentação ruim
+
+#======================================================================
+14_Jaragua_Agua_Boa_14
+
+segmentação ruim
+
+#======================================================================
+26_Calapogonio_Paludo_07
+
+IMG_0099 ruim
+
+#======================================================================
+28_Corda_de_viola_Paludo_09
+
+poucas amostras 7
+
+#======================================================================
+#======================================================================
+#======================================================================
+
+
+
+
+

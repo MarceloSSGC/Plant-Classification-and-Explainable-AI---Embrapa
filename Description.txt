@@ -14,6 +14,15 @@ de espécies, e não há chão ou outro elementos (na maioria das fotos, mas há
 outra que há mistura ou solo), a imagem é completamente "cheia" para planta daninha 
 (na esmagadora maioria). 
 
+band_mapping = {
+    1: "Blue",
+    2: "Green",
+    3: "Red",
+    4: "NIR",
+    5: "Red Edge",
+}
+
+
 Esse é o contexto. Não precisa responder.
 
 ------------------------------------------------

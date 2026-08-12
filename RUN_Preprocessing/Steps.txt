@@ -1,0 +1,22 @@
+Imagens brutas (5 bandas)
+        │
+        ▼
+1. Alinhamento das bandas
+        │
+        ▼
+2. Segmentação
+        │
+        ▼
+3. Split por instância
+   ┌────┼─────────┐
+   ▼    ▼         ▼
+ Train  Validation Test
+   │
+   ▼
+4. Data Augmentation
+   │
+   ▼
+5. Normalização / padronização
+   │
+   ▼
+CNN / ViT / outro modelo

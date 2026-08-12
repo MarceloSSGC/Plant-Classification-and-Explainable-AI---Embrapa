@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 from PIL import Image
 
 os.chdir("/home/marcelo/Documents/VSCode_python/Agro/SIMIDS/Planta_Daninha_Boa_Vista/Segmentation")
-from auxiliar import *
+from Segmentation.auxiliar_segmentation import *
 
 print(os.listdir())
 

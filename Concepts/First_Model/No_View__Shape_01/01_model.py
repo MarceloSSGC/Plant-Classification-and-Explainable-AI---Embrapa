@@ -59,7 +59,6 @@ sleep(3)
 
 random.seed(SEED)
 np.random.seed(SEED)
-random.seed(SEED)
 
 #======================================================================
 # Dataset & Directories

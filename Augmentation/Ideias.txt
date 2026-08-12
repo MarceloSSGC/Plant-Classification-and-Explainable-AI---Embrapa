@@ -1,0 +1,159 @@
+===========================================================
+
+M_0=sem augmentation
+M_G=augmentation geométrico
+M_S=augmentation espectral
+
+"Como diferentes estratégias de augmentation alteram as evidências morfológicas e espectrais utilizadas pela rede para discriminar espécies?"
+
+===========================================================
+
+1. Separar os dados
+
+- Dividir primeiro em treino, validação e teste.
+- Fazer a divisão de forma estratificada por espécie.
+- Não aplicar augmentation em validação nem em teste.
+- Todo augmentation deve ser feito apenas no conjunto de treino.
+
+
+2. Corrigir o desbalanceamento
+
+- Não aplicar a mesma quantidade de augmentation para todas as espécies.
+- Usar augmentation estratificado: espécies com poucas imagens devem aparecer mais vezes no treinamento.
+- Espécies com muitas imagens precisam de pouco ou nenhum oversampling.
+- Não tentar necessariamente levar todas as classes até o número da maior classe (~120).
+- Usar como alvo algo intermediário, por exemplo aproximadamente 40-50 amostras/apresentações por classe em cada época.
+
+
+3. Augmentation geométrico principal
+
+Aplicar aleatoriamente:
+
+- Rotação: 0-360 graus ou rotações aleatórias amplas.
+- Flip horizontal.
+- Flip vertical.
+- Pequenas translações.
+- Pequeno zoom in/zoom out.
+- Crop moderado, somente se não remover partes importantes da planta.
+
+IMPORTANTE:
+
+- A mesma transformação geométrica deve ser aplicada exatamente da mesma forma às 5 bandas.
+- Nunca rotacionar, deslocar ou cortar uma banda de maneira diferente das demais.
+
+
+4. Intensidade do augmentation por classe
+
+- Classes muito pequenas (< 15 imagens): augmentation mais frequente.
+- Classes pequenas (15-30): augmentation moderado.
+- Classes médias (30-50): augmentation leve.
+- Classes grandes (> 50): pouco ou nenhum oversampling, mantendo apenas augmentation normal como regularização.
+
+
+5. Augmentation espectral
+
+Fazer em um experimento separado do augmentation geométrico inicial.
+
+Testar pequenas perturbações nos valores das bandas, por exemplo:
+
+- Pequena variação global de intensidade.
+- Pequenas perturbações individuais em determinadas bandas.
+- Pequena adição de ruído compatível com o sensor.
+
+Evitar alterações espectrais fortes, pois podem gerar assinaturas espectrais biologicamente irreais.
+
+
+6. Band dropout
+
+Testar separadamente:
+
+- Ocasionalmente mascarar uma das 5 bandas durante o treinamento.
+- Não usar inicialmente junto com todos os outros augmentations.
+- Tratar como experimento de robustez/ablação espectral.
+
+
+7. Blur e ruído
+
+Podem ser testados depois:
+
+- Blur muito leve.
+- Ruído gaussiano leve.
+- Usar somente valores que possam representar variações reais do processo de aquisição.
+
+
+8. Experimentos sugeridos para o artigo
+
+Experimento 1:
+Sem augmentation (baseline).
+
+Experimento 2:
+Augmentation geométrico, sem balanceamento.
+
+Experimento 3:
+Augmentation geométrico + balanceamento estratificado.
+
+Experimento 4:
+Geométrico + balanceamento + augmentation espectral leve.
+
+Experimento 5:
+Geométrico + balanceamento + band dropout.
+
+
+9. Estratégia principal recomendada
+
+Para o modelo principal, começar com:
+
+- Sampling/augmentation estratificado por classe.
+- Rotação.
+- Flip horizontal.
+- Flip vertical.
+- Pequenas translações.
+- Pequeno zoom.
+- Todas as transformações sincronizadas entre as 5 bandas.
+
+Depois estudar augmentation espectral e band dropout separadamente, principalmente para analisar seus efeitos com XAI.
+
+
+
+
+
+#==============================================================================================
+#==============================================================================================
+
+
+
+
+
+
+| Nº de imagens originais | Augmentation sugerido | Fator final aprox. | Exemplo     |
+| ----------------------: | --------------------: | -----------------: | ----------- |
+|                **< 15** |  +3 a +4 por original |               4–5× | 7 → 28–35   |
+|               **15–24** |  +2 a +3 por original |               3–4× | 20 → 60–80  |
+|               **25–39** |  +1 a +2 por original |               2–3× | 30 → 60–90  |
+|               **40–59** |       +1 por original |                 2× | 45 → 90     |
+|               **60–89** |  +0 a +1 por original |               1–2× | 63 → 63–126 |
+|                **≥ 90** |                nenhum |                 1× | 112 → 112   |
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
