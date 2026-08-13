@@ -1,0 +1,162 @@
+projeto/
+│
+├── config/
+│   └── experiment.yaml
+│
+├── src/
+│   ├── preprocessing.py
+│   ├── training.py
+│   ├── evaluation.py
+│   └── utils.py
+│
+├── run_pipeline.py
+│
+├── data/
+├── outputs/
+└── requirements.txt
+
+===============================================================
+===============================================================
+
+# src/preprocessing.py
+
+def run_preprocessing(config):
+
+    seed = config["experiment"]["seed"]
+
+    dataset_path = config["data"]["input_path"]
+    output_path = config["data"]["output_path"]
+
+    transformations = config["preprocessing"]["transformations"]
+
+    train_ratio = config["split"]["train"]
+    val_ratio = config["split"]["validation"]
+    test_ratio = config["split"]["test"]
+
+    print("Iniciando preprocessamento...")
+
+    # carregar dataset
+    # aplicar transformações
+    # dividir dataset
+    # normalizar
+    # salvar
+
+    print("Preprocessamento finalizado.")
+
+----------------------------------------------------------
+
+# src/training.py
+
+def run_training(config):
+
+    model_name = config["model"]["architecture"]
+
+    epochs = config["training"]["epochs"]
+    batch_size = config["training"]["batch_size"]
+    learning_rate = config["training"]["learning_rate"]
+
+    print(f"Treinando modelo {model_name}...")
+
+    # carregar dados preprocessados
+    # criar modelo
+    # treinar
+    # predizer
+    # calcular métricas
+    # salvar resultados
+
+    print("Treinamento finalizado.")
+
+----------------------------------------------------------
+
+# run_pipeline.py
+
+import yaml
+
+from src.preprocessing import run_preprocessing
+from src.training import run_training
+
+
+def load_config(path):
+    with open(path, "r") as f:
+        return yaml.safe_load(f)
+
+
+def main():
+
+    config = load_config("config/experiment.yaml")
+
+    print("=== PIPELINE INICIADO ===")
+
+    run_preprocessing(config)
+
+    run_training(config)
+
+    print("=== PIPELINE FINALIZADO ===")
+
+
+if __name__ == "__main__":
+    main()
+
+----------------------------------------------------------
+
+python run_pipeline.py
+
+
+===============================================================
+===============================================================
+
+# run_pipeline.py
+
+import argparse
+import yaml
+
+from src.preprocessing import run_preprocessing
+from src.training import run_training
+
+
+def load_config(path):
+    with open(path, "r") as f:
+        return yaml.safe_load(f)
+
+
+def parse_args():
+
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument(
+        "--config",
+        type=str,
+        required=True,
+        help="Path to experiment configuration file"
+    )
+
+    return parser.parse_args()
+
+
+def main():
+
+    args = parse_args()
+
+    config = load_config(args.config)
+
+    print(f"Configuração: {args.config}")
+
+    run_preprocessing(config)
+    run_training(config)
+
+
+if __name__ == "__main__":
+    main()
+
+----------------------------------------------------------
+
+python run_pipeline.py --config config/experiment_resnet18.yaml
+
+
+
+
+
+
+
+
+
