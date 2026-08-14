@@ -46,12 +46,12 @@ DO_AUGMENTANTION: True
 # Model
 
 SEED_MODEL: 20
-DATASET_INPUT: align_bands_ecc_affine_with_retry--best_band_otsu_green__SEED_20_AUG
+DATASET_INPUT: align_bands_ecc_affine_with_retry--best_band_otsu_green__SEED_20
 
-EXPERIMENT_NAME: YAML_seg_&_aug__SEED_20_EPOCHS_5_AUG
+EXPERIMENT_NAME: YAML_seg_&_aug__SEED_20_EPOCHS_30
 
 BATCH_SIZE: 8
-EPOCHS: 5
+EPOCHS: 30
 
 #--------------------------------------------------------
 #--------------------------------------------------------

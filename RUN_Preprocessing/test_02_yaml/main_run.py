@@ -9,11 +9,12 @@ from time import sleep, time
 from sklearn.metrics import classification_report
 
 # Auxiliar
-from .aux_model import *
+try:
+    from .aux_model import *
+except ImportError:
+    from aux_model import *
 
 os.environ["CUBLAS_WORKSPACE_CONFIG"] = ":4096:8"
-
-print(f"\n main run\n ")
 
 
 #======================================================================
@@ -63,7 +64,10 @@ def run_training(config):
     # Dataset & Directories
 
     DATASET_INPUT = config["DATASET_INPUT"]
-    DATA_DIR = f"/media/marcelo/HD_8t/Marcelo__Seagate_8tb/Embrapa/Embrapa_Experimentos/Datasets/run_preprocessing/{DATASET_INPUT}"
+    if PC == "NITRO":
+        DATA_DIR = f"/media/marcelo/HD_8t/Marcelo__Seagate_8tb/Embrapa/Embrapa_Experimentos/Datasets/run_preprocessing/{DATASET_INPUT}"
+    else:
+        DATA_DIR = f"/run/media/marcelo/HD_8t/Marcelo__Seagate_8tb/Embrapa/Embrapa_Experimentos/Datasets/run_preprocessing/{DATASET_INPUT}"
 
     if not os.path.isdir(DATA_DIR):
         raise ValueError("DATA_DIR doesnt exist")
@@ -73,7 +77,12 @@ def run_training(config):
 
     EXPERIMENT_NAME = config["EXPERIMENT_NAME"]
     experiment_type = "segmentation_augmentation"
-    DIR_EXP = f"/media/marcelo/HD_8t/Marcelo__Seagate_8tb/Embrapa/Embrapa_Experimentos/Results/{experiment_type}/{EXPERIMENT_NAME}"
+
+    if PC == "NITRO":
+       DIR_EXP = f"/media/marcelo/HD_8t/Marcelo__Seagate_8tb/Embrapa/Embrapa_Experimentos/Results/{experiment_type}/{EXPERIMENT_NAME}"
+    else:
+       DIR_EXP = f"/run/media/marcelo/HD_8t/Marcelo__Seagate_8tb/Embrapa/Embrapa_Experimentos/Results/{experiment_type}/{EXPERIMENT_NAME}"
+
 
     if not os.path.isdir(DIR_EXP):
         os.makedirs(DIR_EXP)
@@ -129,9 +138,9 @@ def run_training(config):
     val_dataset = MultispectralWeedDataset(VAL_DIR)
     test_dataset = MultispectralWeedDataset(TEST_DIR)
 
-    print("\nTrain:", len(train_dataset))
-    print("Val:", len(val_dataset))
-    print("Test:", len(test_dataset), "\n")
+    print(f"\nTrain: \033[96;92m{len(train_dataset)}\033[0m")
+    print(f"Val: \033[96;92m{len(val_dataset)}\033[0m")
+    print(f"Test: \033[96;92m{len(test_dataset)}\033[0m \n")
 
     infos["RUN"]["n_samples"] = {
         "Train": len(train_dataset),
@@ -139,8 +148,9 @@ def run_training(config):
         "Test": len(test_dataset),
         }
 
-
     batch_size = config["BATCH_SIZE"]
+
+    print(f"batch_size: \033[96;92m{batch_size} \n\033[0m")
 
     train_loader = DataLoader(
         train_dataset,
@@ -194,7 +204,7 @@ def run_training(config):
     epochs = config["EPOCHS"]
 
     best_model_dir = os.path.join(DIR_EXP, "best_model.pt")
-    loss_dir = os.path.join(DIR_EXP, "df_liss.csv")
+    loss_dir = os.path.join(DIR_EXP, "df_loss.csv")
 
     if "model_trained" not in infos["RUN"].keys() or not infos["RUN"]["model_trained"]:
 
@@ -395,114 +405,116 @@ def run_training(config):
             file.write(cl_report_test)
 
 
+    #======================================================================
+    #======================================================================
+    #======================================================================
+    # SHAP
 
+    APPLY_SHAP = config["APPLY_SHAP"]
 
-# #======================================================================
-# #======================================================================
-# #======================================================================
+    if APPLY_SHAP:
+        import shap
 
-# import shap
+        # ======================================================================
+        # 1. Preparar dados de background e de explicação
+        # ======================================================================
 
-# # ======================================================================
-# # 1. Preparar dados de background e de explicação
-# # ======================================================================
+        model.eval()
+        model.to(device)
 
-# model.eval()
-# model.to(device)
+        # Loaders auxiliares só para o SHAP (num_workers=0 evita crash de subprocessos)
+        shap_train_loader = DataLoader(
+            train_dataset,
+            batch_size=4,
+            shuffle=True,
+            num_workers=0,
+        )
 
-# # Loaders auxiliares só para o SHAP (num_workers=0 evita crash de subprocessos)
-# shap_train_loader = DataLoader(
-#     train_dataset,
-#     batch_size=4,
-#     shuffle=True,
-#     num_workers=0,
-# )
+        shap_test_loader = DataLoader(
+            test_dataset,
+            batch_size=4,
+            shuffle=False,
+            num_workers=0,
+        )
 
-# shap_test_loader = DataLoader(
-#     test_dataset,
-#     batch_size=4,
-#     shuffle=False,
-#     num_workers=0,
-# )
+        # Background: pequena amostra de imagens de treino (SHAP usa como "referência" de baseline)
+        background_imgs = []
+        for imgs, y_is, c_is, n_is in shap_train_loader:
+            background_imgs.append(imgs)
+            if len(background_imgs) * imgs.size(0) >= 4:   # 32 -> 4
+                break
+        background_imgs = torch.cat(background_imgs)[:4].to(device)  # 32 -> 4
 
-# # Background: pequena amostra de imagens de treino (SHAP usa como "referência" de baseline)
-# background_imgs = []
-# for imgs, y_is, c_is, n_is in shap_train_loader:
-#     background_imgs.append(imgs)
-#     if len(background_imgs) * imgs.size(0) >= 4:   # 32 -> 4
-#         break
-# background_imgs = torch.cat(background_imgs)[:4].to(device)  # 32 -> 4
+        # Amostras que você quer explicar (ex. um batch do conjunto de teste)
+        explain_imgs, explain_y_is, explain_c_is, explain_n_is = next(iter(shap_test_loader))
+        explain_imgs = explain_imgs.to(device)
 
-# # Amostras que você quer explicar (ex. um batch do conjunto de teste)
-# explain_imgs, explain_y_is, explain_c_is, explain_n_is = next(iter(shap_test_loader))
-# explain_imgs = explain_imgs.to(device)
+        # ======================================================================
+        # 2. Criar o explainer
+        # ======================================================================
 
-# # ======================================================================
-# # 2. Criar o explainer
-# # ======================================================================
+        import gc
 
-# import gc
+        torch.cuda.empty_cache()
+        gc.collect()
 
-# torch.cuda.empty_cache()
-# gc.collect()
+        explainer = shap.GradientExplainer(model, background_imgs)
 
-# explainer = shap.GradientExplainer(model, background_imgs)
+        # shap_values: lista com um array por classe (num_classes outputs -> lista de num_classes arrays)
+        # cada array tem shape (N, 5, H, W) -> mesma shape da imagem de entrada
+        shap_values = explainer.shap_values(explain_imgs)
 
-# # shap_values: lista com um array por classe (num_classes outputs -> lista de num_classes arrays)
-# # cada array tem shape (N, 5, H, W) -> mesma shape da imagem de entrada
-# shap_values = explainer.shap_values(explain_imgs)
+        # # ======================================================================
+        # # 3a. Agregar em importância por banda (TODAS as classes, como antes)
+        # #     -> útil só como visão geral, mas mistura explicações de classes irrelevantes
+        # # ======================================================================
 
-# # ======================================================================
-# # 3a. Agregar em importância por banda (TODAS as classes, como antes)
-# #     -> útil só como visão geral, mas mistura explicações de classes irrelevantes
-# # ======================================================================
+        # shap_stack = np.stack(shap_values, axis=0)          # (num_classes, N, C, H, W)
+        # shap_abs = np.abs(shap_stack)
+        # band_importance_all_classes = shap_abs.mean(axis=(0, 1, 3, 4))  # (5,)
 
-# shap_stack = np.stack(shap_values, axis=0)          # (num_classes, N, C, H, W)
-# shap_abs = np.abs(shap_stack)
-# band_importance_all_classes = shap_abs.mean(axis=(0, 1, 3, 4))  # (5,)
+        # # ======================================================================
+        # # 3b. Agregar em importância por banda SOMENTE da classe predita (mais correto p/ multiclasse)
+        # # ======================================================================
 
-# # ======================================================================
-# # 3b. Agregar em importância por banda SOMENTE da classe predita (mais correto p/ multiclasse)
-# # ======================================================================
+        # with torch.no_grad():
+        #     logits = model(explain_imgs)
+        #     preds = torch.argmax(logits, dim=1).cpu().numpy()  # classe predita por amostra
 
-# with torch.no_grad():
-#     logits = model(explain_imgs)
-#     preds = torch.argmax(logits, dim=1).cpu().numpy()  # classe predita por amostra
+        # # Para cada amostra i, pega o shap_values da classe predita[i]
+        # # shap_values[k] tem shape (N, C, H, W) -> um array por classe k
+        # N = explain_imgs.shape[0]
+        # shap_per_sample = np.stack(
+        #     [shap_values[preds[i]][i] for i in range(N)],  # (C, H, W) por amostra
+        #     axis=0
+        # )  # (N, C, H, W)
 
-# # Para cada amostra i, pega o shap_values da classe predita[i]
-# # shap_values[k] tem shape (N, C, H, W) -> um array por classe k
-# N = explain_imgs.shape[0]
-# shap_per_sample = np.stack(
-#     [shap_values[preds[i]][i] for i in range(N)],  # (C, H, W) por amostra
-#     axis=0
-# )  # (N, C, H, W)
+        # shap_abs_pred = np.abs(shap_per_sample)
+        # band_importance_pred_class = shap_abs_pred.mean(axis=(0, 2, 3))  # (5,)
 
-# shap_abs_pred = np.abs(shap_per_sample)
-# band_importance_pred_class = shap_abs_pred.mean(axis=(0, 2, 3))  # (5,)
+        # # ======================================================================
+        # # 4. Resultado
+        # # ======================================================================
 
-# # ======================================================================
-# # 4. Resultado
-# # ======================================================================
+        # band_names = ["Band_1", "Band_2", "Band_3", "Band_4", "Band_5"]  # ajuste para seus nomes reais
 
-# band_names = ["Band_1", "Band_2", "Band_3", "Band_4", "Band_5"]  # ajuste para seus nomes reais
+        # print("=== Importância por banda (todas as classes, agregadas) ===")
+        # for name, val in zip(band_names, band_importance_all_classes):
+        #     print(f"{name}: {val:.6f}")
 
-# print("=== Importância por banda (todas as classes, agregadas) ===")
-# for name, val in zip(band_names, band_importance_all_classes):
-#     print(f"{name}: {val:.6f}")
+        # pct_all = 100 * band_importance_all_classes / band_importance_all_classes.sum()
+        # for name, val in zip(band_names, pct_all):
+        #     print(f"{name}: {val:.2f}%")
 
-# pct_all = 100 * band_importance_all_classes / band_importance_all_classes.sum()
-# for name, val in zip(band_names, pct_all):
-#     print(f"{name}: {val:.2f}%")
+        # print("\n=== Importância por banda (apenas classe predita por amostra) ===")
+        # for name, val in zip(band_names, band_importance_pred_class):
+        #     print(f"{name}: {val:.6f}")
 
-# print("\n=== Importância por banda (apenas classe predita por amostra) ===")
-# for name, val in zip(band_names, band_importance_pred_class):
-#     print(f"{name}: {val:.6f}")
+        # pct_pred = 100 * band_importance_pred_class / band_importance_pred_class.sum()
+        # for name, val in zip(band_names, pct_pred):
+        #     print(f"{name}: {val:.2f}%")
 
-# pct_pred = 100 * band_importance_pred_class / band_importance_pred_class.sum()
-# for name, val in zip(band_names, pct_pred):
-#     print(f"{name}: {val:.2f}%")
-
-# #======================================================================
+        # #======================================================================
 
 
 

@@ -15,9 +15,12 @@ def load_config(path):
         return yaml.safe_load(f)
 
 # #======================================================================
+# #======================================================================
 # # YAML File
 
-yaml_name = "test_02_all_script.yaml"
+# RUN 1
+
+yaml_name = "test_03_epoch_30.yaml"
 
 print(f"\n work_dir: {os.getcwd()} \n")
 sleep(2)
@@ -25,7 +28,7 @@ sleep(2)
 # yaml_abs_dir = f"/home/marcelo/Documents/VSCode_python/Agro/SIMIDS/Planta_Daninha_Boa_Vista/config/{yaml_name}"
 yaml_dir = f"config/{yaml_name}"
 
-#======================================================================
+#-----------------------------------------------------------------------
 # Import config
 
 yaml_file = load_config(yaml_dir)
@@ -34,8 +37,42 @@ for x in yaml_file:
     print(f"{x}: \033[96;96m{yaml_file[x]}\033[0m")
 
 sleep(4)
+#-----------------------------------------------------------------------
+# ALL PIPELINE
+
+print("=== PIPELINE INICIADO ===")
+
+run_preprocessing(yaml_file)
+
+run_training(yaml_file)
+
+print("\n\033[100;40m\t === PIPELINE FINALIZADO === \t\033[0m")
+
 #======================================================================
 #======================================================================
+#======================================================================
+
+
+# RUN 2
+
+yaml_name = "test_04_epoch_30_aug.yaml"
+
+print(f"\n work_dir: {os.getcwd()} \n")
+sleep(2)
+
+# yaml_abs_dir = f"/home/marcelo/Documents/VSCode_python/Agro/SIMIDS/Planta_Daninha_Boa_Vista/config/{yaml_name}"
+yaml_dir = f"config/{yaml_name}"
+
+#-----------------------------------------------------------------------
+# Import config
+
+yaml_file = load_config(yaml_dir)
+
+for x in yaml_file:
+    print(f"{x}: \033[96;96m{yaml_file[x]}\033[0m")
+
+sleep(4)
+#-----------------------------------------------------------------------
 # ALL PIPELINE
 
 print("=== PIPELINE INICIADO ===")

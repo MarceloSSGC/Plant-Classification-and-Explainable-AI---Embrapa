@@ -29,11 +29,20 @@ def run_preprocessing(config):
     # Base Data
 
     BASE_DATA_DIR = config["BASE_DATA_DIR"]
+
+    if PC == "NITRO":
+        BASE_DATA_DIR = f"/run/{BASE_DATA_DIR}"
+
     #======================================================================
     # Align Dataset
 
     ALIGN_DATASET_NAME = config["ALIGN_DATASET_NAME"]
-    ALIGH_DATA_DIR = f"/media/marcelo/HD_8t/Marcelo__Seagate_8tb/Embrapa/Embrapa_Experimentos/Datasets/Aligned/{ALIGN_DATASET_NAME}"
+
+    if PC == "NITRO":
+        ALIGH_DATA_DIR = f"/media/marcelo/HD_8t/Marcelo__Seagate_8tb/Embrapa/Embrapa_Experimentos/Datasets/Aligned/{ALIGN_DATASET_NAME}"
+    else:
+        ALIGH_DATA_DIR = f"/run/media/marcelo/HD_8t/Marcelo__Seagate_8tb/Embrapa/Embrapa_Experimentos/Datasets/Aligned/{ALIGN_DATASET_NAME}"
+
 
     #======================================================================
     # Alignment Method
@@ -79,7 +88,10 @@ def run_preprocessing(config):
     # Segmentation Dataset
 
     SEG_DATASET_NAME = config["SEG_DATASET_NAME"]
-    SEG_DATA_DIR = f"/media/marcelo/HD_8t/Marcelo__Seagate_8tb/Embrapa/Embrapa_Experimentos/Datasets/Segmentation/{SEG_DATASET_NAME}"
+    if PC == "NITRO":
+        SEG_DATA_DIR = f"/media/marcelo/HD_8t/Marcelo__Seagate_8tb/Embrapa/Embrapa_Experimentos/Datasets/Segmentation/{SEG_DATASET_NAME}"
+    else:
+        SEG_DATA_DIR = f"/run/media/marcelo/HD_8t/Marcelo__Seagate_8tb/Embrapa/Embrapa_Experimentos/Datasets/Segmentation/{SEG_DATASET_NAME}"
 
     #======================================================================
     # Segmentation Method
@@ -147,7 +159,11 @@ def run_preprocessing(config):
 
     EXPERIMENT_NAME = f"{ALIGN_METHOD}--{SEGMENTATION_METHOD}__SEED_{SEED}"
     experiment_type = "run_preprocessing"
-    DIR_EXP = f"/media/marcelo/HD_8t/Marcelo__Seagate_8tb/Embrapa/Embrapa_Experimentos/Datasets/{experiment_type}/{EXPERIMENT_NAME}"
+
+    if PC == "NITRO":
+        DIR_EXP = f"/media/marcelo/HD_8t/Marcelo__Seagate_8tb/Embrapa/Embrapa_Experimentos/Datasets/{experiment_type}/{EXPERIMENT_NAME}"
+    else:
+        DIR_EXP = f"/run/media/marcelo/HD_8t/Marcelo__Seagate_8tb/Embrapa/Embrapa_Experimentos/Datasets/{experiment_type}/{EXPERIMENT_NAME}"
 
     if not os.path.isdir(DIR_EXP):
         os.makedirs(DIR_EXP)
@@ -430,17 +446,26 @@ def run_preprocessing(config):
     DO_AUGMENTANTION = config["DO_AUGMENTANTION"]
 
     if DO_AUGMENTANTION:
-            
-        from .aux_augm import augmentation_compilation, plot_rgb
 
-        print(f"\n\033[100;01m\t     --- Start Data Augmentation ---     \t\033[0m\n")
+        # Auxiliar
+        try:
+            from .aux_augm import augmentation_compilation, plot_rgb
+
+        except ImportError:
+            from aux_augm import augmentation_compilation, plot_rgb
+
+
+        print(f"\n\033[100;40m\t     --- Start Data Augmentation ---     \t\033[0m\n")
 
         #======================================================================
         # Directories
 
         AUG_EXPERIMENT_NAME = EXPERIMENT_NAME + "_AUG"
 
-        AUG_DIR_EXP = f"/media/marcelo/HD_8t/Marcelo__Seagate_8tb/Embrapa/Embrapa_Experimentos/Datasets/{experiment_type}/{AUG_EXPERIMENT_NAME}"
+        if PC == "NITRO":
+            AUG_DIR_EXP = f"/media/marcelo/HD_8t/Marcelo__Seagate_8tb/Embrapa/Embrapa_Experimentos/Datasets/{experiment_type}/{AUG_EXPERIMENT_NAME}"
+        else:
+            AUG_DIR_EXP = f"/run/media/marcelo/HD_8t/Marcelo__Seagate_8tb/Embrapa/Embrapa_Experimentos/Datasets/{experiment_type}/{AUG_EXPERIMENT_NAME}"
 
         os.makedirs(AUG_DIR_EXP, exist_ok=True)
 
