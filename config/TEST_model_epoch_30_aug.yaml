@@ -1,5 +1,5 @@
 
-PC: NITRO
+PC: HELIOS
 INTERACTIVE: False
 
 #--------------------------------------------------------
@@ -45,13 +45,22 @@ DO_AUGMENTANTION: True
 #--------------------------------------------------------
 # Model
 
-SEED_MODEL: 20
 DATASET_INPUT: align_bands_ecc_affine_with_retry--best_band_otsu_green__SEED_20
-
 EXPERIMENT_NAME: MODEL_SEED_20_EPOCHS_30_AUG
 
-BATCH_SIZE: 8
-EPOCHS: 1
+MODEL:
+  MODEL_NAME: MobileNetV3Small
+  SEED_MODEL: 20
+
+  PRETRAINED: True
+  BATCH_SIZE: 8
+  EPOCHS: 1
+  DROPOUT: 0.2
+
+  NUM_CLASSES_INPUT: 5
+  NUM_WORKERS: 4
+  PIN_MEMORY: True
+  PERSISTENT_WORKERS: True
 
 #--------------------------------------------------------
 #--------------------------------------------------------

@@ -29,7 +29,8 @@ def load_config(path):
         return yaml.safe_load(f)
     
 yaml_test_name = "TEST_model_epoch_30_aug.yaml"
-path = f"/home/marcelo/Documents/VSCode_python/Agro/SIMIDS/Planta_Daninha_Boa_Vista/config/{yaml_test_name}"
+# path = f"/run/home/marcelo/Documents/VSCode_python/Agro/SIMIDS/Planta_Daninha_Boa_Vista/config/{yaml_test_name}"
+path = f"/home/marcelo/Documents/python_projects/USP/Planta_Daninha_Embrapa/Plant-Classification-and-Explainable-AI---Embrapa/config/{yaml_test_name}"
 config = load_config(path)
 
 for x in config:
@@ -50,7 +51,7 @@ def run_training(config):
 
     PC = config["PC"]
     INTERACTIVE = config["INTERACTIVE"]
-    SEED_MODEL = config["SEED_MODEL"]
+    SEED_MODEL = config["MODEL"]["SEED_MODEL"]
 
     print(f"\t  Interactive: \033[96;95m{INTERACTIVE} \033[0m\n")
     print(f"\t  SEED_MODEL: \033[96;95m{SEED_MODEL} \033[0m\n")
@@ -150,9 +151,10 @@ def run_training(config):
     #======================================================================
     # 2. DataLoaders
 
-    train_dataset = MultispectralWeedDataset(TRAIN_DIR)
     # train_dataset.__dict__.keys()
     # 'root_dir', 'transform', 'classes', 'class_to_idx', 'samples'
+
+    train_dataset = MultispectralWeedDataset(TRAIN_DIR)
     val_dataset = MultispectralWeedDataset(VAL_DIR)
     test_dataset = MultispectralWeedDataset(TEST_DIR)
 
@@ -166,35 +168,51 @@ def run_training(config):
         "Test": len(test_dataset),
         }
 
-    batch_size = config["BATCH_SIZE"]
+    batch_size = config["MODEL"]["BATCH_SIZE"]
 
     print(f"batch_size: \033[96;92m{batch_size} \n\033[0m")
+
+    # num_workers=4
+    # pin_memory=True
+    # persistent_workers=True
+
+    # Sugestão
+    # num_workers=4
+    # persistent_workers=True
+
+    # num_workers = 1
+    # pin_memory = False
+    # persistent_workers = False
+
+    num_workers = config["MODEL"]["NUM_WORKERS"]
+    pin_memory = config["MODEL"]["PIN_MEMORY"]
+    persistent_workers = config["MODEL"]["PERSISTENT_WORKERS"]
 
     train_loader = DataLoader(
         train_dataset,
         batch_size=batch_size,
         shuffle=True,
-        num_workers=4,
-        pin_memory=True,
-        persistent_workers=True
+        num_workers=num_workers,
+        pin_memory=pin_memory,
+        persistent_workers=persistent_workers
     )
 
     val_loader = DataLoader(
         val_dataset,
         batch_size=batch_size,
         shuffle=False,
-        num_workers=4,
-        pin_memory=True,
-        persistent_workers=True
+        num_workers=num_workers,
+        pin_memory=pin_memory,
+        persistent_workers=persistent_workers
     )
 
     test_loader = DataLoader(
         test_dataset,
         batch_size=batch_size,
         shuffle=False,
-        num_workers=4,
-        pin_memory=True,
-        persistent_workers=True
+        num_workers=num_workers,
+        pin_memory=pin_memory,
+        persistent_workers=persistent_workers
     )
 
     #======================================================================
@@ -219,7 +237,7 @@ def run_training(config):
     # Treinamento
 
     num_classes = len(train_dataset.classes)  # deve ser 31
-    epochs = config["EPOCHS"]
+    epochs = config["MODEL"]["EPOCHS"]
 
     best_model_dir = os.path.join(DIR_EXP, "best_model.pt")
     loss_dir = os.path.join(DIR_EXP, "df_loss.csv")
@@ -231,18 +249,25 @@ def run_training(config):
         #-----------------------------------------------------------------
         # Instanciação do modelo
 
-        # model = MulticlassSmallCNN(
-        #     in_channels=5,
-        #     num_classes=num_classes,
-        #     base_channels=32,
-        # )
+        MODEL_NAME = config["MODEL"]["MODEL_NAME"]
+        NUM_CLASSES_INPUT = config["MODEL"]["NUM_CLASSES_INPUT"]
+        PRETRAINED = config["MODEL"]["PRETRAINED"]
+        DROPOUT = config["MODEL"]["DROPOUT"]
+        
+        model_class = model_class_function(MODEL_NAME)
 
-        model = MulticlassConvNeXtTiny(
-            in_channels=5,
-            num_classes=num_classes,
-            pretrained=False,   # ou True para carregar pesos ImageNet adaptados
-            dropout=0.2,
-        )
+        if MODEL_NAME == "SmallCNN":
+            model = model_class(
+                in_channels=NUM_CLASSES_INPUT,
+                num_classes=num_classes,
+            )
+        else:
+            model = model_class(
+                in_channels=NUM_CLASSES_INPUT,
+                num_classes=num_classes,
+                pretrained=PRETRAINED,   # ou True para carregar pesos ImageNet adaptados
+                dropout=DROPOUT,
+            )
 
         # ---- treino ----
  
@@ -254,7 +279,7 @@ def run_training(config):
         lr=1e-3,
         weight_decay=1e-4,
         device="cuda",
-        checkpoint_path="best_mobilenetv3_small.pt",
+        checkpoint_path="best_model.pt",
         patience=30,      # opcional, early stopping
         verbose=True,
           )
