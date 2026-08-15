@@ -1,0 +1,20 @@
+Métodos simples
+Translação — corrige deslocamentos em X e Y.
+Rotação + translação — adiciona correção angular.
+Phase Correlation — estima automaticamente a translação, inclusive subpixel.
+Correlação cruzada — busca o deslocamento que maximiza a similaridade.
+Busca exaustiva — testa combinações de dx, dy e, se desejado, pequenos ângulos.
+
+Métodos médios
+- ECC — otimiza automaticamente o registro; pode estimar translação, rotação ou transformação afim.
+- Transformação afim — corrige translação + rotação + escala + cisalhamento.
+- Homografia — adiciona correção de perspectiva.
+- Mutual Information — boa para bandas espectralmente diferentes, como Red × NIR.
+- Alinhamento por bordas — registra usando contornos/estruturas da planta em vez das intensidades.
+- Alinhamento por máscaras — segmenta a planta e alinha sua geometria.
+- Keypoints (SIFT/ORB/AKAZE) — encontra pontos correspondentes entre bandas e estima a transformação.
+- Optical Flow — estima deslocamentos locais, permitindo corrigir desalinhamentos que variam ao longo da imagem.
+
+Para seus testes, eu seguiria aproximadamente:
+
+Phase Correlation → ECC/Affine → Mutual Information → Optical Flow.

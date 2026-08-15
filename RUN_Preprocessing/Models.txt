@@ -1,0 +1,124 @@
+Pensando especificamente no seu cenário — 31 classes, imagens multiespectrais com 5 bandas (Blue, Green, Red, NIR, Red Edge) e classificação de uma espécie por imagem — eu testaria estes modelos, aproximadamente nesta ordem de complexidade:
+
+1. MobileNetV3-Small / Large
+Muito leve e rápido. É um ótimo próximo passo depois de uma CNN simples e serve como baseline de arquitetura moderna.
+
+2. EfficientNet-B0
+Pequena, eficiente e geralmente muito forte em classificação. Eu colocaria como um dos primeiros experimentos.
+
+3. ResNet-18
+Arquitetura clássica, simples e extremamente útil como baseline. Também é fácil adaptar a primeira convolução de 3 para 5 canais.
+
+4. ResNet-50
+Consideravelmente maior que a ResNet-18. Boa para verificar se aumentar a capacidade realmente melhora seu problema.
+
+5. EfficientNet-B2 / B3
+Um meio-termo interessante entre tamanho e capacidade. Eu testaria especialmente a B3 se houver dados suficientes.
+
+6. ConvNeXt-Tiny
+CNN mais moderna. É particularmente interessante para comparar uma arquitetura convolucional moderna contra ResNet/EfficientNet.
+
+7. DenseNet-121
+Outra arquitetura CNN interessante para comparação, especialmente pela reutilização de features entre camadas.
+
+8. Swin Transformer-Tiny
+Aqui você já entra em uma arquitetura baseada em Transformer hierárquico. É interessante para verificar se mecanismos de atenção conseguem extrair informações que as CNNs não estão capturando.
+
+9. Vision Transformer (ViT-B/16)
+Eu deixaria para depois dos anteriores. É maior, mais dependente da quantidade de dados e normalmente se beneficia bastante de pré-treinamento.
+
+Para seu experimento, eu não testaria todos de uma vez. Uma sequência particularmente boa seria:
+
+CNN atual → MobileNetV3 → ResNet-18 → EfficientNet-B0 → ResNet-50 → ConvNeXt-Tiny → Swin-Tiny → ViT-B/16
+
+Isso cria uma comparação progressiva muito boa entre CNN simples → CNN residual → CNN eficiente → CNN moderna → Transformer.
+
+Um ponto especialmente importante no seu caso é que os modelos normalmente são desenvolvidos para RGB (3 canais), enquanto você possui 5 canais. Portanto, a forma de adaptar e/ou inicializar os pesos das bandas NIR e Red Edge será uma decisão importante, principalmente se você quiser usar transfer learning.
+
+=============================================================================================================
+
+LISTA DE MODELOS PARA TESTAR - CLASSIFICAÇÃO DE PLANTAS DANINHAS (IMAGENS MULTIESPECTRAIS, 5 BANDAS, 31 CLASSES)
+Ordem: do mais simples/pequeno ao mais complexo/robusto.
+Contexto: baseline atual com CNN simples = 85% de acurácia.
+
+1. CNNs SIMPLES / RASAS (ajuste do que já foi feito)
+----------------------------------------------------
+- CNN customizada mais profunda (mais blocos conv, batch norm, dropout) - evolução natural do baseline atual.
+- LeNet-style / VGG pequena (VGG11) - bom para comparar contra a CNN atual com pouco aumento de complexidade.
+
+2. CNNs INTERMEDIÁRIAS (clássicas, adaptáveis a 5 canais)
+-----------------------------------------------------------
+- ResNet18 / ResNet34 - fáceis de adaptar (troca só a primeira camada conv para aceitar 5 bandas), ótimo custo-benefício.
+- DenseNet121 - bom para datasets menores, reaproveita features entre camadas.
+- MobileNetV3 - leve e rápida, interessante se pensar em embarcar depois (drone, campo).
+
+3. CNNs MAIORES / MAIS EFICIENTES
+----------------------------------
+- EfficientNet (B0-B3) - geralmente forte relação acurácia/custo, boa escolha "meio-termo".
+- ResNet50 / ResNeXt50 - mais capacidade, ainda viável sem dataset gigante.
+- ConvNeXt (Tiny/Small) - CNN moderna com design inspirado em transformers, costuma superar ResNet clássica.
+
+4. MODELOS MAIORES E MAIS COMPLEXOS
+--------------------------------------
+- Vision Transformer (ViT-Base/Small) - exige mais dados/augmentation ou pré-treino, mas capta relações espaciais globais.
+- Swin Transformer - combina hierarquia tipo CNN com atenção, geralmente mais robusto que ViT puro em datasets médios.
+- Redes híbridas CNN+Transformer (ex: CoAtNet) - topo de linha em capacidade, exigem mais cuidado com overfitting dado 31 classes.
+
+5. ABORDAGENS ESPECÍFICAS PARA MULTIESPECTRAL (vale considerar à parte)
+---------------------------------------------------------------------------
+- Arquiteturas multi-branch / fusão tardia (um branch RGB + um branch NIR/Red Edge, depois concatena) - explora a estrutura espectral em vez de tratar as 5 bandas como "canais genéricos".
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

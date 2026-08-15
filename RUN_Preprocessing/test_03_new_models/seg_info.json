@@ -1,0 +1,9 @@
+{"ALIGN_METHOD": "align_bands_ecc_affine_with_retry", 
+"DATA_DIR": "/media/marcelo/HD_8t/Marcelo__Seagate_8tb/Embrapa/Embrapa_Experimentos/Datasets/PlantaDaninha_BoaVista", 
+"ALIGN_DATASET_NAME": "Aligned_ecc_affine_interch_45_cen_5", 
+"ALIGH_DATA_DIR": "/media/marcelo/HD_8t/Marcelo__Seagate_8tb/Embrapa/Embrapa_Experimentos/Datasets/Aligned/Aligned_ecc_affine_interch_45_cen_5", 
+"SEGMENTATION_METHOD": "best_band_otsu_green", 
+"SEG_DATASET_NAME": "ecc_affine_interch_45_cen_5__seg_best_band_otsu", 
+"SEG_DATA_DIR": "/media/marcelo/HD_8t/Marcelo__Seagate_8tb/Embrapa/Embrapa_Experimentos/Datasets/Segmentation/ecc_affine_interch_45_cen_5__seg_best_band_otsu",
+
+}
