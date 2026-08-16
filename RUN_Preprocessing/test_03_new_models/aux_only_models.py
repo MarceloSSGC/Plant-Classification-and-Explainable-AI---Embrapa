@@ -23,39 +23,50 @@ from time import sleep
 from copy import deepcopy
 
 
-# #======================================================================
-# # Modelo - Multiclass (single-label)
-
-def conv_block(in_channels, out_channels, kernel_size=3, padding=1):
-    return nn.Sequential(
-        nn.Conv2d(in_channels, out_channels, kernel_size=kernel_size, padding=padding),
-        nn.BatchNorm2d(out_channels),
-        nn.ReLU(inplace=True),
-        nn.MaxPool2d(kernel_size=2, stride=2),
-    )
-
-
 #======================================================================
-
+#======================================================================
+# SmallCNN
 
 class MulticlassSmallCNN(nn.Module):
-    def __init__(self, in_channels=5, num_classes=31, base_channels=32):
+    def __init__(self, in_channels=5, num_classes=31, base_channels=32, dropout=0.2):
         super().__init__()
 
+        # ---- guarda os argumentos de construção para permitir carregamento genérico ----
+        self.config = {
+            "in_channels": in_channels,
+            "num_classes": num_classes,
+            "base_channels": base_channels,
+            "dropout": dropout,
+        }
+
         self.features = nn.Sequential(
-            conv_block(in_channels, base_channels),            # 5   -> 32
-            conv_block(base_channels, base_channels * 2),       # 32  -> 64
-            conv_block(base_channels * 2, base_channels * 4),   # 64  -> 128
-            conv_block(base_channels * 4, base_channels * 8),   # 128 -> 256
+            self._conv_block(in_channels, base_channels),            # 5   -> 32
+            self._conv_block(base_channels, base_channels * 2),       # 32  -> 64
+            self._conv_block(base_channels * 2, base_channels * 4),   # 64  -> 128
+            self._conv_block(base_channels * 4, base_channels * 8),   # 128 -> 256
         )
 
         self.gap = nn.AdaptiveAvgPool2d(1)
+        self.dropout = nn.Dropout(p=dropout) if dropout is not None else nn.Identity()
         self.classifier = nn.Linear(base_channels * 8, num_classes)
+
+    # ------------------------------------------------------------------
+    # Bloco convolucional (agora interno à classe)
+
+    @staticmethod
+    def _conv_block(in_channels, out_channels, kernel_size=3, padding=1):
+        return nn.Sequential(
+            nn.Conv2d(in_channels, out_channels, kernel_size=kernel_size, padding=padding),
+            nn.BatchNorm2d(out_channels),
+            nn.ReLU(inplace=True),
+            nn.MaxPool2d(kernel_size=2, stride=2),
+        )
 
     def forward(self, x):
         x = self.features(x)
         x = self.gap(x)
         x = torch.flatten(x, 1)
+        x = self.dropout(x)
         logits = self.classifier(x)  # sem softmax -> CrossEntropyLoss
         return logits
 
@@ -91,7 +102,7 @@ class MulticlassSmallCNN(nn.Module):
             history[f"train_{m}"] = []
             history[f"val_{m}"] = []
 
-        best_val_f1_macro = -1.0
+        best_val_loss = float("inf")
         best_state = None
         epochs_no_improve = 0
 
@@ -123,14 +134,24 @@ class MulticlassSmallCNN(nn.Module):
                     f"train_f1_macro={train_metrics['f1_macro']:.4f} | val_f1_macro={val_metrics['f1_macro']:.4f}"
                 )
 
-            # ---- checkpoint do melhor modelo (critério: F1 macro na validação) ----
-            if val_metrics["f1_macro"] > best_val_f1_macro:
-                best_val_f1_macro = val_metrics["f1_macro"]
+            # ---- checkpoint do melhor modelo (critério: loss na validação) ----
+            if val_metrics["loss"] < best_val_loss:
+                best_val_loss = val_metrics["loss"]
                 best_state = deepcopy(self.state_dict())
-                torch.save(best_state, checkpoint_path)
+
+                # ---- salva estado + config, para permitir carregamento genérico ----
+                torch.save(
+                    {
+                        "model_class": self.__class__.__name__,
+                        "config": self.config,
+                        "state_dict": best_state,
+                    },
+                    checkpoint_path,
+                )
+
                 epochs_no_improve = 0
                 if verbose:
-                    print(f"  -> novo melhor modelo salvo em '{checkpoint_path}' (val_f1_macro={best_val_f1_macro:.4f})")
+                    print(f"  -> novo melhor modelo salvo em '{checkpoint_path}' (val_loss={best_val_loss:.4f})")
             else:
                 epochs_no_improve += 1
 
@@ -218,6 +239,65 @@ class MulticlassSmallCNN(nn.Module):
             "filenames": all_names,
         }
 
+    # ------------------------------------------------------------------
+    # Carregamento genérico (o checkpoint carrega sua própria config)
+
+    @classmethod
+    def load(cls, checkpoint_path, device="cuda"):
+        checkpoint = torch.load(checkpoint_path, map_location=device)
+        model = cls(**checkpoint["config"])
+        model.load_state_dict(checkpoint["state_dict"])
+        model.to(device)
+        model.eval()
+        return model
+
+#-----------------------------------------------------------------------
+
+# # 1) Instanciar o modelo
+
+# model = MulticlassSmallCNN(
+#     in_channels=5,
+#     num_classes=num_classes,
+#     base_channels=32,
+#     dropout=0.2,
+# )
+    
+# #-----------------------------
+# # 2) Treinar o modelo
+
+# history = model.fit(
+#     train_loader=train_loader,
+#     val_loader=val_loader,
+#     epochs=30,
+#     lr=1e-3,
+#     weight_decay=1e-4,
+#     device="cuda",
+#     checkpoint_path="best_smallcnn.pt",
+#     patience=10,       # opcional, early stopping
+#     verbose=True,
+# )
+
+# #-----------------------------
+# # 3) Fazer predições
+
+# results = model.predict(test_loader, device="cuda")
+
+# # exemplos de uso do dicionário retornado:
+# preds = results["preds"]          # classe predita por amostra
+# true = results["true"]            # classe verdadeira por amostra
+# probs = results["probs"]          # probabilidades (softmax) por classe
+# species = results["species"]      # nome da espécie (string)
+# filenames = results["filenames"]  # nome do arquivo original
+
+# #-----------------------------
+# # 4) Carregar o modelo (de forma genérica, sem precisar saber os hiperparâmetros)
+
+# model = MulticlassSmallCNN.load("best_smallcnn.pt", device="cuda")
+
+# # já vem pronto para inferência (model.eval() já é chamado dentro de load())
+# results = model.predict(test_loader, device="cuda")
+
+
 
 #======================================================================
 #======================================================================
@@ -227,8 +307,18 @@ from torchvision.models import mobilenet_v3_small
 
 
 class MulticlassMobileNetV3Small(nn.Module):
+    MODEL_NAME = "MobileNetV3Small"
+
     def __init__(self, in_channels=5, num_classes=31, pretrained=False, dropout=0.2):
         super().__init__()
+
+        # ---- guarda os argumentos de construção para permitir carregamento genérico ----
+        self.config = {
+            "in_channels": in_channels,
+            "num_classes": num_classes,
+            "pretrained": pretrained,
+            "dropout": dropout,
+        }
 
         weights = "IMAGENET1K_V1" if pretrained else None
         backbone = mobilenet_v3_small(weights=weights)
@@ -334,7 +424,17 @@ class MulticlassMobileNetV3Small(nn.Module):
             if val_metrics["acc"] > best_val_acc:
                 best_val_acc = val_metrics["acc"]
                 best_state = deepcopy(self.state_dict())
-                torch.save(best_state, checkpoint_path)
+
+                # ---- salva estado + config, para permitir carregamento genérico ----
+                torch.save(
+                    {
+                        "model_class": self.MODEL_NAME,
+                        "config": self.config,
+                        "state_dict": best_state,
+                    },
+                    checkpoint_path,
+                )
+
                 epochs_no_improve = 0
                 if verbose:
                     print(f"  -> novo melhor modelo salvo em '{checkpoint_path}' (val_acc={best_val_acc:.4f})")
@@ -425,6 +525,18 @@ class MulticlassMobileNetV3Small(nn.Module):
             "filenames": all_names,
         }
 
+    # ------------------------------------------------------------------
+    # Carregamento genérico (o checkpoint carrega sua própria config)
+
+    @classmethod
+    def load(cls, checkpoint_path, device="cuda"):
+        checkpoint = torch.load(checkpoint_path, map_location=device)
+        model = cls(**checkpoint["config"])
+        model.load_state_dict(checkpoint["state_dict"])
+        model.to(device)
+        model.eval()
+        return model
+
 #---------------------------------------------------------------------
 # model = MulticlassMobileNetV3Small(
 #     in_channels=5,
@@ -453,8 +565,18 @@ from torchvision.models import resnet18
 
 
 class MulticlassResNet18(nn.Module):
+    MODEL_NAME = "ResNet18"
+
     def __init__(self, in_channels=5, num_classes=31, pretrained=False, dropout=0.2):
         super().__init__()
+
+        # ---- guarda os argumentos de construção para permitir carregamento genérico ----
+        self.config = {
+            "in_channels": in_channels,
+            "num_classes": num_classes,
+            "pretrained": pretrained,
+            "dropout": dropout,
+        }
 
         weights = "IMAGENET1K_V1" if pretrained else None
         backbone = resnet18(weights=weights)
@@ -562,7 +684,17 @@ class MulticlassResNet18(nn.Module):
             if val_metrics["acc"] > best_val_acc:
                 best_val_acc = val_metrics["acc"]
                 best_state = deepcopy(self.state_dict())
-                torch.save(best_state, checkpoint_path)
+
+                # ---- salva estado + config, para permitir carregamento genérico ----
+                torch.save(
+                    {
+                        "model_class": self.MODEL_NAME,
+                        "config": self.config,
+                        "state_dict": best_state,
+                    },
+                    checkpoint_path,
+                )
+
                 epochs_no_improve = 0
                 if verbose:
                     print(f"  -> novo melhor modelo salvo em '{checkpoint_path}' (val_acc={best_val_acc:.4f})")
@@ -650,6 +782,18 @@ class MulticlassResNet18(nn.Module):
             "species": all_species,
             "filenames": all_names,
         }
+
+    # ------------------------------------------------------------------
+    # Carregamento genérico (o checkpoint carrega sua própria config)
+
+    @classmethod
+    def load(cls, checkpoint_path, device="cuda"):
+        checkpoint = torch.load(checkpoint_path, map_location=device)
+        model = cls(**checkpoint["config"])
+        model.load_state_dict(checkpoint["state_dict"])
+        model.to(device)
+        model.eval()
+        return model
 
 #---------------------------------------------------------------------
 # model = MulticlassResNet18(
@@ -884,9 +1028,6 @@ class MulticlassConvNeXtTiny(nn.Module):
 
 def model_class_function(MODEL_NAME: str):
 
-    if MODEL_NAME not in ["SmallCNN", "MobileNetV3Small", "ResNet18"]:
-        raise ValueError("MODEL_NAME not in list ")
-
     if MODEL_NAME == "SmallCNN":
         return MulticlassSmallCNN
     elif MODEL_NAME == "MobileNetV3Small":
@@ -899,5 +1040,17 @@ def model_class_function(MODEL_NAME: str):
     
 #======================================================================
 #======================================================================
+
+def load_model_generic(checkpoint_path, device="cuda"):
+    checkpoint = torch.load(checkpoint_path, map_location=device)
+
+    model_class = model_class_function(checkpoint["model_class"])
+    model = model_class(**checkpoint["config"])
+    model.load_state_dict(checkpoint["state_dict"])
+
+    model.to(device)
+    model.eval()
+    return model
+
 #======================================================================
 #======================================================================

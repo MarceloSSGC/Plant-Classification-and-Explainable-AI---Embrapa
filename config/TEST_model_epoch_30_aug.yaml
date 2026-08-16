@@ -1,5 +1,5 @@
 
-PC: HELIOS
+PC: NITRO
 INTERACTIVE: False
 
 #--------------------------------------------------------
@@ -49,7 +49,7 @@ DATASET_INPUT: align_bands_ecc_affine_with_retry--best_band_otsu_green__SEED_20
 EXPERIMENT_NAME: MODEL_SEED_20_EPOCHS_30_AUG
 
 MODEL:
-  MODEL_NAME: MobileNetV3Small
+  MODEL_NAME: ResNet18
   SEED_MODEL: 20
 
   PRETRAINED: True

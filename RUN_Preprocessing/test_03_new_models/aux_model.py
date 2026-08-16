@@ -313,198 +313,199 @@ class MultispectralWeedDataset(Dataset):
         return img, y_i, c_i, n_i
 
 # #======================================================================
-# # Modelo - Multiclass (single-label)
+# #======================================================================
+# # # Modelo - Multiclass (single-label)
 
-def conv_block(in_channels, out_channels, kernel_size=3, padding=1):
-    return nn.Sequential(
-        nn.Conv2d(in_channels, out_channels, kernel_size=kernel_size, padding=padding),
-        nn.BatchNorm2d(out_channels),
-        nn.ReLU(inplace=True),
-        nn.MaxPool2d(kernel_size=2, stride=2),
-    )
-
-
-#======================================================================
+# def conv_block(in_channels, out_channels, kernel_size=3, padding=1):
+#     return nn.Sequential(
+#         nn.Conv2d(in_channels, out_channels, kernel_size=kernel_size, padding=padding),
+#         nn.BatchNorm2d(out_channels),
+#         nn.ReLU(inplace=True),
+#         nn.MaxPool2d(kernel_size=2, stride=2),
+#     )
 
 
-class MulticlassSmallCNN(nn.Module):
-    def __init__(self, in_channels=5, num_classes=31, base_channels=32):
-        super().__init__()
+# #======================================================================
 
-        self.features = nn.Sequential(
-            conv_block(in_channels, base_channels),            # 5   -> 32
-            conv_block(base_channels, base_channels * 2),       # 32  -> 64
-            conv_block(base_channels * 2, base_channels * 4),   # 64  -> 128
-            conv_block(base_channels * 4, base_channels * 8),   # 128 -> 256
-        )
 
-        self.gap = nn.AdaptiveAvgPool2d(1)
-        self.classifier = nn.Linear(base_channels * 8, num_classes)
+# class MulticlassSmallCNN(nn.Module):
+#     def __init__(self, in_channels=5, num_classes=31, base_channels=32):
+#         super().__init__()
 
-    def forward(self, x):
-        x = self.features(x)
-        x = self.gap(x)
-        x = torch.flatten(x, 1)
-        logits = self.classifier(x)  # sem softmax -> CrossEntropyLoss
-        return logits
+#         self.features = nn.Sequential(
+#             conv_block(in_channels, base_channels),            # 5   -> 32
+#             conv_block(base_channels, base_channels * 2),       # 32  -> 64
+#             conv_block(base_channels * 2, base_channels * 4),   # 64  -> 128
+#             conv_block(base_channels * 4, base_channels * 8),   # 128 -> 256
+#         )
 
-    # ------------------------------------------------------------------
-    # Treino
+#         self.gap = nn.AdaptiveAvgPool2d(1)
+#         self.classifier = nn.Linear(base_channels * 8, num_classes)
 
-    def fit(
-        self,
-        train_loader,
-        val_loader,
-        epochs=30,
-        lr=1e-3,
-        weight_decay=1e-4,
-        device="cuda",
-        checkpoint_path="best_model.pt",
-        patience=None,
-        verbose=True,
-    ):
-        self.to(device)
-        optimizer = optim.Adam(self.parameters(), lr=lr, weight_decay=weight_decay)
-        criterion = nn.CrossEntropyLoss()
+#     def forward(self, x):
+#         x = self.features(x)
+#         x = self.gap(x)
+#         x = torch.flatten(x, 1)
+#         logits = self.classifier(x)  # sem softmax -> CrossEntropyLoss
+#         return logits
 
-        print(f'\n\t Trainning...   epochs: \033[96;96m{epochs}\033[0m \n')
+#     # ------------------------------------------------------------------
+#     # Treino
 
-        metric_names = [
-            "loss", "acc", "balanced_acc",
-            "f1_macro", "f1_micro",
-            "precision_macro", "recall_macro",
-            "kappa",
-        ]
-        history = {}
-        for m in metric_names:
-            history[f"train_{m}"] = []
-            history[f"val_{m}"] = []
+#     def fit(
+#         self,
+#         train_loader,
+#         val_loader,
+#         epochs=30,
+#         lr=1e-3,
+#         weight_decay=1e-4,
+#         device="cuda",
+#         checkpoint_path="best_model.pt",
+#         patience=None,
+#         verbose=True,
+#     ):
+#         self.to(device)
+#         optimizer = optim.Adam(self.parameters(), lr=lr, weight_decay=weight_decay)
+#         criterion = nn.CrossEntropyLoss()
 
-        best_val_f1_macro = -1.0
-        best_state = None
-        epochs_no_improve = 0
+#         print(f'\n\t Trainning...   epochs: \033[96;96m{epochs}\033[0m \n')
 
-        for epoch in range(1, epochs + 1):
-            # ---- passo de otimização (treino) ----
-            self.train()
-            for imgs, y_is, c_is, n_is in train_loader:
-                imgs, y_is = imgs.to(device), y_is.to(device)
+#         metric_names = [
+#             "loss", "acc", "balanced_acc",
+#             "f1_macro", "f1_micro",
+#             "precision_macro", "recall_macro",
+#             "kappa",
+#         ]
+#         history = {}
+#         for m in metric_names:
+#             history[f"train_{m}"] = []
+#             history[f"val_{m}"] = []
 
-                optimizer.zero_grad()
-                logits = self(imgs)
-                loss = criterion(logits, y_is)
-                loss.backward()
-                optimizer.step()
+#         best_val_f1_macro = -1.0
+#         best_state = None
+#         epochs_no_improve = 0
 
-            # ---- avaliação em treino e validação (mesma métrica, mesmo critério) ----
-            train_metrics = self._evaluate(train_loader, criterion, device)
-            val_metrics = self._evaluate(val_loader, criterion, device)
+#         for epoch in range(1, epochs + 1):
+#             # ---- passo de otimização (treino) ----
+#             self.train()
+#             for imgs, y_is, c_is, n_is in train_loader:
+#                 imgs, y_is = imgs.to(device), y_is.to(device)
 
-            for m in metric_names:
-                history[f"train_{m}"].append(train_metrics[m])
-                history[f"val_{m}"].append(val_metrics[m])
+#                 optimizer.zero_grad()
+#                 logits = self(imgs)
+#                 loss = criterion(logits, y_is)
+#                 loss.backward()
+#                 optimizer.step()
 
-            if verbose:
-                print(
-                    f"\n[Epoch {epoch:03d}/{epochs}] "
-                    f"train_loss={train_metrics['loss']:.4f} | val_loss={val_metrics['loss']:.4f} | "
-                    f"train_acc={train_metrics['acc']:.4f} | val_acc={val_metrics['acc']:.4f} | "
-                    f"train_f1_macro={train_metrics['f1_macro']:.4f} | val_f1_macro={val_metrics['f1_macro']:.4f}"
-                )
+#             # ---- avaliação em treino e validação (mesma métrica, mesmo critério) ----
+#             train_metrics = self._evaluate(train_loader, criterion, device)
+#             val_metrics = self._evaluate(val_loader, criterion, device)
 
-            # ---- checkpoint do melhor modelo (critério: F1 macro na validação) ----
-            if val_metrics["f1_macro"] > best_val_f1_macro:
-                best_val_f1_macro = val_metrics["f1_macro"]
-                best_state = deepcopy(self.state_dict())
-                torch.save(best_state, checkpoint_path)
-                epochs_no_improve = 0
-                if verbose:
-                    print(f"  -> novo melhor modelo salvo em '{checkpoint_path}' (val_f1_macro={best_val_f1_macro:.4f})")
-            else:
-                epochs_no_improve += 1
+#             for m in metric_names:
+#                 history[f"train_{m}"].append(train_metrics[m])
+#                 history[f"val_{m}"].append(val_metrics[m])
 
-            # ---- early stopping opcional ----
-            if patience is not None and epochs_no_improve >= patience:
-                if verbose:
-                    print(f"  -> early stopping na época {epoch} (sem melhora por {patience} épocas)")
-                break
+#             if verbose:
+#                 print(
+#                     f"\n[Epoch {epoch:03d}/{epochs}] "
+#                     f"train_loss={train_metrics['loss']:.4f} | val_loss={val_metrics['loss']:.4f} | "
+#                     f"train_acc={train_metrics['acc']:.4f} | val_acc={val_metrics['acc']:.4f} | "
+#                     f"train_f1_macro={train_metrics['f1_macro']:.4f} | val_f1_macro={val_metrics['f1_macro']:.4f}"
+#                 )
 
-        # recarrega os melhores pesos encontrados durante o treino
-        if best_state is not None:
-            self.load_state_dict(best_state)
+#             # ---- checkpoint do melhor modelo (critério: F1 macro na validação) ----
+#             if val_metrics["f1_macro"] > best_val_f1_macro:
+#                 best_val_f1_macro = val_metrics["f1_macro"]
+#                 best_state = deepcopy(self.state_dict())
+#                 torch.save(best_state, checkpoint_path)
+#                 epochs_no_improve = 0
+#                 if verbose:
+#                     print(f"  -> novo melhor modelo salvo em '{checkpoint_path}' (val_f1_macro={best_val_f1_macro:.4f})")
+#             else:
+#                 epochs_no_improve += 1
 
-        return history
+#             # ---- early stopping opcional ----
+#             if patience is not None and epochs_no_improve >= patience:
+#                 if verbose:
+#                     print(f"  -> early stopping na época {epoch} (sem melhora por {patience} épocas)")
+#                 break
 
-    # ------------------------------------------------------------------
-    # Avaliação interna (usada no fit, tanto para train quanto para val)
+#         # recarrega os melhores pesos encontrados durante o treino
+#         if best_state is not None:
+#             self.load_state_dict(best_state)
 
-    @torch.no_grad()
-    def _evaluate(self, loader, criterion, device):
-        self.eval()
-        running_loss = 0.0
-        n_samples = 0
-        all_preds, all_true = [], []
+#         return history
 
-        for imgs, y_is, c_is, n_is in loader:
-            imgs, y_is = imgs.to(device), y_is.to(device)
+#     # ------------------------------------------------------------------
+#     # Avaliação interna (usada no fit, tanto para train quanto para val)
 
-            logits = self(imgs)
-            loss = criterion(logits, y_is)
-            running_loss += loss.item() * imgs.size(0)
-            n_samples += imgs.size(0)
+#     @torch.no_grad()
+#     def _evaluate(self, loader, criterion, device):
+#         self.eval()
+#         running_loss = 0.0
+#         n_samples = 0
+#         all_preds, all_true = [], []
 
-            preds = torch.argmax(logits, dim=1)
+#         for imgs, y_is, c_is, n_is in loader:
+#             imgs, y_is = imgs.to(device), y_is.to(device)
 
-            all_preds.append(preds.cpu())
-            all_true.append(y_is.cpu())
+#             logits = self(imgs)
+#             loss = criterion(logits, y_is)
+#             running_loss += loss.item() * imgs.size(0)
+#             n_samples += imgs.size(0)
 
-        avg_loss = running_loss / n_samples
+#             preds = torch.argmax(logits, dim=1)
 
-        preds = torch.cat(all_preds).numpy()
-        true = torch.cat(all_true).numpy()
+#             all_preds.append(preds.cpu())
+#             all_true.append(y_is.cpu())
 
-        metrics = {
-            "loss": avg_loss,
-            "acc": float(np.mean(preds == true)),
-            "balanced_acc": balanced_accuracy_score(true, preds),
-            "f1_macro": f1_score(true, preds, average="macro", zero_division=0),
-            "f1_micro": f1_score(true, preds, average="micro", zero_division=0),
-            "precision_macro": precision_score(true, preds, average="macro", zero_division=0),
-            "recall_macro": recall_score(true, preds, average="macro", zero_division=0),
-            "kappa": cohen_kappa_score(true, preds),
-        }
+#         avg_loss = running_loss / n_samples
 
-        return metrics
+#         preds = torch.cat(all_preds).numpy()
+#         true = torch.cat(all_true).numpy()
 
-    # ------------------------------------------------------------------
-    # Predição
+#         metrics = {
+#             "loss": avg_loss,
+#             "acc": float(np.mean(preds == true)),
+#             "balanced_acc": balanced_accuracy_score(true, preds),
+#             "f1_macro": f1_score(true, preds, average="macro", zero_division=0),
+#             "f1_micro": f1_score(true, preds, average="micro", zero_division=0),
+#             "precision_macro": precision_score(true, preds, average="macro", zero_division=0),
+#             "recall_macro": recall_score(true, preds, average="macro", zero_division=0),
+#             "kappa": cohen_kappa_score(true, preds),
+#         }
 
-    @torch.no_grad()
-    def predict(self, loader, device="cuda"):
-        self.to(device)
-        self.eval()
+#         return metrics
 
-        all_probs, all_preds, all_true = [], [], []
-        all_species, all_names = [], []
+#     # ------------------------------------------------------------------
+#     # Predição
 
-        for imgs, y_is, c_is, n_is in loader:
-            imgs = imgs.to(device)
-            logits = self(imgs)
-            probs = torch.softmax(logits, dim=1)
-            preds = torch.argmax(probs, dim=1)
+#     @torch.no_grad()
+#     def predict(self, loader, device="cuda"):
+#         self.to(device)
+#         self.eval()
 
-            all_probs.append(probs.cpu())
-            all_preds.append(preds.cpu())
-            all_true.append(y_is)
-            all_species.extend(c_is)
-            all_names.extend(n_is)
+#         all_probs, all_preds, all_true = [], [], []
+#         all_species, all_names = [], []
 
-        return {
-            "probs": torch.cat(all_probs).numpy(),
-            "preds": torch.cat(all_preds).numpy(),
-            "true": torch.cat(all_true).numpy(),
-            "species": all_species,
-            "filenames": all_names,
-        }
+#         for imgs, y_is, c_is, n_is in loader:
+#             imgs = imgs.to(device)
+#             logits = self(imgs)
+#             probs = torch.softmax(logits, dim=1)
+#             preds = torch.argmax(probs, dim=1)
 
-#======================================================================
+#             all_probs.append(probs.cpu())
+#             all_preds.append(preds.cpu())
+#             all_true.append(y_is)
+#             all_species.extend(c_is)
+#             all_names.extend(n_is)
+
+#         return {
+#             "probs": torch.cat(all_probs).numpy(),
+#             "preds": torch.cat(all_preds).numpy(),
+#             "true": torch.cat(all_true).numpy(),
+#             "species": all_species,
+#             "filenames": all_names,
+#         }
+
+# #======================================================================

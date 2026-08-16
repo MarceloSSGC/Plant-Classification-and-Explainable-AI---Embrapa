@@ -22,19 +22,19 @@ os.environ["CUBLAS_WORKSPACE_CONFIG"] = ":4096:8"
 #======================================================================
 #======================================================================
 
-import yaml
+# import yaml
 
-def load_config(path):
-    with open(path, "r") as f:
-        return yaml.safe_load(f)
+# def load_config(path):
+#     with open(path, "r") as f:
+#         return yaml.safe_load(f)
     
-yaml_test_name = "TEST_model_epoch_30_aug.yaml"
-# path = f"/run/home/marcelo/Documents/VSCode_python/Agro/SIMIDS/Planta_Daninha_Boa_Vista/config/{yaml_test_name}"
-path = f"/home/marcelo/Documents/python_projects/USP/Planta_Daninha_Embrapa/Plant-Classification-and-Explainable-AI---Embrapa/config/{yaml_test_name}"
-config = load_config(path)
+# yaml_test_name = "TEST_model_epoch_30_aug.yaml"
+# # path = f"/run/home/marcelo/Documents/VSCode_python/Agro/SIMIDS/Planta_Daninha_Boa_Vista/config/{yaml_test_name}"
+# path = f"/home/marcelo/Documents/VSCode_python/Agro/SIMIDS/Planta_Daninha_Boa_Vista/config/{yaml_test_name}"
+# config = load_config(path)
 
-for x in config:
-    print(f"{x}: \033[96;96m{config[x]}\033[0m")
+# for x in config:
+#     print(f"{x}: \033[96;96m{config[x]}\033[0m")
 
 #======================================================================
 #======================================================================
@@ -53,6 +53,7 @@ def run_training(config):
     INTERACTIVE = config["INTERACTIVE"]
     SEED_MODEL = config["MODEL"]["SEED_MODEL"]
 
+    print(f"\t  PC: \033[96;95m{PC} \033[0m\n")
     print(f"\t  Interactive: \033[96;95m{INTERACTIVE} \033[0m\n")
     print(f"\t  SEED_MODEL: \033[96;95m{SEED_MODEL} \033[0m\n")
 
@@ -190,6 +191,7 @@ def run_training(config):
 
     train_loader = DataLoader(
         train_dataset,
+        # test_dataset,
         batch_size=batch_size,
         shuffle=True,
         num_workers=num_workers,
@@ -242,14 +244,21 @@ def run_training(config):
     best_model_dir = os.path.join(DIR_EXP, "best_model.pt")
     loss_dir = os.path.join(DIR_EXP, "df_loss.csv")
 
+    MODEL_NAME = config["MODEL"]["MODEL_NAME"]
+
     if "model_trained" not in infos["RUN"].keys() or not infos["RUN"]["model_trained"]:
 
-        print(f"\n\t \033[96;01m  Initialize Training  \033[0m")
-        
+        #-----------------------------------------------------------------
+
+        print("-"*80 + f"\n\t \033[96;01m  Initialize Training  \033[0m\n")
+        for x in config["MODEL"]:
+            print(f"{x}: \033[96;96m{config['MODEL'][x]}\033[0m")
+        print("\n" + "-"*80)
+
+        # SmallCNN  MobileNetV3Small   ResNet18
         #-----------------------------------------------------------------
         # Instanciação do modelo
 
-        MODEL_NAME = config["MODEL"]["MODEL_NAME"]
         NUM_CLASSES_INPUT = config["MODEL"]["NUM_CLASSES_INPUT"]
         PRETRAINED = config["MODEL"]["PRETRAINED"]
         DROPOUT = config["MODEL"]["DROPOUT"]
@@ -260,6 +269,8 @@ def run_training(config):
             model = model_class(
                 in_channels=NUM_CLASSES_INPUT,
                 num_classes=num_classes,
+                base_channels=32,
+                dropout=DROPOUT,
             )
         else:
             model = model_class(
@@ -269,7 +280,7 @@ def run_training(config):
                 dropout=DROPOUT,
             )
 
-        # ---- treino ----
+        # ---- Treino ----
  
         t_0 = time()
         history = model.fit(
@@ -278,12 +289,13 @@ def run_training(config):
         epochs=epochs,
         lr=1e-3,
         weight_decay=1e-4,
-        device="cuda",
-        checkpoint_path="best_model.pt",
-        patience=30,      # opcional, early stopping
+        device=str(device),
+        checkpoint_path=best_model_dir,
+        patience=30,                        # opcional, early stopping
         verbose=True,
-          )
+        )
         t_1 = time()
+        # ---- Fim de Treino ----
 
         elapsed = round(t_1 - t_0)
         hours = elapsed // 3600
@@ -291,6 +303,7 @@ def run_training(config):
         seconds = elapsed % 60
 
         time_train = f"{hours} hour, {minutes} min, {seconds} sec"
+        print(f'\n time_train: {time_train}')
 
         infos["RUN"]["model_trained"] = True
 
@@ -376,24 +389,54 @@ def run_training(config):
 
         # Load Model
 
-        print(f"\n\t --- \033[96;01m  Loading Model --- \033[0m")
+        print("-"*80 + f"\n\t --- \033[96;01m  Loading Model --- \033[0m \n")
+        for x in config["MODEL"]:
+            print(f"{x}: \033[96;96m{config['MODEL'][x]}\033[0m")
+        print("\n" + "-"*80)
 
-        device = "cuda" if torch.cuda.is_available() else "cpu"
+        if MODEL_NAME == "SmallCNN":
+            model = MulticlassSmallCNN.load(best_model_dir, device=str(device))
+        elif MODEL_NAME == "MobileNetV3Small":
+            model = MulticlassMobileNetV3Small.load(best_model_dir, device=str(device))
+        elif MODEL_NAME == "ResNet18":
+            model = MulticlassResNet18.load(best_model_dir, device=str(device))
 
-        # 1. Recriar a arquitetura (mesmos parâmetros do treino original)
-        model = MulticlassSmallCNN(
-            in_channels=5,
-            num_classes=num_classes,   # precisa ser o mesmo valor usado no treino (31)
-            base_channels=32,
-        )
+        print(f"\n\n\t --- \033[96;01m  Loaded --- \033[0m \n")
 
-        # 2. Carregar os pesos salvos
-        state_dict = torch.load(best_model_dir, map_location=device)
-        model.load_state_dict(state_dict)
 
-        # 3. Mover para o device e colocar em modo de avaliação
-        model.to(device)
-        model.eval()
+        # model_class = model_class_function(MODEL_NAME)
+
+        # if MODEL_NAME == "SmallCNN":
+        #     model = MulticlassSmallCNN(
+        #         in_channels=NUM_CLASSES_INPUT,
+        #         num_classes=num_classes,
+        #         base_channels=32,
+        #         dropout=DROPOUT,
+        #     )
+        # else:
+        #     model = model_class(
+        #         in_channels=NUM_CLASSES_INPUT,
+        #         num_classes=num_classes,
+        #         pretrained=PRETRAINED,   # ou True para carregar pesos ImageNet adaptados
+        #         dropout=DROPOUT,
+        #     )
+
+
+
+        # # 1. Recriar a arquitetura (mesmos parâmetros do treino original)
+        # model = MulticlassSmallCNN(
+        #     in_channels=5,
+        #     num_classes=num_classes,   # precisa ser o mesmo valor usado no treino (31)
+        #     base_channels=32,
+        # )
+
+        # # 2. Carregar os pesos salvos
+        # state_dict = torch.load(best_model_dir, map_location=device)
+        # model.load_state_dict(state_dict)
+
+        # # 3. Mover para o device e colocar em modo de avaliação
+        # model.to(device)
+        # model.eval()
 
 
     #======================================================================

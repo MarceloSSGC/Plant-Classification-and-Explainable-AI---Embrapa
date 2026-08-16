@@ -563,7 +563,7 @@ def run_preprocessing(config):
 
             aug_factor = augmentation_factor(n_sample)
 
-            print(f"especie: {especie}   --   aug_factor: {aug_factor}   --   n_sample:{n_sample}")
+            # print(f"especie: {especie}   --   aug_factor: {aug_factor}   --   n_sample:{n_sample}")
 
             for ith_file in files:  # ith_file = files[1]
 
