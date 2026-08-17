@@ -63,7 +63,7 @@ for model_name in model_name_list:          # model_name = "MobileNetV3Small"
 
             #-----------------------------------------------------------------------
 
-            EXPERIMENT_NAME = f"MODEL_{model_name}__PRETRAINED_{pretrained}__EPOCHS_{epochs}"
+            EXPERIMENT_NAME = f"MODEL_{model_name}__PRETRAINED_{pretrained}__EPOCHS_{epochs}_AUG"
 
             yaml_file["EXPERIMENT_NAME"] = EXPERIMENT_NAME
 
@@ -71,7 +71,7 @@ for model_name in model_name_list:          # model_name = "MobileNetV3Small"
             yaml_file["MODEL"]["PRETRAINED"] = pretrained
             yaml_file["MODEL"]["EPOCHS"] = epochs
 
-            print(f"{x}: \033[96;96m{yaml_file['EXPERIMENT_NAME']}\033[0m")
+            print(f"\033[96;96m {yaml_file['EXPERIMENT_NAME']} \033[0m")
             for x in yaml_file['MODEL']:
                 print(f"{x}: \033[96;96m{yaml_file['MODEL'][x]}\033[0m")
 

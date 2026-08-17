@@ -1,5 +1,5 @@
 
-PC: NITRO
+PC: HELIOS
 INTERACTIVE: False
 
 #--------------------------------------------------------
@@ -45,7 +45,7 @@ DO_AUGMENTANTION: True
 #--------------------------------------------------------
 # Model
 
-DATASET_INPUT: align_bands_ecc_affine_with_retry--best_band_otsu_green__SEED_20
+DATASET_INPUT: align_bands_ecc_affine_with_retry--best_band_otsu_green__SEED_20_AUG
 EXPERIMENT_NAME: MODEL_SEED_20_EPOCHS_30_AUG
 
 MODEL:
