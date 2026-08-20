@@ -22,6 +22,20 @@ band_mapping = {
     5: "Red Edge",
 }
 
+Esse é o contexto. Não precisa responder.
+
+------------------------------------------------
+
+Aqui estamos no contexto de classificação de imagens de plantas daninhas com deep 
+learning. Eu tenho um conjunto de 31 pastas onde cada uma contém imagens de uma única 
+espécie de planta daninha. Cada imaem é composta por 5 bandas onde cada banda é um 
+arquivo tif (por exemplo: IMG_0003_1.tif,...,  IMG_0003_5.tif). Para cada imagem, eu juntei
+as 5 bandas formando um array (900, 1100, 5), apliquei algumas tranformações/filtros
+e formei um novo array de dimensão (900, 1100, N), onde N varia dependedo das tranformações
+que eu apliquei.
+
+O meu script python (preprocessamento, modelo preditivo e análise) inicialmente estava tratando com
+5 bandas, agora preciso ajustar meus scripts para um número genérico de bandas.
 
 Esse é o contexto. Não precisa responder.
 

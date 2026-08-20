@@ -1,6 +1,6 @@
 import os
-import json
 import numpy as pd
+import json
 
 # Auxiliar
 try:
@@ -10,6 +10,22 @@ except ImportError:
         from aux_align import align_main_function
         from aux_seg import *
 
+#======================================================================
+#======================================================================
+
+# import yaml
+
+# def load_config(path):
+#     with open(path, "r") as f:
+#         return yaml.safe_load(f)
+    
+# yaml_test_name = "TEST_model_epoch_30_aug.yaml"
+# # path = f"/run/home/marcelo/Documents/VSCode_python/Agro/SIMIDS/Planta_Daninha_Boa_Vista/config/{yaml_test_name}"
+# path = f"/home/marcelo/Documents/VSCode_python/Agro/SIMIDS/Planta_Daninha_Boa_Vista/config/{yaml_test_name}"
+# config = load_config(path)
+
+# for x in config:
+#     print(f"{x}: \033[96;96m{config[x]}\033[0m")
 
 #======================================================================
 #======================================================================

@@ -1,0 +1,23 @@
+
+
+| Rank  | Característica           | Exemplo de rótulos                                     | Facilidade visual |
+| ----- | ------------------------ | ------------------------------------------------------ | ----------------- |
+| **1** | **Rugosidade**           | lisa / intermediária / rugosa                          | ⭐⭐⭐⭐⭐             |
+| **2** | **Granularidade**        | fina / média / grosseira                               | ⭐⭐⭐⭐⭐             |
+| **3** | **Densidade de textura** | baixa / média / alta                                   | ⭐⭐⭐⭐              |
+| **4** | **Homogeneidade**        | homogênea / intermediária / heterogênea                | ⭐⭐⭐⭐              |
+| **5** | **Direcionalidade**      | sem direção / pouco direcional / fortemente direcional | ⭐⭐⭐               |
+
+
+1. Filtro de Frangi (vesselness/ridge filter) — minha maior recomendação
+Originalmente criado para detectar vasos sanguíneos em imagens médicas, mas nervuras de folha são estruturalmente idênticas ao problema (estruturas lineares finas, mais claras/escuras que o entorno, ramificadas). Baseado nos autovalores da matriz Hessiana em múltiplas escalas — responde fortemente a estruturas tipo "linha" e ignora manchas difusas e bordas retas grosseiras (exatamente o ruído de borda que te incomodou). Existe pronto no skimage.filters.frangi.
+
+2. Filtros Sato e Meijering — variantes do mesmo princípio (realce de estruturas tubulares/ridge), também em skimage.filters. Vale testar os três (Frangi, Sato, Meijering) porque cada um pondera os autovalores da Hessiana de forma um pouco diferente — para venação foliar, geralmente um deles fica visivelmente mais "limpo" que os outros.
+
+3. Morfologia matemática — Top-hat / Black-hat — realça estruturas finas e claras (ou escuras) contra um fundo que varia lentamente, isolando exatamente estruturas do tamanho de nervuras sem precisar de estatística de janela. Rápido, determinístico, fácil de explicar em XAI ("realçamos estruturas menores que N pixels").
+
+4. Esqueletização / medial axis (skimage.morphology.skeletonize) — literalmente o "esqueleto" que você mencionou. Mas atenção: precisa de uma imagem binarizada primeiro (nervura vs não-nervura), então normalmente vem depois de um Frangi/top-hat, não no lugar deles — usa-se o filtro de realce para segmentar as nervuras e depois esqueletiza o resultado binário. Ótimo para features geométricas interpretáveis (densidade de ramificação, comprimento total de nervura, ângulos).
+
+5. Structure tensor (tensor de estrutura local) — em cada pixel, calcula a orientação dominante e a "coerência" (quão bem definida é essa direção). Bom complemento porque não só detecta onde tem nervura, mas em que direção ela aponta — pode virar feature interpretável tipo "direcionalidade da venação", que Tamura também tenta capturar mas de forma mais grosseira.
+
+6. Entropia local (skimage.filters.rank.entropy) — mesma família do desvio-padrão local que você já testou, mas mede desordem de distribuição de tons em vez de dispersão numérica; às vezes captura textura fina de forma um pouco diferente, vale como comparação rápida, não é grande aposta.

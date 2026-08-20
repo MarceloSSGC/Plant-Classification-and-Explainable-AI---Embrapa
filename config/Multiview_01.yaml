@@ -1,6 +1,6 @@
 
-PC: HELIOS
-INTERACTIVE: False
+PC: NITRO
+INTERACTIVE: True
 
 #--------------------------------------------------------
 # Base Data
@@ -27,12 +27,65 @@ SEG_DATASET_NAME: ecc_affine_interch_45_cen_5__seg_best_band_otsu
 SEGMENTATION_METHOD: best_band_otsu_green
 
 #--------------------------------------------------------
+# Multiview
+
+# Dataset Multiview
+MULTIVIEW_DATASET_NAME: Test_Multiview_01
+
+VIEWS:
+  SHAPE:
+    0:
+      funct: Canny
+      param: 
+        which_band: NIR
+    1: 
+      funct: Silhouette
+      param: 
+        which_band: NIR
+
+  COLOR:
+    0:
+      funct: HSV
+      param: 
+          which_band: All   # RGB
+
+  TEXTURE:
+    0:
+      funct: Tophat
+      param: 
+        which_band: NIR
+
+    1:
+      funct: Coherence
+      param: 
+        which_band: NIR
+
+  INDEX:
+    0:
+      funct: NDVI
+      param: 
+        which_band: All
+
+    1:
+      funct: NDRE
+      param: 
+        which_band: All
+
+    2:
+      funct: GNDVI
+      param: 
+        which_band: All
+
+#--------------------------------------------------------
 # Split
 
 SEED: 20
 
-# EXPERIMENT_NAME = f"{ALIGN_METHOD}--{SEGMENTATION_METHOD}__SEED_{SEED}"
-# Embrapa_Experimentos/Datasets/run_preprocessing/{EXPERIMENT_NAME}
+SPLIT_DATA_NAME: align_bands_ecc_affine_with_retry--best_band_otsu_green--Multiview__SEED_20
+SPLIT_NAME_TYPE: Multiview_SPLIT
+
+TRAIN_SIZE: 0.75
+VAL_SIZE: 0.15
 
 #--------------------------------------------------------
 # Data Augmentation
@@ -45,19 +98,20 @@ DO_AUGMENTANTION: True
 #--------------------------------------------------------
 # Model
 
-DATASET_INPUT: align_bands_ecc_affine_with_retry--best_band_otsu_green__SEED_20_AUG
-EXPERIMENT_NAME: MULTIVIEW__SEED_20_EPOCHS_1_AUG
+# DATASET_INPUT: align_bands_ecc_affine_with_retry--best_band_otsu_green--Multiview__SEED_20
+EXPERIMENT_NAME: Multiview_SEED_20_EPOCHS_7
+EXPERIMENT_TYPE: Multiview
 
 MODEL:
-  MODEL_NAME: ResNet18
+  MODEL_NAME: MobileNetV3Small
   SEED_MODEL: 20
 
   PRETRAINED: True
   BATCH_SIZE: 8
-  EPOCHS: 1
+  EPOCHS: 7
   DROPOUT: 0.2
 
-  NUM_CLASSES_INPUT: 5
+  N_BANDS: -1
   NUM_WORKERS: 4
   PIN_MEMORY: True
   PERSISTENT_WORKERS: True
@@ -66,5 +120,5 @@ MODEL:
 #--------------------------------------------------------
 # SHAP
 
-APPLY_SHAP: False
+APPLY_SHAP: True
 

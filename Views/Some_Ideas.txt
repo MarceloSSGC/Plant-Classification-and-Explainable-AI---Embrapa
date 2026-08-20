@@ -1,0 +1,167 @@
+                         ┌─ Canny ──────────────┐
+                    ┌────┼─ Sobel ──────────────┼─ SHAPE encoder ── zS
+                    │    └─ Silhouette ─────────┘
+                    │
+RGB image X ────────┼────┬─ Gabor ──────────────┐
+                    │    ├─ High-pass ───────────┼─ TEXTURE encoder ─ zT
+                    │    └─ Wavelet/LBP ─────────┘
+                    │
+                    └────┬─ HSV ─────────────────┐
+                         ├─ Lab ──────────────────┼─ COLOR encoder ── zC
+                         └─ channel decomposition ┘
+
+
+
+| Grupo   | Transformação             | Resultado          | Informação enfatizada       |
+| ------- | ------------------------- | ------------------ | --------------------------- |
+| Shape   | Canny                     | edge map           | contornos                   |
+| Shape   | segmentation → silhouette | máscara/silhueta   | forma global                |
+| Shape   | Sobel                     | gradient map       | estrutura/bordas            |
+| Texture | Gabor                     | response map       | orientação/frequência local |
+| Texture | LBP                       | texture map        | padrões locais              |
+| Texture | high-pass                 | residual image     | detalhes finos              |
+| Texture | wavelet                   | coeficientes/mapas | frequência + localização    |
+| Color   | RGB → HSV                 | H/S/V maps         | cromaticidade               |
+| Color   | RGB → Lab                 | L/a/b maps         | luminância/crominância      |
+| Color   | channel decomposition     | R/G/B maps         | resposta por canal          |
+
+
+==============================================================================================
+==============================================================================================
+==============================================================================================
+
+
+DECOMPOSIÇÃO MULTIVIEW — IMAGEM MULTIESPECTRAL DE 5 BANDAS
+
+Entrada:
+X ∈ R^(H × W × 5)
+Bandas = [Blue, Green, Red, NIR, Red Edge]
+
+Objetivo:
+Construir grupos de views que enfatizem informações complementares:
+forma/estrutura, textura, resposta espectral e relações entre bandas.
+
+
+1. SHAPE VIEWS
+   Objetivo: enfatizar geometria, contornos e estrutura espacial.
+
+   Views:
+   - Canny / Edge map
+   - Sobel / Gradient map
+   - Silhouette / Segmentation mask
+
+   Sugestão:
+   Calcular sobre uma representação estrutural comum, por exemplo PC1 das 5 bandas,
+   para evitar simplesmente repetir o mesmo operador em todas as bandas.
+
+   Exemplos:
+   V_shape_1 = Canny(PC1(X))
+   V_shape_2 = Sobel(PC1(X))
+   V_shape_3 = Silhouette(X)
+
+
+2. TEXTURE VIEWS
+   Objetivo: enfatizar padrões locais, granularidade e conteúdo espacial/frequencial.
+
+   Views:
+   - LBP (Local Binary Pattern)
+   - Gabor filter bank
+   - Wavelet decomposition
+   - High-pass / local-detail map
+
+   Sugestão:
+   Selecionar poucas bandas complementares (por exemplo Red, NIR e Red Edge)
+   ou uma representação agregada, em vez de aplicar todos os filtros às 5 bandas.
+
+   Exemplos:
+   V_texture_1 = LBP(NIR)
+   V_texture_2 = Gabor(Red Edge)
+   V_texture_3 = Wavelet(Red)
+   V_texture_4 = HighPass(NIR)
+
+
+3. SPECTRAL VIEWS
+   Objetivo: preservar as medições espectrais originais e separar regiões
+   espectrais com propriedades distintas.
+
+   Views:
+   - VIS = [Blue, Green, Red]
+   - NIR = [NIR]
+   - Red Edge = [Red Edge]
+
+   Portanto:
+   V_spectral_1 = [B, G, R]       -> H × W × 3
+   V_spectral_2 = [NIR]           -> H × W × 1
+   V_spectral_3 = [Red Edge]      -> H × W × 1
+
+   Essa divisão permite comparar informação visual versus informação
+   não visível, mantendo as medições originais.
+
+
+4. SPECTRAL-INDEX VIEWS
+   Objetivo: representar relações normalizadas/complementares entre bandas,
+   em vez das intensidades espectrais isoladas.
+
+   Views principais:
+   - NDVI = (NIR - Red) / (NIR + Red)
+   - NDRE = (NIR - RedEdge) / (NIR + RedEdge)
+
+   Views adicionais devem ser escolhidas conforme o domínio e a justificativa física.
+
+   Exemplos:
+   V_index_1 = NDVI(X)             -> H × W × 1
+   V_index_2 = NDRE(X)             -> H × W × 1
+
+
+DIAGRAMA DA DECOMPOSIÇÃO
+
+                              ┌─ Canny(PC1) ───────────┐
+                         ┌────┼─ Sobel(PC1) ───────────┼─ SHAPE encoder ───── zS
+                         │    └─ Silhouette ───────────┘
+                         │
+                         │    ┌─ LBP(NIR) ─────────────┐
+                         ├────┼─ Gabor(Red Edge) ──────┤
+                         │    ├─ Wavelet(Red) ─────────┼─ TEXTURE encoder ─── zT
+                         │    └─ High-pass(NIR) ───────┘
+                         │
+X [B,G,R,NIR,RE] ────────┤    ┌─ VIS [B,G,R]  ──────────┐
+                         ├────┼─ NIR ───────────────────┼─ SPECTRAL encoder ─ zSP
+                         │    └─ Red Edge ──────────────┘
+                         │
+                         │    ┌─ NDVI ──────────────────┐
+                         └────┼─ NDRE ──────────────────┼─ INDEX encoder ──── zI
+                              └─ outros índices* ───────┘
+                                         
+                                         │
+                              [zS, zT, zSP, zI]
+                                         │
+                                         ▼
+                                  FUSION / ATTENTION
+                                         │
+                                         ▼
+                                    CLASSIFIER
+
+
+PRINCÍPIO DE COMPLEMENTARIDADE
+
+SHAPE
+  -> "Qual é a geometria/estrutura do objeto?"
+
+TEXTURE
+  -> "Como variam espacialmente os padrões locais?"
+
+SPECTRAL
+  -> "Como o objeto responde em diferentes regiões espectrais?"
+
+SPECTRAL INDICES
+  -> "Quais relações entre bandas caracterizam o objeto?"
+
+Observação:
+As famílias não são matematicamente independentes. O objetivo é produzir
+views cue-enhanced (shape-enhanced, texture-enhanced, spectral-enhanced),
+reduzindo redundância e aumentando complementaridade, e não afirmar uma
+separação perfeita das informações.
+
+
+
+

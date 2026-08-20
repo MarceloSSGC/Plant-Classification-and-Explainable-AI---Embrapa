@@ -1,15 +1,39 @@
 import os
 import json
-import numpy as pd
 
 # Auxiliar
 try:
     from .aux_align import align_main_function
     from .aux_seg import *
+    from .aux_multiview_functions import *
 except ImportError:
         from aux_align import align_main_function
         from aux_seg import *
+        from aux_multiview_functions import *
 
+
+#======================================================================
+#======================================================================
+# import yaml
+
+# def load_config(path):
+#     with open(path, "r") as f:
+#         return yaml.safe_load(f)
+    
+# yaml_test_name = "Multiview_01.yaml"
+# # path = f"/run/home/marcelo/Documents/VSCode_python/Agro/SIMIDS/Planta_Daninha_Boa_Vista/config/{yaml_test_name}"
+# path = f"/home/marcelo/Documents/VSCode_python/Agro/SIMIDS/Planta_Daninha_Boa_Vista/config/{yaml_test_name}"
+# config = load_config(path)
+
+# for x in config:
+#     print(f"{x}: \033[96;96m{config[x]}\033[0m")
+
+# raw_data 
+# → alinhamento 
+# → segmentação 
+# → multiview
+# → split 
+# → normalização
 
 #======================================================================
 #======================================================================
@@ -20,6 +44,7 @@ def run_preprocessing(config):
 
 
     PC = config["PC"]
+    INTERACTIVE = config["INTERACTIVE"]
 
     #======================================================================
     # Alignment
@@ -65,10 +90,12 @@ def run_preprocessing(config):
 
         align_info = {
             "PC": PC,
+            "INTERACTIVE": INTERACTIVE,
+            "ALIGN": {
             "ALIGN_METHOD": ALIGN_METHOD,
             "BASE_DATA_DIR": BASE_DATA_DIR,
             "ALIGN_DATASET_NAME": ALIGN_DATASET_NAME,
-            "ALIGH_DATA_DIR": ALIGH_DATA_DIR
+            "ALIGH_DATA_DIR": ALIGH_DATA_DIR}
         }
 
         align_main_function(ALIGN_METHOD, BASE_DATA_DIR, ALIGH_DATA_DIR)
@@ -113,18 +140,74 @@ def run_preprocessing(config):
 
         seg_info = align_info.copy()
 
-        seg_info_update = {
+        seg_info["SEGMENTATION"] = {
             "SEGMENTATION_METHOD": SEGMENTATION_METHOD,
             "SEG_DATASET_NAME": SEG_DATASET_NAME,
             "SEG_DATA_DIR": SEG_DATA_DIR
         }
 
-        seg_info.update(seg_info_update)
-
         segmentation_main_function(SEGMENTATION_METHOD, ALIGH_DATA_DIR, SEG_DATA_DIR)
 
         with open(seg_info_dir, "w", encoding="utf-8") as file:
             json.dump(seg_info, file)
+
+        print("\n💾 File saved\n")
+
+    ####################################################################################
+    ####################################################################################
+    ####################################################################################
+    # Multiview
+
+    print(f"\n\033[100;01m\t     --- Start Multiview ---     \t\033[0m\n")
+
+    #======================================================================
+    # Multiview Dataset
+
+    MTV_DATASET_NAME = config["MULTIVIEW_DATASET_NAME"]
+    if PC == "NITRO":
+        MTV_DATA_DIR = f"/media/marcelo/HD_8t/Marcelo__Seagate_8tb/Embrapa/Embrapa_Experimentos/Datasets/Multiview/{MTV_DATASET_NAME}"
+    else:
+        MTV_DATA_DIR = f"/run/media/marcelo/HD_8t/Marcelo__Seagate_8tb/Embrapa/Embrapa_Experimentos/Datasets/Multiview/{MTV_DATASET_NAME}"
+
+    #======================================================================
+    # Organizing Views 
+
+    views_dict = config["VIEWS"]
+
+    trans_list = []
+    for key in views_dict:  # key = list(views_dict.keys())[0]
+        for x in views_dict[key]:   # x = list(views_dict[key])[0]
+            # print(f"x: {x} - key: {key}")
+            ih_view = {"type_view": key}
+            ih_view.update(views_dict[key][x])
+            trans_list.append(ih_view)
+
+
+    #======================================================================
+    # Multiview in action
+
+    mtv_info_dir = os.path.join(MTV_DATA_DIR, "mtv_info.json")
+
+    if os.path.isfile(mtv_info_dir):
+        print(f"\nDataset Multiview ✅\n")
+
+        with open(mtv_info_dir, "r", encoding="utf-8") as file:
+            mtv_info = json.load(file)
+    else:
+
+        n_bands = multiview_main_function(trans_list, SEG_DATA_DIR, MTV_DATA_DIR)
+
+        mtv_info = seg_info.copy()
+        mtv_info["MULTIVIEW"] = {
+            "MTV_DATASET_NAME": MTV_DATASET_NAME,
+            "MTV_DATA_DIR": MTV_DATA_DIR,
+            "TRANSFORMATIONS": trans_list,
+            "N_BANDS": n_bands
+            }
+
+
+        with open(mtv_info_dir, "w", encoding="utf-8") as file:
+            json.dump(mtv_info, file)
 
         print("\n💾 File saved\n")
 
@@ -158,58 +241,49 @@ def run_preprocessing(config):
     #======================================================================
     # Experiment Name and Directory
 
-    EXPERIMENT_NAME = f"{ALIGN_METHOD}--{SEGMENTATION_METHOD}__SEED_{SEED}"
-    experiment_type = "run_preprocessing"
+    SPLIT_DATA_NAME = config["SPLIT_DATA_NAME"]
+    SPLIT_NAME_TYPE = config["SPLIT_NAME_TYPE"]
+
+    TRAIN_SIZE = config["TRAIN_SIZE"]
+    VAL_SIZE = config["VAL_SIZE"]
 
     if PC == "NITRO":
-        DIR_EXP = f"/media/marcelo/HD_8t/Marcelo__Seagate_8tb/Embrapa/Embrapa_Experimentos/Datasets/{experiment_type}/{EXPERIMENT_NAME}"
+        SPLIT_DIR = f"/media/marcelo/HD_8t/Marcelo__Seagate_8tb/Embrapa/Embrapa_Experimentos/Datasets/{SPLIT_NAME_TYPE}/{SPLIT_DATA_NAME}"
     else:
-        DIR_EXP = f"/run/media/marcelo/HD_8t/Marcelo__Seagate_8tb/Embrapa/Embrapa_Experimentos/Datasets/{experiment_type}/{EXPERIMENT_NAME}"
+        SPLIT_DIR = f"/run/media/marcelo/HD_8t/Marcelo__Seagate_8tb/Embrapa/Embrapa_Experimentos/Datasets/{SPLIT_NAME_TYPE}/{SPLIT_DATA_NAME}"
 
-    if not os.path.isdir(DIR_EXP):
-        os.makedirs(DIR_EXP)
+    if not os.path.isdir(SPLIT_DIR):
+        os.makedirs(SPLIT_DIR)
 
     #======================================================================
     # Infos
 
-    DIR_INFOS = DIR_EXP + "/infos.json"
+    split_info_dir = os.path.join(SPLIT_DIR, "split_info.json")
 
-    if not os.path.isfile(DIR_INFOS):
-        infos = {
-        "INTERACTIVE": INTERACTIVE,
-
-        "ALIGN": align_info,
-        "SEGMENTATION": seg_info,
-
-        "EXPERIMENT_NAME": EXPERIMENT_NAME,
-        "experiment_type": experiment_type,
-
-        "DIR_EXP": DIR_EXP,
-        "SEG_DATA_DIR": SEG_DATA_DIR,
-
-        "SEED": SEED,
-
-        "TRAIN_SIZE": 0.7,
-        "VAL_SIZE": 0.15,
-        "TEST_SIZE": 0.15,
-
+    if os.path.isfile(split_info_dir):
+        with open(split_info_dir, "r") as file:
+            split_info = json.load(file)
+    
+    else:
+        split_info = mtv_info.copy()
+        split_info["SPLIT"] = {
+            "SPLIT_DATA_NAME": SPLIT_DATA_NAME,
+            "SPLIT_NAME_TYPE": SPLIT_NAME_TYPE,
+            "TRAIN_SIZE": TRAIN_SIZE,
+            "VAL_SIZE": VAL_SIZE,
         }
 
-        with open(DIR_INFOS, "w", encoding="utf-8") as arquivo:
-            json.dump(infos, arquivo, ensure_ascii=False, indent=4)
-
-    else:
-        with open(DIR_INFOS, "r") as file:
-            infos = json.load(file)
+        with open(split_info_dir, "w", encoding="utf-8") as arquivo:
+            json.dump(split_info, arquivo, ensure_ascii=False, indent=4)
 
     #======================================================================
     # DIVISÃO TRAIN / VAL / TEST - JSON
 
-    split_file_dir = os.path.join(DIR_EXP, "split_files.json")
+    split_file_dir = os.path.join(SPLIT_DIR, "split_files.json")
 
-    species = sorted(os.listdir(SEG_DATA_DIR))
-    if 'seg_info.json' in species:
-        species.remove('seg_info.json')
+    species = sorted(os.listdir(MTV_DATA_DIR))
+    if 'mtv_info.json' in species:
+        species.remove('mtv_info.json')
 
     if not os.path.isfile(split_file_dir):
             
@@ -221,16 +295,16 @@ def run_preprocessing(config):
             
             print(f"\nProcessando espécie: \033[96;93m{specie}\033[0m")
 
-            specie_dir = os.path.join(SEG_DATA_DIR, specie)
+            specie_dir = os.path.join(MTV_DATA_DIR, specie)
 
-            sample_names = sorted(set([x[:-6] for x in os.listdir(specie_dir)]))
+            sample_names = sorted(os.listdir(specie_dir))
 
             random.shuffle(sample_names)
 
             n = len(sample_names)
 
-            n_train = int(infos["TRAIN_SIZE"] * n)
-            n_val = int(infos["VAL_SIZE"] * n)
+            n_train = int(TRAIN_SIZE * n)
+            n_val = int(VAL_SIZE * n)
             n_test = n - n_train - n_val
 
             train_samples = sample_names[:n_train]
@@ -274,35 +348,35 @@ def run_preprocessing(config):
     partitions = ["Train", "Val", "Test"]
 
     for part in partitions:     # part = "Train"
-        os.makedirs(os.path.join(DIR_EXP, part), exist_ok=True)
+        os.makedirs(os.path.join(SPLIT_DIR, part), exist_ok=True)
 
     #======================================================================
     # FUNÇÃO PARA EMPILHAR AS 5 BANDAS
 
-    def load_multispectral_image(specie_dir, sample_name):
-        bands = []
+    # def load_multispectral_image(specie_dir, sample_name):
+    #     bands = []
 
-        for band_id in range(1, 6):
-            band_file = f"{sample_name}_{band_id}.tif"
-            band_path = os.path.join(specie_dir, band_file)
+    #     for band_id in range(1, 6):
+    #         band_file = f"{sample_name}_{band_id}.tif"
+    #         band_path = os.path.join(specie_dir, band_file)
 
-            if not os.path.exists(band_path):
-                print(f"Arquivo não encontrado: {band_path}")
-                return None
+    #         if not os.path.exists(band_path):
+    #             print(f"Arquivo não encontrado: {band_path}")
+    #             return None
 
-            try:
-                with rasterio.open(band_path) as src:
-                    band = src.read(1)
-            except Exception as e:
-                print(f"Erro ao ler {band_path}")
-                print(e)
-                return None
+    #         try:
+    #             with rasterio.open(band_path) as src:
+    #                 band = src.read(1)
+    #         except Exception as e:
+    #             print(f"Erro ao ler {band_path}")
+    #             print(e)
+    #             return None
 
-            bands.append(band)
+    #         bands.append(band)
 
-        img = np.stack(bands, axis=-1)
+    #     img = np.stack(bands, axis=-1)
 
-        return img
+    #     return img
 
     #======================================================================
     # Split 
@@ -315,21 +389,17 @@ def run_preprocessing(config):
 
             samples = split_file_names[partition][specie]
 
-            output_class_dir = os.path.join(DIR_EXP, partition, specie)
+            output_class_dir = os.path.join(SPLIT_DIR, partition, specie)
             os.makedirs(output_class_dir, exist_ok=True)
 
             for sample_name in samples:     # sample_name = samples[0]
 
-                output_path = os.path.join(output_class_dir, f"{sample_name}.npy")
+                output_path = os.path.join(output_class_dir, sample_name)
 
                 if not os.path.isfile(output_path):
 
-                    specie_dir = os.path.join(SEG_DATA_DIR, specie)
-                    img = load_multispectral_image(specie_dir, sample_name)
-
-                    if img is None:
-                        print(f"Amostra descartada: {sample_name} - {specie} - {partition}")
-                        x=1/0
+                    img_dir = os.path.join(MTV_DATA_DIR, specie, sample_name)
+                    img = np.load(img_dir)
 
                     print(f'Saving image... {sample_name}   -   {partition}')
                     np.save(output_path, img)
@@ -341,26 +411,28 @@ def run_preprocessing(config):
 
     from pathlib import Path
 
-    DIR_EXP = Path(DIR_EXP)
-    TRAIN_DIR = DIR_EXP / "Train"
+    SPLIT_DIR = Path(SPLIT_DIR)
+    TRAIN_DIR = SPLIT_DIR / "Train"
 
     #------------------------------------------------------------------------
     # ETAPA 1: CALCULAR MÉDIA E DESVIO PADRÃO POR BANDA USANDO TRAIN
 
-    if "mean_bands" not in infos.keys() or "std_bands" not in infos.keys():
+    N_BANDS = split_info["MULTIVIEW"]["N_BANDS"]
+
+    if "mean_bands" not in split_info["SPLIT"].keys() or "std_bands" not in split_info["SPLIT"].keys():
 
         print("Calculate mean and standard deviation per band using TRAIN....")
 
-        sum_bands = np.zeros(5, dtype=np.float64)
-        sum_sq_bands = np.zeros(5, dtype=np.float64)
-        count_pixels = np.zeros(5, dtype=np.int64)
+        sum_bands = np.zeros(N_BANDS, dtype=np.float64)
+        sum_sq_bands = np.zeros(N_BANDS, dtype=np.float64)
+        count_pixels = np.zeros(N_BANDS, dtype=np.int64)
 
         train_files = list(TRAIN_DIR.rglob("*.npy"))
 
         print(f"Número de imagens em Train: {len(train_files)}")
 
-        for i, file_path in enumerate(train_files):
-            img = np.load(file_path)  # (H, W, 5)
+        for i, file_path in enumerate(train_files): # i, file_path = 0, train_files[0]
+            img = np.load(file_path)    # (H, W, N_BANDS)
 
             img = img.astype(np.float64)
 
@@ -388,30 +460,30 @@ def run_preprocessing(config):
         print("\nDesvio padrão por banda:")
         print(std_bands)
 
-        infos["mean_bands"] = mean_bands.tolist()
-        infos["std_bands"] = std_bands.tolist()
+        split_info["SPLIT"]["mean_bands"] = mean_bands.tolist()
+        split_info["SPLIT"]["std_bands"] = std_bands.tolist()
 
-        with open(DIR_INFOS, "w", encoding="utf-8") as file:
-            json.dump(infos, file, indent=4)
+        with open(split_info_dir, "w", encoding="utf-8") as file:
+            json.dump(split_info, file, indent=4)
         
         print(f"Mean and STD: \033[96;92mCalculated\033[0m\n")
 
     else:
-        mean_bands = np.array(infos["mean_bands"])
-        std_bands = np.array(infos["std_bands"])
+        mean_bands = np.array(split_info["SPLIT"]["mean_bands"])
+        std_bands = np.array(split_info["SPLIT"]["std_bands"])
         print(f"Mean and STD: \033[96;92mLoaded\033[0m\n")
 
 
     #------------------------------------------------------------------------
     # ETAPA 2: NORMALIZAR TRAIN, VAL E TEST
 
-    mean_bands = mean_bands.reshape(1, 1, 5)
-    std_bands = std_bands.reshape(1, 1, 5)
+    mean_bands = mean_bands.reshape(1, 1, N_BANDS)
+    std_bands = std_bands.reshape(1, 1, N_BANDS)
 
     for split in partitions:    # split = "Train"
         
-        input_dir = DIR_EXP / split
-        output_dir = DIR_EXP / f"{split}_Norm"
+        input_dir = SPLIT_DIR / split
+        output_dir = SPLIT_DIR / f"{split}_Norm"
 
         files = list(input_dir.rglob("*.npy"))
 
@@ -456,17 +528,17 @@ def run_preprocessing(config):
             from aux_augm import augmentation_compilation, plot_rgb
 
 
-        print(f"\n\033[100;40m\t     --- Start Data Augmentation ---     \t\033[0m\n")
+        print(f"\n\033[100;01m\t     --- Start Data Augmentation ---     \t\033[0m\n")
 
         #======================================================================
         # Directories
 
-        AUG_EXPERIMENT_NAME = EXPERIMENT_NAME + "_AUG"
+        AUG_EXPERIMENT_NAME = SPLIT_DATA_NAME + "_AUG"
 
         if PC == "NITRO":
-            AUG_DIR_EXP = f"/media/marcelo/HD_8t/Marcelo__Seagate_8tb/Embrapa/Embrapa_Experimentos/Datasets/{experiment_type}/{AUG_EXPERIMENT_NAME}"
+            AUG_DIR_EXP = f"/media/marcelo/HD_8t/Marcelo__Seagate_8tb/Embrapa/Embrapa_Experimentos/Datasets/Augmentation/{AUG_EXPERIMENT_NAME}"
         else:
-            AUG_DIR_EXP = f"/run/media/marcelo/HD_8t/Marcelo__Seagate_8tb/Embrapa/Embrapa_Experimentos/Datasets/{experiment_type}/{AUG_EXPERIMENT_NAME}"
+            AUG_DIR_EXP = f"/run/media/marcelo/HD_8t/Marcelo__Seagate_8tb/Embrapa/Embrapa_Experimentos/Datasets/Augmentation/{AUG_EXPERIMENT_NAME}"
 
         os.makedirs(AUG_DIR_EXP, exist_ok=True)
 
@@ -477,9 +549,12 @@ def run_preprocessing(config):
 
         if not os.path.isfile(AUG_DIR_INFOS):
 
-            aug_infos = infos.copy()
+            aug_infos = split_info.copy()
 
-            AUGMENT = dict()
+            aug_infos["AUGMENT"] = {
+                "AUG_EXPERIMENT_NAME": AUG_EXPERIMENT_NAME,
+                "AUG_DIR_EXP": AUG_DIR_EXP
+            }
 
             aug_rules = {"<11": "x5",
                         "<18": "x4",
@@ -487,7 +562,7 @@ def run_preprocessing(config):
                         "<35": "x2"
                         }
 
-            AUGMENT["aug_rules"] = aug_rules
+            aug_infos["AUGMENT"]["aug_rules"] = aug_rules
 
             aug_params = [
                 [("rotation", 180)],
@@ -497,10 +572,9 @@ def run_preprocessing(config):
                 [("cutout", 39), ("cutout", 139), ("cutout", 10)]
             ]
 
-            AUGMENT["aug_params"] = aug_params
+            aug_infos["AUGMENT"]["aug_params"] = aug_params
 
-            aug_infos["AUGMENT"] = AUGMENT
-            
+              
             with open(AUG_DIR_INFOS, "w", encoding="utf-8") as arquivo:
                 json.dump(aug_infos, arquivo, ensure_ascii=False, indent=4)
 
@@ -548,13 +622,13 @@ def run_preprocessing(config):
         TRAIN_AUG_DIR_EXP = os.path.join(AUG_DIR_EXP, "Train")
         os.makedirs(TRAIN_AUG_DIR_EXP, exist_ok=True)
 
-        especies = sorted(os.listdir(DIR_EXP / "Train"))
+        especies = sorted(os.listdir(SPLIT_DIR / "Train"))
 
         dist_especie_period = dict()
 
         for especie in especies:    # especie = especies[0]
 
-            old_especie_dir = os.path.join(DIR_EXP, "Train", especie)
+            old_especie_dir = os.path.join(SPLIT_DIR, "Train", especie)
             new_especie_dir = os.path.join(TRAIN_AUG_DIR_EXP, especie)
             os.makedirs(new_especie_dir, exist_ok=True)
 
@@ -602,7 +676,8 @@ def run_preprocessing(config):
                 #     temp_dir = os.path.join(new_especie_dir, file)
                 #     img = np.load(temp_dir)    # (H, W, 5)
                 #     img = img.astype(np.float32)
-                #     plot_rgb(img)
+                #     plot_rgb(img[:, :, [8, 6, 5]])
+                #     plot_band(img[:, :, 0])
 
         #======================================================================
         # Normalization
@@ -617,16 +692,16 @@ def run_preprocessing(config):
 
             print("Calculate mean and standard deviation per band using TRAIN....")
 
-            sum_bands = np.zeros(5, dtype=np.float64)
-            sum_sq_bands = np.zeros(5, dtype=np.float64)
-            count_pixels = np.zeros(5, dtype=np.int64)
+            sum_bands = np.zeros(N_BANDS, dtype=np.float64)
+            sum_sq_bands = np.zeros(N_BANDS, dtype=np.float64)
+            count_pixels = np.zeros(N_BANDS, dtype=np.int64)
 
             train_files = list(AUG_TRAIN_DIR.rglob("*.npy"))
 
             print(f"Número de imagens em Train: {len(train_files)}")
 
             for i, file_path in enumerate(train_files):
-                img = np.load(file_path)  # (H, W, 5)
+                img = np.load(file_path)  # (H, W, N_BANDS)
 
                 img = img.astype(np.float64)
 
@@ -670,15 +745,15 @@ def run_preprocessing(config):
         #------------------------------------------------------------------------
         # ETAPA 2: NORMALIZAR TRAIN, VAL E TEST
 
-        mean_bands = mean_bands.reshape(1, 1, 5)
-        std_bands = std_bands.reshape(1, 1, 5)
+        mean_bands = mean_bands.reshape(1, 1, N_BANDS)
+        std_bands = std_bands.reshape(1, 1, N_BANDS)
 
         for split in ["Train", "Val", "Test"]:    # split = "Train"
 
             if split == "Train":
                 input_dir = AUG_DIR_EXP / split
             else:
-                input_dir = DIR_EXP / split
+                input_dir = SPLIT_DIR / split
 
             output_dir = AUG_DIR_EXP / f"{split}_Norm"
 
