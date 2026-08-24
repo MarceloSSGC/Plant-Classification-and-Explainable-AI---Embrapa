@@ -21,8 +21,11 @@ except ImportError:
 #         return yaml.safe_load(f)
     
 # yaml_test_name = "Multiview_01.yaml"
-# # path = f"/run/home/marcelo/Documents/VSCode_python/Agro/SIMIDS/Planta_Daninha_Boa_Vista/config/{yaml_test_name}"
-# path = f"/home/marcelo/Documents/VSCode_python/Agro/SIMIDS/Planta_Daninha_Boa_Vista/config/{yaml_test_name}"
+# #Helios
+# path = f"/home/marcelo/Documents/python_projects/USP/Planta_Daninha_Embrapa/Plant-Classification-and-Explainable-AI---Embrapa/config/{yaml_test_name}"
+
+# # Nitro
+# # path = f"/home/marcelo/Documents/VSCode_python/Agro/SIMIDS/Planta_Daninha_Boa_Vista/config/{yaml_test_name}"
 # config = load_config(path)
 
 # for x in config:
@@ -45,6 +48,12 @@ def run_preprocessing(config):
 
     PC = config["PC"]
     INTERACTIVE = config["INTERACTIVE"]
+    SEED = config["SEED"]
+
+
+    print(f"\t  PC: \033[96;95m{PC} \033[0m\n")
+    print(f"\t  Interactive: \033[96;95m{INTERACTIVE} \033[0m\n")
+    print(f"\t  SEED: \033[96;95m{SEED} \033[0m\n")
 
     #======================================================================
     # Alignment
@@ -56,7 +65,7 @@ def run_preprocessing(config):
 
     BASE_DATA_DIR = config["BASE_DATA_DIR"]
 
-    if PC == "NITRO":
+    if PC != "NITRO":
         BASE_DATA_DIR = f"/run/{BASE_DATA_DIR}"
 
     #======================================================================

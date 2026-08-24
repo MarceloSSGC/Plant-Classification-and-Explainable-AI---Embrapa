@@ -1,6 +1,6 @@
 
-PC: NITRO
-INTERACTIVE: True
+PC: HELIOS
+INTERACTIVE: False
 
 #--------------------------------------------------------
 # Base Data
@@ -103,7 +103,7 @@ EXPERIMENT_NAME: Multiview_SEED_20_EPOCHS_7
 EXPERIMENT_TYPE: Multiview
 
 MODEL:
-  MODEL_NAME: MobileNetV3Small
+  MODEL_NAME: SmallCNN
   SEED_MODEL: 20
 
   PRETRAINED: True
@@ -120,5 +120,5 @@ MODEL:
 #--------------------------------------------------------
 # SHAP
 
-APPLY_SHAP: True
+APPLY_SHAP: False
 

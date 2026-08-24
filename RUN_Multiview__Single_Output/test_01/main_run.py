@@ -29,8 +29,9 @@ os.environ["CUBLAS_WORKSPACE_CONFIG"] = ":4096:8"
 #         return yaml.safe_load(f)
     
 # yaml_test_name = "Multiview_01.yaml"
-# # path = f"/run/home/marcelo/Documents/VSCode_python/Agro/SIMIDS/Planta_Daninha_Boa_Vista/config/{yaml_test_name}"
-# path = f"/home/marcelo/Documents/VSCode_python/Agro/SIMIDS/Planta_Daninha_Boa_Vista/config/{yaml_test_name}"
+# path = f"/home/marcelo/Documents/python_projects/USP/Planta_Daninha_Embrapa/Plant-Classification-and-Explainable-AI---Embrapa/config/{yaml_test_name}"
+
+# # path = f"/home/marcelo/Documents/VSCode_python/Agro/SIMIDS/Planta_Daninha_Boa_Vista/config/{yaml_test_name}"
 # config = load_config(path)
 
 # for x in config:
@@ -54,9 +55,11 @@ def run_training(config):
     INTERACTIVE = config["INTERACTIVE"]
     SEED_MODEL = config["MODEL"]["SEED_MODEL"]
 
-    print(f"\t  PC: \033[96;95m{PC} \033[0m\n")
-    print(f"\t  Interactive: \033[96;95m{INTERACTIVE} \033[0m\n")
+    print(f"\t  PC: \033[96;95m{PC} \033[0m")
+    print(f"\t  Interactive: \033[96;95m{INTERACTIVE} \033[0m")
     print(f"\t  SEED_MODEL: \033[96;95m{SEED_MODEL} \033[0m\n")
+
+    print(os.getcwd())
 
     #======================================================================
     # Reproducibility
@@ -93,7 +96,7 @@ def run_training(config):
         DATA_DIR = f"/run/media/marcelo/HD_8t/Marcelo__Seagate_8tb/Embrapa/Embrapa_Experimentos/Datasets/{SPLIT_NAME_TYPE}/{SPLIT_DATA_NAME}"
 
     if not os.path.isdir(DATA_DIR):
-        raise ValueError("DATA_DIR doesnt exist")
+        raise ValueError(f"DATA_DIR doesnt exist - {DATA_DIR[-60:]}")
 
     #======================================================================
     # Experiment Name and Directory
@@ -123,9 +126,12 @@ def run_training(config):
             old_info_dir = os.path.join(DATA_DIR, "split_info.json")
             with open(old_info_dir, "r", encoding="utf-8") as file:
                 mdl_info = json.load(file)
-
+        elif "aug_infos.json" in os.listdir(DATA_DIR):
+            old_info_dir = os.path.join(DATA_DIR, "aug_infos.json")
+            with open(old_info_dir, "r", encoding="utf-8") as file:
+                mdl_info = json.load(file)
         else:
-            raise ValueError("split_info.json was not found")
+            raise ValueError("split_info.json or aug_infos.json was not found")
 
         mdl_info["RUN"] = {
             "SEED_MODEL": SEED_MODEL,
@@ -240,6 +246,9 @@ def run_training(config):
         print("-"*80 + f"\n\t \033[96;01m  Initialize Training  \033[0m\n")
         for x in config["MODEL"]:
             print(f"{x}: \033[96;96m{config['MODEL'][x]}\033[0m")
+
+        print(f"\nSPLIT_DATA_NAME: {SPLIT_DATA_NAME[-60:]}")
+
         print("\n" + "-"*80)
 
         # SmallCNN  MobileNetV3Small   ResNet18
@@ -388,16 +397,7 @@ def run_training(config):
         print(f"num_classes: \033[96;92m{model.config['num_classes']}\033[0m")
 
     #======================================================================
-    #
-    # param = {
-    #     "SEED_MODEL": SEED_MODEL,
-    #     "N_BANDS": N_BANDS,
-    #     "N_BANDS": N_BANDS,
-    #     "time_train": mdl_info["RUN"]['model']['time_train'],
-    #     "epochs": mdl_info["RUN"]['model']['epochs'],
-    #     "best_epoch": mdl_info["RUN"]['model']['best_epoch'],
-    #     "trainable_params": mdl_info["RUN"]['model']['trainable_params'],
-    # }
+    # Model Params
 
     df_model = pd.DataFrame([config["MODEL"]])
     df_model["SEED_MODEL"] = SEED_MODEL
@@ -495,94 +495,459 @@ def run_training(config):
         #======================================================================
         #======================================================================
 
-        print(f"\n\033[100;01m\t     --- Start SHAAP ---     \t\033[0m\n")
+        print(f"\n\033[100;01m\t     --- Start SHAP ---     \t\033[0m\n")
 
         #======================================================================
-        #======================================================================
+        # Files and Diretories
 
-        sleep(5)
+        df_shap_por_classe_dir = os.path.join(DIR_EXP, "df_shap_por_classe.csv")
+        df_diagnostico_dir = os.path.join(DIR_EXP, "df_diagnostico.csv")
 
-        import gc
-        import shap
+        if not os.path.isfile(df_shap_por_classe_dir) or not os.path.isfile(df_diagnostico_dir):
 
-        # ======================================================================
-        # 1. Preparar dados de background e de explicação
-        # ======================================================================
+            #======================================================================
 
-        model.eval()
-        model.to(device)
+            import gc
+            import shap
 
-        BACKGROUND_SIZE = 4
-        EXPLAIN_BATCH = 4
-        NSAMPLES = 20   # <-- controla o buffer interno (nsamples, num_bands, H, W); default do SHAP é 200
+            # ======================================================================
+            # CUSTO COMPUTACIONAL — ajuste estas variáveis para controlar tempo/memória
+            # ======================================================================
+            NSAMPLES = 20         # nº de interpolações por imagem explicada
+            BACKGROUND_SIZE = 4   # nº de imagens de referência (background), vindas de train
+            # Com 31 classes (1 imagem cada), o custo total é ~31x o de uma única imagem.
+            # Se ficar muito lento/pesado, reduza NSAMPLES primeiro.
+            # ======================================================================
 
-        shap_train_loader = DataLoader(
-            train_dataset,
-            batch_size=4,
-            shuffle=True,
-            num_workers=0,
-        )
+            model.eval()
+            model.to(device)
 
-        shap_test_loader = DataLoader(
-            test_dataset,
-            batch_size=EXPLAIN_BATCH,
-            shuffle=False,
-            num_workers=0,
-        )
+            # ======================================================================
+            # 1. Selecionar 1 imagem de teste por classe verdadeira
+            # ======================================================================
 
-        background_imgs = []
-        for imgs, y_is, c_is, n_is in shap_train_loader:
-            background_imgs.append(imgs)
-            if len(background_imgs) * imgs.size(0) >= BACKGROUND_SIZE:
-                break
-        background_imgs = torch.cat(background_imgs)[:BACKGROUND_SIZE].to(device)
+            # test_dataset.samples é uma lista de (file_path, cls_idx, cls_name)
+            # vinda da MultispectralWeedDataset -> usamos para pegar 1 amostra por classe
 
-        explain_imgs, explain_y_is, explain_c_is, explain_n_is = next(iter(shap_test_loader))
-        explain_imgs = explain_imgs.to(device)
+            one_per_class = {}  # cls_idx -> índice na lista test_dataset.samples
+            for sample_idx, (file_path, cls_idx, cls_name) in enumerate(test_dataset.samples):
+                if cls_idx not in one_per_class:
+                    one_per_class[cls_idx] = sample_idx
 
-        num_bands = explain_imgs.shape[1]
-        band_names = [f"Band_{i+1}" for i in range(num_bands)]
+            missing_classes = [c for c in test_dataset.class_to_idx.values() if c not in one_per_class]
+            if missing_classes:
+                missing_names = [test_dataset.classes[c] for c in missing_classes]
+                print(f"[aviso] classes sem nenhuma imagem no conjunto de teste: {missing_names}")
 
-        # ======================================================================
-        # 2. Criar o explainer
-        # ======================================================================
+            # ordena por cls_idx para o dataframe final sair na ordem das classes (0..30)
+            selected = sorted(one_per_class.items())  # lista de (cls_idx, sample_idx)
 
-        torch.cuda.empty_cache()
-        gc.collect()
+            # ======================================================================
+            # 2. Preparar background (referência), vindo de train
+            # ======================================================================
 
-        explainer = shap.GradientExplainer(model, background_imgs)
+            shap_train_loader = DataLoader(
+                train_dataset,
+                batch_size=4,
+                shuffle=True,
+                num_workers=0,
+            )
 
-        shap_values, indexes = explainer.shap_values(
-            explain_imgs,
-            nsamples=NSAMPLES,
-            ranked_outputs=1,
-        )
+            background_imgs = []
+            for imgs, y_is, c_is, n_is in shap_train_loader:
+                background_imgs.append(imgs)
+                if len(background_imgs) * imgs.size(0) >= BACKGROUND_SIZE:
+                    break
+            background_imgs = torch.cat(background_imgs)[:BACKGROUND_SIZE].to(device)
 
-        shap_pred_class = shap_values[0]
-        pred_class_idx = indexes[:, 0]
+            num_bands = background_imgs.shape[1]
+            band_names = [f"banda_{i+1}" for i in range(num_bands)]
 
-        del explainer, shap_values
-        torch.cuda.empty_cache()
-        gc.collect()
+            print("background_imgs.shape:", tuple(background_imgs.shape))
+            print(f"Classes selecionadas: {len(selected)} de {len(test_dataset.classes)}")
 
-        # ======================================================================
-        # 3. Agregar em importância por banda (classe predita por amostra)
-        # ======================================================================
+            # ======================================================================
+            # 3. Criar o explainer
+            # ======================================================================
 
-        shap_abs_pred = np.abs(shap_pred_class)
-        band_importance_pred_class = shap_abs_pred.mean(axis=(0, 2, 3))
+            torch.cuda.empty_cache()
+            gc.collect()
 
-        # ======================================================================
-        # 4. Resultado
-        # ======================================================================
+            explainer = shap.GradientExplainer(model, background_imgs)
 
-        print("=== Importância por banda (classe predita por amostra) ===")
-        for name, val in zip(band_names, band_importance_pred_class):
-            print(f"{name}: {val:.6f}")
+            # ======================================================================
+            # 4. Loop: 1 imagem por classe -> SHAP -> importância por banda (%)
+            # ======================================================================
 
-        pct_pred = 100 * band_importance_pred_class / band_importance_pred_class.sum()
-        for name, val in zip(band_names, pct_pred):
-            print(f"{name}: {val:.2f}%")
+            rows = []          # uma linha por classe: percentuais por banda
+            row_labels = []     # nome da classe (índice do dataframe final)
+            diagnostics = []    # info extra por classe (arquivo, classe predita, bateu com verdadeira?)
+
+            for cls_idx, sample_idx in selected:
+                file_path, true_cls_idx, true_cls_name = test_dataset.samples[sample_idx]
+
+                img, y_i, c_i, n_i = test_dataset[sample_idx]
+                single_img = img.unsqueeze(0).to(device)  # (1, num_bands, H, W)
+
+                sv, idx = explainer.shap_values(
+                    single_img,
+                    nsamples=NSAMPLES,
+                    ranked_outputs=1,
+                )
+
+                sv_arr = sv[0]
+                if torch.is_tensor(sv_arr):
+                    sv_arr = sv_arr.detach().cpu().numpy()
+                else:
+                    sv_arr = np.asarray(sv_arr)
+                sv_arr = np.squeeze(sv_arr)  # -> (num_bands, H, W)
+
+                if sv_arr.shape != (num_bands,) + tuple(single_img.shape[2:]):
+                    raise RuntimeError(
+                        f"Classe '{true_cls_name}': shape inesperado após squeeze: {sv_arr.shape}. "
+                        f"Esperado: {(num_bands,) + tuple(single_img.shape[2:])}."
+                    )
+
+                pred_class = idx[0, 0]
+                pred_class = int(pred_class.detach().cpu().item()) if torch.is_tensor(pred_class) else int(pred_class)
+
+                # importância por banda para essa imagem (média espacial)
+                band_importance = np.abs(sv_arr).mean(axis=(1, 2))  # (num_bands,)
+                pct = 100 * band_importance / band_importance.sum()
+
+                rows.append(pct)
+                row_labels.append(true_cls_name)
+                diagnostics.append({
+                    "classe_idx": true_cls_idx,
+                    "classe_nome": true_cls_name,
+                    "arquivo": file_path.stem,
+                    "classe_predita_idx": pred_class,
+                    "classe_predita_nome": test_dataset.classes[pred_class],
+                    "acertou": pred_class == true_cls_idx,
+                })
+
+                torch.cuda.empty_cache()
+
+            del explainer
+            gc.collect()
+            torch.cuda.empty_cache()
+
+            # ======================================================================
+            # 5. Montar o DataFrame final (31, 10)
+            # ======================================================================
+
+            df_shap_por_classe = pd.DataFrame(rows, index=row_labels, columns=band_names)
+            df_shap_por_classe.to_csv(df_shap_por_classe_dir, index=True)
+
+            df_diagnostico = pd.DataFrame(diagnostics)
+            df_diagnostico.to_csv(df_diagnostico_dir, index=True)
+
+            print("\n=== DataFrame de importância por banda, por classe (%) ===")
+            print(df_shap_por_classe.round(2))
+
+            print(f"\nAcurácia nas imagens explicadas: {df_diagnostico['acertou'].mean():.2%}")
+            print("\n=== Diagnóstico por classe ===")
+            print(df_diagnostico)
+
+
+        #==================================================================================================
+        #==================================================================================================
+        print("\n\n" + "="*30 + f"\n\n\t\033[100;01m --- FIM --- \033[100;0m\n\n"  + "="*30)
+        #==================================================================================================
+        #==================================================================================================
+
+
+
+
+
+
+#         #======================================================================
+
+#         shap_dir = os.path.join(DIR_EXP, "df_shap.csv")
+
+#         if not os.path.isfile(shap_dir):
+                
+#             #======================================================================
+
+#             sleep(5)
+
+#             import gc
+#             import shap
+
+#             # ======================================================================
+#             # CUSTO COMPUTACIONAL — ajuste estas variáveis para controlar tempo/memória
+#             # ======================================================================
+#             NSAMPLES = 20         # nº de interpolações por imagem explicada (maior impacto no custo)
+#             BACKGROUND_SIZE = 4   # nº de imagens de referência (background)
+#             EXPLAIN_BATCH = 4     # nº de imagens a explicar (processadas uma a uma, ver nota abaixo)
+#             # H, W da imagem também pesam bastante no custo, mas não são ajustados aqui
+#             # (dependem do pré-processamento anterior).
+#             # ======================================================================
+
+#             model.eval()
+#             model.to(device)
+
+#             # ======================================================================
+#             # 1. Preparar dados de background e de explicação
+#             # ======================================================================
+
+#             shap_train_loader = DataLoader(
+#                 train_dataset,
+#                 batch_size=4,
+#                 shuffle=True,
+#                 num_workers=0,
+#             )
+
+#             shap_test_loader = DataLoader(
+#                 test_dataset,
+#                 batch_size=EXPLAIN_BATCH,
+#                 shuffle=False,
+#                 num_workers=0,
+#             )
+
+#             background_imgs = []
+#             for imgs, y_is, c_is, n_is in shap_train_loader:
+#                 background_imgs.append(imgs)
+#                 if len(background_imgs) * imgs.size(0) >= BACKGROUND_SIZE:
+#                     break
+#             background_imgs = torch.cat(background_imgs)[:BACKGROUND_SIZE].to(device)
+
+#             explain_imgs, explain_y_is, explain_c_is, explain_n_is = next(iter(shap_test_loader))
+#             explain_imgs = explain_imgs.to(device)
+
+#             num_bands = explain_imgs.shape[1]
+#             band_names = [f"Band_{i+1}" for i in range(num_bands)]
+
+#             print("explain_imgs.shape:", tuple(explain_imgs.shape))
+#             print("background_imgs.shape:", tuple(background_imgs.shape))
+
+#             # ======================================================================
+#             # 2. Criar o explainer
+#             # ======================================================================
+
+#             torch.cuda.empty_cache()
+#             gc.collect()
+
+#             explainer = shap.GradientExplainer(model, background_imgs)
+
+#             # ======================================================================
+#             # 3. Explicar UMA IMAGEM POR VEZ
+#             #    (evita depender do comportamento de batching interno do shap com
+#             #     ranked_outputs, que nessa versão está descartando a dimensão do lote)
+#             # ======================================================================
+
+#             per_image_shap = []      # vai acumular um array (num_bands, H, W) por imagem
+#             per_image_pred_class = []
+
+#             for i in range(explain_imgs.shape[0]):
+#                 single_img = explain_imgs[i:i+1]  # mantém a dim de batch, shape (1, num_bands, H, W)
+
+#                 sv, idx = explainer.shap_values(
+#                     single_img,
+#                     nsamples=NSAMPLES,
+#                     ranked_outputs=1,
+#                 )
+
+#                 # ---- sv[0]: garante que está em CPU/numpy antes de manipular ----
+#                 sv_arr = sv[0]
+#                 if torch.is_tensor(sv_arr):
+#                     sv_arr = sv_arr.detach().cpu().numpy()
+#                 else:
+#                     sv_arr = np.asarray(sv_arr)
+
+#                 sv_arr = np.squeeze(sv_arr)  # remove eixos extras de tamanho 1
+
+#                 if sv_arr.shape != (num_bands,) + tuple(single_img.shape[2:]):
+#                     raise RuntimeError(
+#                         f"Imagem {i}: shape inesperado após squeeze: {sv_arr.shape}. "
+#                         f"Esperado: {(num_bands,) + tuple(single_img.shape[2:])}. "
+#                         f"Investigue a versão do shap antes de prosseguir."
+#                     )
+
+#                 per_image_shap.append(sv_arr)
+
+#                 # ---- idx: garante que está em CPU antes de converter para int ----
+#                 pred_class = idx[0, 0]
+#                 if torch.is_tensor(pred_class):
+#                     pred_class = pred_class.detach().cpu().item()
+#                 else:
+#                     pred_class = int(np.asarray(pred_class))
+#                 per_image_pred_class.append(int(pred_class))
+
+#                 torch.cuda.empty_cache()
+
+#             del explainer
+#             gc.collect()
+#             torch.cuda.empty_cache()
+
+#             # ======================================================================
+#             # 4. Empilhar em (EXPLAIN_BATCH, num_bands, H, W) e agregar por banda
+#             # ======================================================================
+
+#             shap_pred_class = np.stack(per_image_shap, axis=0)  # (EXPLAIN_BATCH, num_bands, H, W)
+#             print("shap_pred_class.shape (empilhado):", shap_pred_class.shape)
+
+#             assert shap_pred_class.shape[0] == explain_imgs.shape[0], (
+#                 "Número de imagens no resultado empilhado não bate com EXPLAIN_BATCH."
+#             )
+#             assert shap_pred_class.shape[1] == num_bands, (
+#                 "Eixo de bandas não bate com num_bands após empilhamento."
+#             )
+
+#             shap_abs_pred = np.abs(shap_pred_class)
+#             band_importance_pred_class = shap_abs_pred.mean(axis=(0, 2, 3))  # média sobre imagens + espaço -> (num_bands,)
+
+#             assert band_importance_pred_class.shape == (num_bands,)
+
+#             # ======================================================================
+#             # 5. Resultado
+#             # ======================================================================
+
+#             print(f"\nClasses preditas por imagem: {per_image_pred_class}")
+
+#             print("\n=== Importância por banda (média sobre as imagens explicadas) ===")
+#             for name, val in zip(band_names, band_importance_pred_class):
+#                 print(f"{name}: {val:.6f}")
+
+#             pct_pred = 100 * band_importance_pred_class / band_importance_pred_class.sum()
+#             for name, val in zip(band_names, pct_pred):
+#                 print(f"{name}: {val:.2f}%")
+
+#             print(f"\nSoma das porcentagens (deve ser ~100%): {pct_pred.sum():.2f}%")
+
+
+
+#             df_shap = pd.DataFrame(
+#                 [band_importance_pred_class, pct_pred],
+#                 index=["importancia_media", "percentual"],
+#                 columns=[f"banda_{i+1}" for i in range(num_bands)],
+#             )
+
+#             print(df_shap)
+
+#             df_shap.to_csv(shap_dir, index=True)
+            
+
+            # #==================================================================================================
+            # #==================================================================================================
+            # print("\n\n" + "="*30 + f"\n\n\t\033[100;01m --- FIM --- \033[100;0m\n\n"  + "="*30)
+            # #==================================================================================================
+            # #==================================================================================================
+
+
+        # import gc
+        # import shap
+
+        # # ======================================================================
+        # # 1. Preparar dados de background e de explicação
+        # # ======================================================================
+
+        # model.eval()
+        # model.to(device)
+
+        # BACKGROUND_SIZE = 4
+        # EXPLAIN_BATCH = 4
+        # NSAMPLES = 20
+
+        # shap_train_loader = DataLoader(
+        #     train_dataset,
+        #     batch_size=4,
+        #     shuffle=True,
+        #     num_workers=0,
+        # )
+
+        # shap_test_loader = DataLoader(
+        #     test_dataset,
+        #     batch_size=EXPLAIN_BATCH,
+        #     shuffle=False,
+        #     num_workers=0,
+        # )
+
+        # background_imgs = []
+        # for imgs, y_is, c_is, n_is in shap_train_loader:
+        #     background_imgs.append(imgs)
+        #     if len(background_imgs) * imgs.size(0) >= BACKGROUND_SIZE:
+        #         break
+        # background_imgs = torch.cat(background_imgs)[:BACKGROUND_SIZE].to(device)
+
+        # explain_imgs, explain_y_is, explain_c_is, explain_n_is = next(iter(shap_test_loader))
+        # explain_imgs = explain_imgs.to(device)
+
+        # num_bands = explain_imgs.shape[1]
+        # band_names = [f"Band_{i+1}" for i in range(num_bands)]
+
+        # # ======================================================================
+        # # 2. Criar o explainer
+        # # ======================================================================
+
+        # torch.cuda.empty_cache()
+        # gc.collect()
+
+        # explainer = shap.GradientExplainer(model, background_imgs)
+
+        # shap_values, indexes = explainer.shap_values(
+        #     explain_imgs,
+        #     nsamples=NSAMPLES,
+        #     ranked_outputs=1,
+        # )
+
+        # shap_pred_class = np.asarray(shap_values[0])
+        # pred_class_idx = indexes[:, 0]
+
+        # del explainer, shap_values
+        # torch.cuda.empty_cache()
+        # gc.collect()
+
+        # # ======================================================================
+        # # 3. Agregar em importância por banda (classe predita por amostra)
+        # # ======================================================================
+
+        # print("explain_imgs.shape:", tuple(explain_imgs.shape))
+        # print("shap_pred_class.shape (bruto):", shap_pred_class.shape)
+
+        # # ranked_outputs pode adicionar um eixo extra de tamanho 1 no final -> remove
+        # if shap_pred_class.ndim == explain_imgs.ndim + 1 and shap_pred_class.shape[-1] == 1:
+        #     shap_pred_class = shap_pred_class.squeeze(-1)
+        #     print("shap_pred_class.shape (após squeeze):", shap_pred_class.shape)
+
+        # # localiza o eixo das bandas em vez de assumir axis=1 -----------------
+        # if shap_pred_class.shape == tuple(explain_imgs.shape):
+        #     channel_axis = 1  # caso esperado: (N, C, H, W), igual ao input
+        # else:
+        #     candidates = [ax for ax, size in enumerate(shap_pred_class.shape) if size == num_bands]
+        #     if len(candidates) != 1:
+        #         raise RuntimeError(
+        #             f"Não foi possível identificar com segurança o eixo das bandas. "
+        #             f"shap_pred_class.shape={shap_pred_class.shape}, num_bands={num_bands}, "
+        #             f"candidatos={candidates}. Investigue manualmente antes de prosseguir."
+        #         )
+        #     channel_axis = candidates[0]
+        #     print(f"[aviso] shape diferente do esperado; eixo de bandas inferido = {channel_axis}")
+
+        # reduce_axes = tuple(ax for ax in range(shap_pred_class.ndim) if ax != channel_axis)
+
+        # shap_abs_pred = np.abs(shap_pred_class)
+        # band_importance_pred_class = shap_abs_pred.mean(axis=reduce_axes)  # deve virar (num_bands,)
+
+        # assert band_importance_pred_class.shape == (num_bands,), (
+        #     f"Esperado shape ({num_bands},), obtive {band_importance_pred_class.shape}. "
+        #     f"channel_axis usado: {channel_axis}"
+        # )
+
+        # # ======================================================================
+        # # 4. Resultado
+        # # ======================================================================
+
+        # print("\n=== Importância por banda (classe predita por amostra) ===")
+        # for name, val in zip(band_names, band_importance_pred_class):
+        #     print(f"{name}: {val:.6f}")
+
+        # pct_pred = 100 * band_importance_pred_class / band_importance_pred_class.sum()
+        # for name, val in zip(band_names, pct_pred):
+        #     print(f"{name}: {val:.2f}%")
+
+        # print(f"\nSoma das porcentagens (deve ser ~100%): {pct_pred.sum():.2f}%")
+
 
 
 

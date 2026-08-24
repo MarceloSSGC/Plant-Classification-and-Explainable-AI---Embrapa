@@ -1040,7 +1040,7 @@ def model_class_function(MODEL_NAME: str):
     elif MODEL_NAME == "ResNet18":
         return MulticlassResNet18
     else:
-        raise ValueError("MODEL_NAME not in list ")
+        raise ValueError("MODEL_NAME not in list [SmallCNN, MobileNetV3Small, ResNet18]")
 
     
 #======================================================================
