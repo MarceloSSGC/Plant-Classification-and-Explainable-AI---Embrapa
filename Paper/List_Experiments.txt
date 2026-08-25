@@ -1,0 +1,72 @@
+Analise o artigo científico fornecido e reconstrua, de maneira estruturada, os passos experimentais realizados pelos autores.
+
+Meu objetivo não é obter apenas um resumo do artigo. Quero entender o artigo como um roteiro de implementação/reprodução dos experimentos: o que foi feito primeiro, por que foi feito, como foi realizado em linhas gerais, quais foram os resultados e como cada experimento motivou o seguinte.
+
+Organize os experimentos na ORDEM DE EXECUÇÃO/LÓGICA EXPERIMENTAL do trabalho. Caso a ordem de apresentação no artigo seja diferente da ordem lógica ou cronológica dos experimentos, priorize a ordem que melhor represente o fluxo experimental e sinalize essa diferença.
+
+Para cada passo, utilize aproximadamente a seguinte estrutura:
+
+### N. [Nome curto e descritivo do experimento/passo]
+
+**Descrição breve:**  
+Explique em poucas frases o que foi feito.
+
+**Objetivo:**  
+Explique qual hipótese, pergunta ou problema esse experimento buscava investigar.
+
+**Implementação / procedimento:**  
+Liste os principais elementos necessários para entender ou reproduzir o experimento em alto nível. Por exemplo:
+- datasets utilizados;
+- modelos/arquiteturas;
+- dados de treinamento e teste;
+- pré-processamentos e transformações;
+- criação de novos datasets ou estímulos;
+- grupos experimentais/baselines;
+- treinamento ou fine-tuning;
+- métricas;
+- comparações realizadas;
+- participantes humanos, quando houver;
+- condições experimentais;
+- perturbações, ablações ou modificações realizadas.
+
+Não é necessário entrar em detalhes excessivamente específicos, como todos os hiperparâmetros, a menos que sejam fundamentais para compreender o experimento.
+
+**Resultados principais:**  
+Descreva brevemente o que foi observado. Sempre que o artigo fornecer números particularmente importantes, inclua-os.
+
+**Observações / ressalvas:**  
+Inclua informações importantes para interpretar corretamente o experimento, como:
+- limitações;
+- controles experimentais;
+- possíveis confundidores;
+- diferenças importantes entre condições;
+- decisões metodológicas relevantes;
+- resultados inesperados;
+- detalhes necessários para não interpretar o resultado de maneira incorreta.
+
+Depois de apresentar todos os passos, inclua uma seção:
+
+### Visão geral do pipeline experimental
+
+Resuma todo o trabalho em uma sequência curta, por exemplo:
+
+Experimento inicial
+→ identificação de determinado fenômeno
+→ experimento de controle
+→ criação/modificação do dataset
+→ novo treinamento
+→ avaliação da hipótese
+→ testes de generalização
+→ avaliação final.
+
+IMPORTANTE:
+- Baseie-se estritamente no artigo fornecido.
+- Não invente experimentos, procedimentos ou resultados.
+- Diferencie claramente o que os autores realmente fizeram de interpretações suas.
+- Se algum detalhe necessário não estiver especificado no artigo, diga explicitamente que ele não foi informado.
+- Não transforme cada pequena análise em um “experimento” separado. Agrupe análises que pertencem ao mesmo passo experimental.
+- Por outro lado, se dois experimentos tiverem objetivos, datasets, condições ou avaliações claramente diferentes, apresente-os separadamente.
+- Dê prioridade à lógica de implementação: quero conseguir entender “se eu fosse reproduzir este artigo, quais seriam os grandes passos e em qual ordem eu os executaria?”.
+- Explique brevemente como o resultado de um passo leva ou motiva o passo seguinte, quando essa relação existir.
+- Preserve os nomes originais de datasets, modelos, métodos e experimentos usados pelos autores.
+- Sempre que possível, indique a seção, tabela ou figura do artigo associada ao experimento para facilitar a conferência.

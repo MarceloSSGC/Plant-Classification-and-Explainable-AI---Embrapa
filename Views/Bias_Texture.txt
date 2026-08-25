@@ -1,0 +1,20 @@
+                  Informação visual
+                         │
+          ┌──────────────┼──────────────┐
+          │              │              │
+        FORMA          TEXTURA          COR
+          │              │              │
+Original  ✓              ✓              ✓
+Greyscale ✓              ✓              ✗
+Silhouette✓*             ✗              ✗
+Edges     ✓**            ↓              ✗
+Texture   ✗/↓            ✓              ✓
+
+
+| Condição       | Informação que se tenta **manter** | Informação que se tenta **suprimir**              | Transformação                                                            |
+| -------------- | ---------------------------------- | ------------------------------------------------- | ------------------------------------------------------------------------ |
+| **Original**   | Cor + textura + forma              | Nada                                              | Nenhuma; fotografia natural                                              |
+| **Greyscale**  | **Forma + textura**                | **Cor**                                           | RGB → escala de cinza                                                    |
+| **Silhouette** | **Contorno/forma externa**         | **Cor + textura interna + detalhes internos**     | Objeto inteiro → preto; fundo → branco                                   |
+| **Edges**      | **Bordas/contornos estruturais**   | **Cor + grande parte da textura e preenchimento** | Detector de bordas **Canny**                                             |
+| **Texture**    | **Textura local**                  | **Forma global confiável do objeto**              | Não é uma transformação da Original; são imagens específicas de texturas |
