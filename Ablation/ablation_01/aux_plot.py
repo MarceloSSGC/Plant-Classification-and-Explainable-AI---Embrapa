@@ -99,6 +99,139 @@ def plot_two_imgs(rgb_img, rgb_img_masked):
     plt.show()
 
 #======================================================================
+
+
+def plot_ablation_accuracy(df, title="Spectral Band Ablation Study"):
+    """
+    Plot classification accuracy for the original model and
+    for each spectral-band ablation experiment.
+
+    Parameters
+    ----------
+    df : pandas.DataFrame
+        DataFrame containing the columns:
+        - 'EXP': experiment identifier ('original' or removed band)
+        - 'acuracia': classification accuracy
+
+    title : str, optional
+        Title of the plot.
+
+    Returns
+    -------
+    fig : matplotlib.figure.Figure
+        Matplotlib figure object.
+
+    ax : matplotlib.axes.Axes
+        Matplotlib axes object.
+    """
+    data = df.copy()
+
+    # Create descriptive labels
+    # data["label"] = data["EXP"].apply(
+    #     lambda x: "Original" if x == "original" else f"Band {x} removed"
+    # )
+
+    data["label"] = ['Original', "Band Blue Removed", "Band Green Removed",
+                     "Band Red Removed", "Band NIR Removed", "Band Red Edge Removed"]
+
+    fig, ax = plt.subplots(figsize=(9, 5))
+
+    bars = ax.bar(
+        data["label"],
+        data["acuracia"]
+    )
+
+    # Display accuracy above each bar
+    ax.bar_label(
+        bars,
+        labels=[f"{value:.3f}" for value in data["acuracia"]],
+        padding=3
+    )
+
+    ax.set_xlabel("Experiment")
+    ax.set_ylabel("Accuracy")
+    ax.set_title(title)
+    ax.set_ylim(0, 1)
+
+    plt.xticks(rotation=30, ha="right")
+    plt.tight_layout()
+    plt.show()
+
+    return fig, ax
+
+
+def plot_ablation_metric(
+    df,
+    metric="acuracia",
+    title="Spectral Band Ablation Study"
+):
+    """
+    Plot a metric for the original model and
+    for each spectral-band ablation experiment.
+
+    Parameters
+    ----------
+    df : pandas.DataFrame
+        DataFrame containing the ablation experiment results.
+
+    metric : str, optional
+        Name of the DataFrame column containing the metric to plot.
+        Default is 'acuracia'.
+
+    title : str, optional
+        Title of the plot.
+
+    Returns
+    -------
+    fig : matplotlib.figure.Figure
+        Matplotlib figure object.
+
+    ax : matplotlib.axes.Axes
+        Matplotlib axes object.
+    """
+    data = df.copy()
+
+    if metric not in data.columns:
+        raise ValueError(
+            f"Metric '{metric}' not found in DataFrame. "
+            f"Available columns: {list(data.columns)}"
+        )
+
+    data["label"] = [
+        "Original",
+        "Band Blue Removed",
+        "Band Green Removed",
+        "Band Red Removed",
+        "Band NIR Removed",
+        "Band Red Edge Removed"
+    ]
+
+    fig, ax = plt.subplots(figsize=(9, 5))
+
+    bars = ax.bar(
+        data["label"],
+        data[metric]
+    )
+
+    # Display metric value above each bar
+    ax.bar_label(
+        bars,
+        labels=[f"{value:.3f}" for value in data[metric]],
+        padding=3
+    )
+
+    # ax.set_xlabel("Experiment")
+    ax.set_ylabel(metric.replace("_", " ").title())
+    ax.set_title(title)
+    ax.set_ylim(0, 1)
+
+    plt.xticks(rotation=30, ha="right")
+    plt.tight_layout()
+    plt.show()
+
+    return fig, ax
+
+
 #======================================================================
 #======================================================================
 #======================================================================
