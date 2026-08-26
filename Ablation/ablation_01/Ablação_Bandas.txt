@@ -1,0 +1,28 @@
+1. Abração de Bandas Espectrais:
+Baseline:  [B, G, R, NIR, RE]
+
+-Blue:     [0, G, R, NIR, RE]
+-Green:    [B, 0, R, NIR, RE]
+-Red:      [B, G, 0, NIR, RE]
+-NIR:      [B, G, R, 0, RE]
+-RedEdge:  [B, G, R, NIR, 0]
+
+Objetivo: medir a sensibilidade/necessidade de cada banda para o modelo já treinado.
+Objetivo:
+Medir a sensibilidade e a necessidade de cada banda espectral para o modelo já treinado, quantificando quanto seu desempenho se deteriora quando a informação fornecida por uma banda deixa de estar disponível. Além da importância global, investigar se a dependência das bandas varia entre as diferentes espécies.
+
+Eu reportaria:
+- ΔF1_{b}​=F1_{baseline}​−F1_{−b}​
+- acc também
+
+Importante: “remover” não deveria significar necessariamente colocar zero bruto. Dependendo da normalização usada no treinamento, zero pode representar um valor perfeitamente válido ou um valor extremo. Uma opção mais controlada é substituir a banda pelo valor médio de treinamento daquela banda (no espaço normalizado, se aplicável). Você pode inclusive comparar mean replacement com zero como controle.
+
+Perguntas experimentais:
+ - Quais bandas espectrais são mais importantes para as decisões do modelo?
+ - O modelo apresenta forte dependência de alguma banda específica?
+ - Existem bandas cuja remoção praticamente não afeta o desempenho, sugerindo redundância de informação com as demais?
+ - A importância das bandas é semelhante para todas as espécies ou existem espécies particularmente dependentes de determinadas regiões espectrais?
+ - Bandas fora do espectro visível, como NIR e Red Edge, fornecem informação relevante além de RGB?
+
+Interpretação:
+Este experimento responde principalmente “quais bandas o modelo necessita/usa quando todas as outras estão disponíveis?”, e não “qual banda contém mais informação sobre a espécie”. Uma banda pode causar ΔF1 pequeno não porque seja inútil, mas porque sua informação pode ser redundante com outra banda. Essa distinção justifica posteriormente um experimento de suficiência das bandas.

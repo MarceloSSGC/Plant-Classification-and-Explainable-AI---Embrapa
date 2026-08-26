@@ -4,6 +4,7 @@ from time import sleep
 from itertools import product
 
 print(f"\n work_dir: {os.getcwd()[-50:]} \n")
+# os.chdir("..")
 
 from RUN_Preprocessing.test_04_experiments.main_preprocessing import run_preprocessing
 from RUN_Preprocessing.test_04_experiments.main_run import run_training
@@ -42,16 +43,18 @@ sleep(3)
 
 print("\n\n GRID: \n\n")
 
-epochs_list = [1, 5]
-augmentation_list = [True, False]
+epochs_list = [30]
+augmentation_list = [False, True]
 dropout_list = [0.2]
 pretrained_list = [True]
-model_name_list = ["SmallCNN", "MobileNetV3Small", "ResNet18"]  #  ["SmallCNN", "MobileNetV3Small", "ResNet18"]
+model_name_list = ["SmallCNN", "MobileNetV3Small", "ResNet18", "ConvNeXtTiny", "ViTTiny"]
+
+#  ["SmallCNN", "MobileNetV3Small", "ResNet18", "ConvNeXtTiny", "ViTTiny"]
 
 print(f"Combinations: {len(list(product(epochs_list, augmentation_list, dropout_list, pretrained_list, model_name_list)))}")
 
 for epochs in epochs_list:                                  # epochs = 1
-    for aug_bool in augmentation_list:                      # aug_bool = True
+    for aug_bool in augmentation_list:                      # aug_bool = False
         for dropout in dropout_list:                        # dropout = 0.2
             for pretrained in pretrained_list:              # pretrained = True
                 for model_name in model_name_list:          # model_name = "SmallCNN"
@@ -61,7 +64,8 @@ for epochs in epochs_list:                                  # epochs = 1
                     #-----------------------------------------------------------------------
                     # ALL PIPELINE
 
-                    print("\n\033[96;91m\t === PIPELINE INICIADO === \t\033[0m \n\n")
+                    print("\n\033[100;40m" + "- "*100 + "\033[0m\n")
+                    print("\033[96;91m\t === PIPELINE INICIADO === \t\033[0m \n")
 
                     #-----------------------------------------------------------------------
 
@@ -85,6 +89,9 @@ for epochs in epochs_list:                                  # epochs = 1
                     #-----------------------------------------------------------------------
 
                     print(f"\n\033[100;40m {config['EXPERIMENT_NAME']} \033[0m\n")
+
+                    print(f"AUGMENTATION: \033[96;95m {aug_bool} \033[0m\n")
+
                     for x in config['MODEL']:
                         print(f"{x}: \033[96;96m{config['MODEL'][x]}\033[0m")
 

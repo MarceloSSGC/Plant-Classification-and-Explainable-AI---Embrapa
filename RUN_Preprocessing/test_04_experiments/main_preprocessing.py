@@ -14,22 +14,22 @@ except ImportError:
 
 #======================================================================
 #======================================================================
-import yaml
+# import yaml
 
-def load_config(path):
-    with open(path, "r") as f:
-        return yaml.safe_load(f)
+# def load_config(path):
+#     with open(path, "r") as f:
+#         return yaml.safe_load(f)
     
-yaml_test_name = "MTV_model_01.yaml"
-#Helios
-# path = f"/home/marcelo/Documents/python_projects/USP/Planta_Daninha_Embrapa/Plant-Classification-and-Explainable-AI---Embrapa/config/{yaml_test_name}"
+# yaml_test_name = "MTV_model_01.yaml"
+# #Helios
+# # path = f"/home/marcelo/Documents/python_projects/USP/Planta_Daninha_Embrapa/Plant-Classification-and-Explainable-AI---Embrapa/config/{yaml_test_name}"
 
-# Nitro
-path = f"/home/marcelo/Documents/VSCode_python/Agro/SIMIDS/Planta_Daninha_Boa_Vista/config/{yaml_test_name}"
-config = load_config(path)
+# # Nitro
+# path = f"/home/marcelo/Documents/VSCode_python/Agro/SIMIDS/Planta_Daninha_Boa_Vista/config/{yaml_test_name}"
+# config = load_config(path)
 
-for x in config:
-    print(f"{x}: \033[96;96m{config[x]}\033[0m")
+# for x in config:
+#     print(f"{x}: \033[96;96m{config[x]}\033[0m")
 
 
 # raw_data 

@@ -3,15 +3,19 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import random
-import torch
 import json
 from time import sleep, time
 from sklearn.metrics import classification_report
 
+# GPU
+os.environ["CUDA_VISIBLE_DEVICES"] = str(1)
+
+import torch
+
 # Auxiliar
 try:
-    from .aux_model import *
-    from .aux_only_models import *
+    from aux_model import *
+    from aux_only_models import *
 except ImportError:
     from RUN_Preprocessing.test_04_experiments.aux_model import *
     from RUN_Preprocessing.test_04_experiments.aux_only_models import *
@@ -28,8 +32,11 @@ os.environ["CUBLAS_WORKSPACE_CONFIG"] = ":4096:8"
 #     with open(path, "r") as f:
 #         return yaml.safe_load(f)
     
-# yaml_test_name = "Multiview_01.yaml"
-# path = f"/home/marcelo/Documents/python_projects/USP/Planta_Daninha_Embrapa/Plant-Classification-and-Explainable-AI---Embrapa/config/{yaml_test_name}"
+# yaml_test_name = "MTV_model_01.yaml"
+
+# # Dante
+# path = f"/home/u14696181/Documents/python_projects/Planta_Daninha_Embrapa/config/{yaml_test_name}"
+
 
 # # path = f"/home/marcelo/Documents/VSCode_python/Agro/SIMIDS/Planta_Daninha_Boa_Vista/config/{yaml_test_name}"
 # config = load_config(path)
@@ -61,6 +68,18 @@ def run_training(config):
 
     print(os.getcwd())
 
+    if PC not in ["NITRO", "HELIOS", "DANTE"]:
+        raise ValueError(f"PC: {PC} not correct")
+
+    #======================================================================
+    # GPU
+
+    if PC == "DANTE":
+        # os.environ["CUDA_VISIBLE_DEVICES"] = str(GPU_ID)
+
+        for i in range(torch.cuda.device_count()):
+            print(f"GPU {i}: {torch.cuda.get_device_name(i)}")
+    
     #======================================================================
     # Reproducibility
 
@@ -92,8 +111,10 @@ def run_training(config):
 
     if PC == "NITRO":
         DATA_DIR = f"/media/marcelo/HD_8t/Marcelo__Seagate_8tb/Embrapa/Embrapa_Experimentos/Datasets/{SPLIT_NAME_TYPE}/{SPLIT_DATA_NAME}"
-    else:
+    elif PC == "HELIOS":
         DATA_DIR = f"/run/media/marcelo/HD_8t/Marcelo__Seagate_8tb/Embrapa/Embrapa_Experimentos/Datasets/{SPLIT_NAME_TYPE}/{SPLIT_DATA_NAME}"
+    else:
+        DATA_DIR = f"/home/u14696181/Documents/Datasets/Embrapa_Experimentos/Datasets/{SPLIT_NAME_TYPE}/{SPLIT_DATA_NAME}"
 
     if not os.path.isdir(DATA_DIR):
         raise ValueError(f"DATA_DIR doesnt exist - {DATA_DIR[-60:]}")
@@ -106,9 +127,10 @@ def run_training(config):
 
     if PC == "NITRO":
        DIR_EXP = f"/media/marcelo/HD_8t/Marcelo__Seagate_8tb/Embrapa/Embrapa_Experimentos/Results/{experiment_type}/{EXPERIMENT_NAME}"
-    else:
+    if PC == "HELIOS":
        DIR_EXP = f"/run/media/marcelo/HD_8t/Marcelo__Seagate_8tb/Embrapa/Embrapa_Experimentos/Results/{experiment_type}/{EXPERIMENT_NAME}"
-
+    else:
+       DIR_EXP = f"/home/u14696181/Documents/Datasets/Embrapa_Experimentos/Results/{experiment_type}/{EXPERIMENT_NAME}"
 
     if not os.path.isdir(DIR_EXP):
         os.makedirs(DIR_EXP)
@@ -154,9 +176,9 @@ def run_training(config):
     TRAIN_DIR = DATA_DIR / "Train_Norm"
     VAL_DIR   = DATA_DIR / "Val_Norm"
     TEST_DIR  = DATA_DIR / "Test_Norm"
-
+   
     #======================================================================
-    # 2. DataLoaders
+    # 2. Datasets
 
     # train_dataset.__dict__.keys()
     # 'root_dir', 'transform', 'classes', 'class_to_idx', 'samples'
@@ -169,6 +191,13 @@ def run_training(config):
     print(f"Val: \033[96;92m{len(val_dataset)}\033[0m")
     print(f"Test: \033[96;92m{len(test_dataset)}\033[0m \n")
 
+    #======================================================================
+    # Model Config
+
+    AUGMENTATION = True if "AUG" in config["EXPERIMENT_NAME"] else False
+
+    mdl_info["RUN"]["AUGMENTATION"] = AUGMENTATION
+
     mdl_info["RUN"]["n_samples"] = {
         "Train": len(train_dataset),
         "Val": len(val_dataset),
@@ -177,10 +206,34 @@ def run_training(config):
 
     N_BANDS = mdl_info["RUN"]['N_BANDS']
     config["MODEL"]["N_BANDS"] = N_BANDS
+
+    epochs = config["MODEL"]["EPOCHS"]
     batch_size = config["MODEL"]["BATCH_SIZE"]
     num_workers = config["MODEL"]["NUM_WORKERS"]
     pin_memory = config["MODEL"]["PIN_MEMORY"]
     persistent_workers = config["MODEL"]["PERSISTENT_WORKERS"]
+
+    # Model Config
+
+    mdl_info["RUN"]["MODEL_CONFIG"] = {
+        "MODEL_NAME": config["MODEL"]["MODEL_NAME"],
+        "SEED_MODEL": config["MODEL"]["SEED_MODEL"],
+        "AUGMENTATION": AUGMENTATION,
+
+        "PRETRAINED": config["MODEL"]["PRETRAINED"],
+        "BATCH_SIZE": config["MODEL"]["BATCH_SIZE"],
+        "EPOCHS": config["MODEL"]["EPOCHS"],
+        "DROPOUT": config["MODEL"]["DROPOUT"],
+
+        "N_BANDS": N_BANDS,
+        "NUM_WORKERS": config["MODEL"]["NUM_WORKERS"],
+        "PIN_MEMORY": config["MODEL"]["PIN_MEMORY"],
+        "PERSISTENT_WORKERS": config["MODEL"]["PERSISTENT_WORKERS"],
+
+    }
+
+    #======================================================================
+    # 2.1 DataLoaders
 
     train_loader = DataLoader(
         train_dataset,
@@ -226,13 +279,12 @@ def run_training(config):
     print(f"torch_cuda_is_available: \033[96;92m{torch_cuda_is_available}\033[0m")
     print(f"torch_cuda_get_device_name: \033[96;92m{torch_cuda_get_device_name}\033[0m\n")
 
-    sleep(5)
+    sleep(3)
 
     #======================================================================
     # Treinamento
 
     num_classes = len(train_dataset.classes)  # deve ser 31
-    epochs = config["MODEL"]["EPOCHS"]
 
     best_model_dir = os.path.join(DIR_EXP, "best_model.pt")
     loss_dir = os.path.join(DIR_EXP, "df_loss.csv")
@@ -244,14 +296,16 @@ def run_training(config):
         #-----------------------------------------------------------------
 
         print("-"*80 + f"\n\t \033[96;01m  Initialize Training  \033[0m\n")
+        print(f"EXPERIMENT_NAME: \033[96;93m{EXPERIMENT_NAME}\033[0m\n")
         for x in config["MODEL"]:
             print(f"{x}: \033[96;96m{config['MODEL'][x]}\033[0m")
 
-        print(f"\nSPLIT_DATA_NAME: {SPLIT_DATA_NAME[-60:]}")
+        print(f"\nAUGMENTATION: \033[96;93m{AUGMENTATION}\033[0m")
 
         print("\n" + "-"*80)
 
-        # SmallCNN  MobileNetV3Small   ResNet18
+        # SmallCNN MobileNetV3Small ResNet18 ConvNeXtTiny ViTTiny
+
         #-----------------------------------------------------------------
         # Instanciação do modelo
 
@@ -266,6 +320,7 @@ def run_training(config):
                 num_classes=num_classes,
                 base_channels=32,
                 dropout=DROPOUT,
+                seed_model=SEED_MODEL
             )
         else:
             model = model_class(
@@ -273,9 +328,11 @@ def run_training(config):
                 num_classes=num_classes,
                 pretrained=PRETRAINED,   # ou True para carregar pesos ImageNet adaptados
                 dropout=DROPOUT,
+                seed_model=SEED_MODEL
             )
 
-        # ---- Treino ----
+        #-----------------------------------------------------------------
+        # Train
  
         t_0 = time()
         history = model.fit(
@@ -290,7 +347,8 @@ def run_training(config):
         verbose=True,
         )
         t_1 = time()
-        # ---- Fim de Treino ----
+
+        #-----------------------------------------------------------------
 
         elapsed = round(t_1 - t_0)
         hours = elapsed // 3600
@@ -352,7 +410,7 @@ def run_training(config):
         print(f"Total de parâmetros: \033[96;92m{total_params:,}\033[0m")
         print(f"Parâmetros treináveis: \033[96;92m{trainable_params:,}\033[0m\n")
 
-        mdl_info["RUN"]["model"] = {
+        mdl_info["RUN"]["training"] = {
             "device": str(device),
             "time_train": time_train,
             "epochs": epochs,
@@ -394,18 +452,19 @@ def run_training(config):
         print(f"\n\t --- \033[96;01m  Loaded --- \033[0m \n")
         print(f"model_class: \033[96;92m{model.MODEL_NAME if hasattr(model, 'MODEL_NAME') else model.__class__.__name__}\033[0m")
         print(f"in_channels (bandas): \033[96;92m{model.config['in_channels']}\033[0m")
-        print(f"num_classes: \033[96;92m{model.config['num_classes']}\033[0m")
+        print(f"num_classes: \033[96;92m{model.config['num_classes']}\033[0m\n")
 
     #======================================================================
     # Model Params
 
     df_model = pd.DataFrame([config["MODEL"]])
     df_model["SEED_MODEL"] = SEED_MODEL
+    df_model["AUGMENTATION"] = AUGMENTATION
     df_model["N_BANDS"] = N_BANDS
-    df_model["TIME_TRAIN"] = mdl_info["RUN"]['model']['time_train']
-    df_model["EPOCHS"] = mdl_info["RUN"]['model']['epochs']
-    df_model["BEST_EPOCH"] = mdl_info["RUN"]['model']['best_epoch']
-    df_model["N_PARAMS"] = mdl_info["RUN"]['model']['trainable_params']
+    df_model["TIME_TRAIN"] = mdl_info["RUN"]['training']['time_train']
+    df_model["EPOCHS"] = mdl_info["RUN"]['training']['epochs']
+    df_model["BEST_EPOCH"] = mdl_info["RUN"]['training']['best_epoch']
+    df_model["N_PARAMS"] = mdl_info["RUN"]['training']['trainable_params']
 
     #======================================================================
     # Metrics

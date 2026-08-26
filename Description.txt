@@ -40,6 +40,21 @@ O meu script python (preprocessamento, modelo preditivo e análise) inicialmente
 Esse é o contexto. Não precisa responder.
 
 ------------------------------------------------
+Ablation
+
+Aqui estamos no contexto de classificação de imagens de plantas daninhas com deep  learning. Eu tenho um conjunto de 31 pastas onde cada uma contém imagens de uma única  espécie de planta daninha. Cada imagem é composta por 5 bandas onde cada banda é um  arquivo tif (por exemplo: IMG_0003_1.tif,...,  IMG_0003_5.tif). Para cada imagem, eu juntei as 5 bandas formando um array (~900, ~1100, 5).  As bandas são:
+
+band_mapping = {
+    1: "Blue",
+    2: "Green",
+    3: "Red",
+    4: "NIR",
+    5: "Red Edge",
+}
+
+Uma vez o modelo treinado, quero fazer alguns testes de ablação.
+
+------------------------------------------------
 
 Morfologia
  - Máscara da planta
@@ -74,6 +89,15 @@ Quais características morfológicas são realmente utilizadas?
 Quais bandas espectrais são mais importantes?
 Existe complementaridade entre forma e espectro?
 O modelo toma decisões biologicamente coerentes?
+
+------------------------------------------------
+# Model
+
+ViT-Tiny (Ti) — ~5-6M parâmetros
+ViT-Small (S) — ~22M parâmetros
+ViT-Base (B) — ~86M parâmetros (a mais usada como padrão)
+ViT-Large (L) — ~307M parâmetros
+ViT-Huge (H) — ~632M parâmetros
 
 ------------------------------------------------
 domain adaptation

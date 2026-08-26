@@ -1,5 +1,5 @@
 import numpy as np
-import random
+
 import torch
 import torch.nn as nn
 from torch.utils.data import Dataset, DataLoader
@@ -27,19 +27,14 @@ from copy import deepcopy
 
 print(f"\n\033[100;40m\t     --- Auxiliar Only Models ---     \t\t\033[0m\n")
 
+
 #======================================================================
 #======================================================================
 # SmallCNN
 
 class MulticlassSmallCNN(nn.Module):
-    MODEL_NAME = "SmallCNN"
-
-    def __init__(self, in_channels=5, num_classes=31, base_channels=32, dropout=0.2, seed_model=None):
+    def __init__(self, in_channels=5, num_classes=31, base_channels=32, dropout=0.2):
         super().__init__()
-
-        # ---- reprodutibilidade: fixa a seed antes de instanciar as camadas ----
-        self.seed_model = seed_model
-        self.set_seed(seed_model)
 
         # ---- guarda os argumentos de construção para permitir carregamento genérico ----
         self.config = {
@@ -47,7 +42,6 @@ class MulticlassSmallCNN(nn.Module):
             "num_classes": num_classes,
             "base_channels": base_channels,
             "dropout": dropout,
-            "seed_model": seed_model,
         }
 
         self.features = nn.Sequential(
@@ -60,18 +54,6 @@ class MulticlassSmallCNN(nn.Module):
         self.gap = nn.AdaptiveAvgPool2d(1)
         self.dropout = nn.Dropout(p=dropout) if dropout is not None else nn.Identity()
         self.classifier = nn.Linear(base_channels * 8, num_classes)
-
-    # ------------------------------------------------------------------
-    # Reprodutibilidade
-
-    @staticmethod
-    def set_seed(seed=None):
-        if seed is None:
-            return
-        random.seed(seed)
-        np.random.seed(seed)
-        torch.manual_seed(seed)
-        torch.cuda.manual_seed_all(seed)
 
     # ------------------------------------------------------------------
     # Bloco convolucional (agora interno à classe)
@@ -165,7 +147,7 @@ class MulticlassSmallCNN(nn.Module):
                 # ---- salva estado + config, para permitir carregamento genérico ----
                 torch.save(
                     {
-                        "model_class": self.MODEL_NAME,
+                        "model_class": self.__class__.__name__,
                         "config": self.config,
                         "state_dict": best_state,
                     },
@@ -332,12 +314,8 @@ from torchvision.models import mobilenet_v3_small
 class MulticlassMobileNetV3Small(nn.Module):
     MODEL_NAME = "MobileNetV3Small"
 
-    def __init__(self, in_channels=5, num_classes=31, pretrained=False, dropout=0.2, seed_model=None):
+    def __init__(self, in_channels=5, num_classes=31, pretrained=False, dropout=0.2):
         super().__init__()
-
-        # ---- reprodutibilidade: fixa a seed antes de instanciar as camadas ----
-        self.seed_model = seed_model
-        self.set_seed(seed_model)
 
         # ---- guarda os argumentos de construção para permitir carregamento genérico ----
         self.config = {
@@ -345,7 +323,6 @@ class MulticlassMobileNetV3Small(nn.Module):
             "num_classes": num_classes,
             "pretrained": pretrained,
             "dropout": dropout,
-            "seed_model": seed_model,
         }
 
         weights = "IMAGENET1K_V1" if pretrained else None
@@ -380,18 +357,6 @@ class MulticlassMobileNetV3Small(nn.Module):
             backbone.classifier[2] = nn.Dropout(p=dropout, inplace=True)
 
         self.backbone = backbone
-
-    # ------------------------------------------------------------------
-    # Reprodutibilidade
-
-    @staticmethod
-    def set_seed(seed=None):
-        if seed is None:
-            return
-        random.seed(seed)
-        np.random.seed(seed)
-        torch.manual_seed(seed)
-        torch.cuda.manual_seed_all(seed)
 
     def forward(self, x):
         return self.backbone(x)  # logits, sem softmax -> CrossEntropyLoss
@@ -576,7 +541,7 @@ class MulticlassMobileNetV3Small(nn.Module):
         model.to(device)
         model.eval()
         return model
-        
+
 #---------------------------------------------------------------------
 # model = MulticlassMobileNetV3Small(
 #     in_channels=5,
@@ -607,12 +572,8 @@ from torchvision.models import resnet18
 class MulticlassResNet18(nn.Module):
     MODEL_NAME = "ResNet18"
 
-    def __init__(self, in_channels=5, num_classes=31, pretrained=False, dropout=0.2, seed_model=None):
+    def __init__(self, in_channels=5, num_classes=31, pretrained=False, dropout=0.2):
         super().__init__()
-
-        # ---- reprodutibilidade: fixa a seed antes de instanciar as camadas ----
-        self.seed_model = seed_model
-        self.set_seed(seed_model)
 
         # ---- guarda os argumentos de construção para permitir carregamento genérico ----
         self.config = {
@@ -620,7 +581,6 @@ class MulticlassResNet18(nn.Module):
             "num_classes": num_classes,
             "pretrained": pretrained,
             "dropout": dropout,
-            "seed_model": seed_model,
         }
 
         weights = "IMAGENET1K_V1" if pretrained else None
@@ -659,18 +619,6 @@ class MulticlassResNet18(nn.Module):
             backbone.fc = nn.Linear(in_features, num_classes)
 
         self.backbone = backbone
-
-    # ------------------------------------------------------------------
-    # Reprodutibilidade
-
-    @staticmethod
-    def set_seed(seed=None):
-        if seed is None:
-            return
-        random.seed(seed)
-        np.random.seed(seed)
-        torch.manual_seed(seed)
-        torch.cuda.manual_seed_all(seed)
 
     def forward(self, x):
         return self.backbone(x)  # logits, sem softmax -> CrossEntropyLoss
@@ -851,7 +799,7 @@ class MulticlassResNet18(nn.Module):
         model.to(device)
         model.eval()
         return model
-    
+
 #---------------------------------------------------------------------
 # model = MulticlassResNet18(
 #     in_channels=5,
@@ -862,6 +810,7 @@ class MulticlassResNet18(nn.Module):
 
 #======================================================================
 #======================================================================
+
 #======================================================================
 # Modelo - ConvNeXt-Tiny - Multiclass (single-label)
 
@@ -869,23 +818,8 @@ from torchvision.models import convnext_tiny
 
 
 class MulticlassConvNeXtTiny(nn.Module):
-    MODEL_NAME = "ConvNeXtTiny"
-
-    def __init__(self, in_channels=5, num_classes=31, pretrained=False, dropout=0.2, seed_model=None):
+    def __init__(self, in_channels=5, num_classes=31, pretrained=False, dropout=0.2):
         super().__init__()
-
-        # ---- reprodutibilidade: fixa a seed antes de instanciar as camadas ----
-        self.seed_model = seed_model
-        self.set_seed(seed_model)
-
-        # ---- guarda os argumentos de construção para permitir carregamento genérico ----
-        self.config = {
-            "in_channels": in_channels,
-            "num_classes": num_classes,
-            "pretrained": pretrained,
-            "dropout": dropout,
-            "seed_model": seed_model,
-        }
 
         weights = "IMAGENET1K_V1" if pretrained else None
         backbone = convnext_tiny(weights=weights)
@@ -926,18 +860,6 @@ class MulticlassConvNeXtTiny(nn.Module):
 
         self.backbone = backbone
 
-    # ------------------------------------------------------------------
-    # Reprodutibilidade
-
-    @staticmethod
-    def set_seed(seed=None):
-        if seed is None:
-            return
-        random.seed(seed)
-        np.random.seed(seed)
-        torch.manual_seed(seed)
-        torch.cuda.manual_seed_all(seed)
-
     def forward(self, x):
         return self.backbone(x)  # logits, sem softmax -> CrossEntropyLoss
 
@@ -1007,17 +929,7 @@ class MulticlassConvNeXtTiny(nn.Module):
             if val_metrics["acc"] > best_val_acc:
                 best_val_acc = val_metrics["acc"]
                 best_state = deepcopy(self.state_dict())
-
-                # ---- salva estado + config, para permitir carregamento genérico ----
-                torch.save(
-                    {
-                        "model_class": self.MODEL_NAME,
-                        "config": self.config,
-                        "state_dict": best_state,
-                    },
-                    checkpoint_path,
-                )
-
+                torch.save(best_state, checkpoint_path)
                 epochs_no_improve = 0
                 if verbose:
                     print(f"  -> novo melhor modelo salvo em '{checkpoint_path}' (val_acc={best_val_acc:.4f})")
@@ -1105,19 +1017,6 @@ class MulticlassConvNeXtTiny(nn.Module):
             "species": all_species,
             "filenames": all_names,
         }
-
-    # ------------------------------------------------------------------
-    # Carregamento genérico (o checkpoint carrega sua própria config)
-
-    @classmethod
-    def load(cls, checkpoint_path, device="cuda"):
-        checkpoint = torch.load(checkpoint_path, map_location=device)
-        model = cls(**checkpoint["config"])
-        model.load_state_dict(checkpoint["state_dict"])
-        model.to(device)
-        model.eval()
-        return model
-    
     
 #---------------------------------------------------------------------
 
@@ -1131,274 +1030,6 @@ class MulticlassConvNeXtTiny(nn.Module):
 #---------------------------------------------------------------------
 #======================================================================
 #======================================================================
-# Modelo - ViT-Tiny - Multiclass (single-label)
-# requer: pip install timm
-
-import timm
-
-
-class MulticlassViTTiny(nn.Module):
-    MODEL_NAME = "ViTTiny"
-
-    def __init__(self, in_channels=5, num_classes=31, pretrained=False, dropout=0.2, seed_model=None, img_size=224):
-        super().__init__()
-
-        # ---- reprodutibilidade: fixa a seed antes de instanciar as camadas ----
-        self.seed_model = seed_model
-        self.set_seed(seed_model)
-
-        # ---- guarda os argumentos de construção para permitir carregamento genérico ----
-        self.config = {
-            "in_channels": in_channels,
-            "num_classes": num_classes,
-            "pretrained": pretrained,
-            "dropout": dropout,
-            "seed_model": seed_model,
-            "img_size": img_size,
-        }
-        self.img_size = img_size
-
-        # ---- cria o backbone ViT-Tiny (patch 16) já com a cabeça ajustada para num_classes ----
-        backbone = timm.create_model(
-            "vit_tiny_patch16_224",
-            pretrained=pretrained,
-            num_classes=num_classes,
-            img_size=img_size,
-        )
-
-        # ---- adapta o patch embedding para aceitar 5 bandas em vez de 3 (RGB) ----
-        old_conv = backbone.patch_embed.proj  # Conv2d(3, 192, kernel=16, stride=16)
-        new_conv = nn.Conv2d(
-            in_channels,
-            old_conv.out_channels,
-            kernel_size=old_conv.kernel_size,
-            stride=old_conv.stride,
-            padding=old_conv.padding,
-            bias=(old_conv.bias is not None),
-        )
-
-        if pretrained:
-            with torch.no_grad():
-                # copia os pesos RGB originais para os 3 primeiros canais (Blue, Green, Red)
-                new_conv.weight[:, :3, :, :] = old_conv.weight
-                if old_conv.bias is not None:
-                    new_conv.bias[:] = old_conv.bias
-                # canais extras (NIR, Red Edge) recebem a média dos pesos RGB como inicialização
-                if in_channels > 3:
-                    mean_w = old_conv.weight.mean(dim=1, keepdim=True)
-                    new_conv.weight[:, 3:, :, :] = mean_w.repeat(1, in_channels - 3, 1, 1)
-
-        backbone.patch_embed.proj = new_conv
-
-        # ---- dropout opcional antes da cabeça de classificação ----
-        if dropout is not None and hasattr(backbone, "head_drop"):
-            backbone.head_drop = nn.Dropout(p=dropout)
-
-        self.backbone = backbone
-
-    # ------------------------------------------------------------------
-    # Reprodutibilidade
-
-    @staticmethod
-    def set_seed(seed=None):
-        if seed is None:
-            return
-        random.seed(seed)
-        np.random.seed(seed)
-        torch.manual_seed(seed)
-        torch.cuda.manual_seed_all(seed)
-
-    def forward(self, x):
-        # ---- garante entrada no tamanho fixo esperado pelo ViT (abordagem padrão na literatura) ----
-        if x.shape[-2] != self.img_size or x.shape[-1] != self.img_size:
-            x = F.interpolate(
-                x,
-                size=(self.img_size, self.img_size),
-                mode="bilinear",
-                align_corners=False,
-            )
-        return self.backbone(x)  # logits, sem softmax -> CrossEntropyLoss
-
-    # ------------------------------------------------------------------
-    # Treino
-
-    def fit(
-        self,
-        train_loader,
-        val_loader,
-        epochs=30,
-        lr=1e-3,
-        weight_decay=1e-4,
-        device="cuda",
-        checkpoint_path="best_model.pt",
-        patience=None,
-        verbose=True,
-    ):
-        self.to(device)
-        optimizer = optim.Adam(self.parameters(), lr=lr, weight_decay=weight_decay)
-        criterion = nn.CrossEntropyLoss()
-
-        print(f'\n\t Trainning...   epochs: \033[96;96m{epochs}\033[0m \n')
-
-        metric_names = [
-            "loss", "acc", "balanced_acc",
-            "f1_macro", "f1_micro",
-            "precision_macro", "recall_macro",
-            "kappa",
-        ]
-        history = {}
-        for m in metric_names:
-            history[f"train_{m}"] = []
-            history[f"val_{m}"] = []
-
-        best_val_acc = -1.0
-        best_state = None
-        epochs_no_improve = 0
-
-        for epoch in range(1, epochs + 1):
-            self.train()
-            for imgs, y_is, c_is, n_is in train_loader:
-                imgs, y_is = imgs.to(device), y_is.to(device)
-
-                optimizer.zero_grad()
-                logits = self(imgs)
-                loss = criterion(logits, y_is)
-                loss.backward()
-                optimizer.step()
-
-            train_metrics = self._evaluate(train_loader, criterion, device)
-            val_metrics = self._evaluate(val_loader, criterion, device)
-
-            for m in metric_names:
-                history[f"train_{m}"].append(train_metrics[m])
-                history[f"val_{m}"].append(val_metrics[m])
-
-            if verbose:
-                print(
-                    f"\n[Epoch {epoch:03d}/{epochs}] "
-                    f"train_loss={train_metrics['loss']:.4f} | val_loss={val_metrics['loss']:.4f} | "
-                    f"train_acc={train_metrics['acc']:.4f} | val_acc={val_metrics['acc']:.4f} | "
-                    f"train_f1_macro={train_metrics['f1_macro']:.4f} | val_f1_macro={val_metrics['f1_macro']:.4f}"
-                )
-
-            # ---- checkpoint do melhor modelo (critério: acurácia na validação) ----
-            if val_metrics["acc"] > best_val_acc:
-                best_val_acc = val_metrics["acc"]
-                best_state = deepcopy(self.state_dict())
-
-                # ---- salva estado + config, para permitir carregamento genérico ----
-                torch.save(
-                    {
-                        "model_class": self.MODEL_NAME,
-                        "config": self.config,
-                        "state_dict": best_state,
-                    },
-                    checkpoint_path,
-                )
-
-                epochs_no_improve = 0
-                if verbose:
-                    print(f"  -> novo melhor modelo salvo em '{checkpoint_path}' (val_acc={best_val_acc:.4f})")
-            else:
-                epochs_no_improve += 1
-
-            if patience is not None and epochs_no_improve >= patience:
-                if verbose:
-                    print(f"  -> early stopping na época {epoch} (sem melhora por {patience} épocas)")
-                break
-
-        if best_state is not None:
-            self.load_state_dict(best_state)
-
-        return history
-
-    # ------------------------------------------------------------------
-    # Avaliação interna (usada no fit, tanto para train quanto para val)
-
-    @torch.no_grad()
-    def _evaluate(self, loader, criterion, device):
-        self.eval()
-        running_loss = 0.0
-        n_samples = 0
-        all_preds, all_true = [], []
-
-        for imgs, y_is, c_is, n_is in loader:
-            imgs, y_is = imgs.to(device), y_is.to(device)
-
-            logits = self(imgs)
-            loss = criterion(logits, y_is)
-            running_loss += loss.item() * imgs.size(0)
-            n_samples += imgs.size(0)
-
-            preds = torch.argmax(logits, dim=1)
-
-            all_preds.append(preds.cpu())
-            all_true.append(y_is.cpu())
-
-        avg_loss = running_loss / n_samples
-
-        preds = torch.cat(all_preds).numpy()
-        true = torch.cat(all_true).numpy()
-
-        metrics = {
-            "loss": avg_loss,
-            "acc": float(np.mean(preds == true)),
-            "balanced_acc": balanced_accuracy_score(true, preds),
-            "f1_macro": f1_score(true, preds, average="macro", zero_division=0),
-            "f1_micro": f1_score(true, preds, average="micro", zero_division=0),
-            "precision_macro": precision_score(true, preds, average="macro", zero_division=0),
-            "recall_macro": recall_score(true, preds, average="macro", zero_division=0),
-            "kappa": cohen_kappa_score(true, preds),
-        }
-
-        return metrics
-
-    # ------------------------------------------------------------------
-    # Predição
-
-    @torch.no_grad()
-    def predict(self, loader, device="cuda"):
-        self.to(device)
-        self.eval()
-
-        all_probs, all_preds, all_true = [], [], []
-        all_species, all_names = [], []
-
-        for imgs, y_is, c_is, n_is in loader:
-            imgs = imgs.to(device)
-            logits = self(imgs)
-            probs = torch.softmax(logits, dim=1)
-            preds = torch.argmax(probs, dim=1)
-
-            all_probs.append(probs.cpu())
-            all_preds.append(preds.cpu())
-            all_true.append(y_is)
-            all_species.extend(c_is)
-            all_names.extend(n_is)
-
-        return {
-            "probs": torch.cat(all_probs).numpy(),
-            "preds": torch.cat(all_preds).numpy(),
-            "true": torch.cat(all_true).numpy(),
-            "species": all_species,
-            "filenames": all_names,
-        }
-
-    # ------------------------------------------------------------------
-    # Carregamento genérico (o checkpoint carrega sua própria config)
-
-    @classmethod
-    def load(cls, checkpoint_path, device="cuda"):
-        checkpoint = torch.load(checkpoint_path, map_location=device)
-        model = cls(**checkpoint["config"])
-        model.load_state_dict(checkpoint["state_dict"])
-        model.to(device)
-        model.eval()
-        return model
-    
-
-#======================================================================
-#======================================================================
 
 def model_class_function(MODEL_NAME: str):
 
@@ -1408,12 +1039,8 @@ def model_class_function(MODEL_NAME: str):
         return MulticlassMobileNetV3Small
     elif MODEL_NAME == "ResNet18":
         return MulticlassResNet18
-    elif MODEL_NAME == "ConvNeXtTiny":
-        return MulticlassConvNeXtTiny
-    elif MODEL_NAME == "ViTTiny":
-        return MulticlassViTTiny
     else:
-        raise ValueError("MODEL_NAME not in list [SmallCNN, MobileNetV3Small, ResNet18, ConvNeXtTiny, ViTTiny]")
+        raise ValueError("MODEL_NAME not in list [SmallCNN, MobileNetV3Small, ResNet18]")
 
     
 #======================================================================
