@@ -1,0 +1,63 @@
+2. Ablação de Grupos Espectrais
+
+Somente RGB:
+[B, G, R, -, -]
+
+Somente espectro não visível:
+[-, -, -, NIR, RE]
+
+Somente bandas visíveis individualmente:
+[B, -, -, -, -]
+[-, G, -, -, -]
+[-, -, R, -, -]
+
+Somente:
+[-, -, -, NIR, -]
+[-, -, -, -, RE]
+
+---------------------------------------------------------------------------
+Objetivo:
+Avaliar a suficiência da informação espectral presente em bandas individuais e em grupos de bandas. Diferentemente do Experimento 1, que mede o impacto da remoção de uma banda na presença das demais, aqui queremos determinar quanto da capacidade de classificação pode ser sustentada apenas pela informação restante.
+
+---------------------------------------------------------------------------
+Perguntas experimentais:
+ - O conjunto RGB sozinho é suficiente para manter um bom nível de classificação?
+ - NIR + Red Edge, sem informação RGB, são suficientes para distinguir as espécies?
+ - Quanto de desempenho é obtido utilizando uma única banda?
+ - Qual banda isolada possui maior capacidade de sustentar as decisões do modelo?
+ - A combinação NIR + Red Edge fornece informação discriminativa que não está presente no espectro visível?
+ - Existem espécies que podem ser reconhecidas adequadamente apenas com RGB, enquanto outras dependem fortemente de NIR/Red Edge?
+ - Há grupos de bandas que parecem carregar informação redundante ou complementar?
+
+---------------------------------------------------------------------------
+O que avaliar:
+
+Accuracy global;
+Macro-F1;
+F1/Recall por espécie;
+Matriz de confusão;
+Queda de desempenho em relação ao baseline.
+ΔF1_G = F1_baseline - F1_G
+onde G representa a banda ou grupo espectral mantido.
+Também pode ser avaliada a proporção do desempenho preservado:
+R_G = F1_G / F1_baseline
+
+Por exemplo:
+Baseline (5 bandas): F1 = 0,92
+Somente RGB: F1 = 0,89
+Nesse caso, RGB preservaria aproximadamente 97% do desempenho obtido com todas as bandas.
+
+---------------------------------------------------------------------------
+Importante:
+Assim como no Experimento 1, os canais ausentes precisam ser substituídos de maneira controlada — por exemplo, pelo valor médio da respectiva banda no conjunto de treinamento — para manter a dimensionalidade de cinco canais esperada pelo modelo.
+
+Além disso, este continua sendo um teste feito sobre um modelo treinado originalmente com as cinco bandas. Portanto, um desempenho baixo com [NIR] sozinho não significa necessariamente que NIR não contenha informação suficiente para classificar as espécies; significa, mais precisamente, que o modelo treinado com cinco bandas não consegue preservar seu desempenho quando restrito a NIR. Treinar um novo modelo exclusivamente com NIR responderia uma pergunta diferente.
+
+---------------------------------------------------------------------------
+Interpretação conjunta com o Experimento 1:
+Os dois experimentos ficam especialmente interessantes quando analisados em conjunto:
+
+Experimento 1 — Necessidade: “O que acontece se eu retirar a banda B?”
+Experimento 2 — Suficiência: “O que acontece se eu deixar somente a banda B?”
+
+Isso permite situações informativas. Por exemplo, uma banda pode ter baixa necessidade e alta suficiência: removê-la quase não afeta o modelo porque outras bandas carregam informação redundante, mas ela sozinha ainda consegue sustentar boa parte da classificação. Já alta necessidade e baixa suficiência indicaria uma banda que é importante em combinação com outras, mas insuficiente isoladamente — evidência de complementaridade espectral.

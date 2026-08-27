@@ -8,7 +8,7 @@ from time import sleep, time
 from sklearn.metrics import classification_report
 
 # GPU
-os.environ["CUDA_VISIBLE_DEVICES"] = str(1)
+# os.environ["CUDA_VISIBLE_DEVICES"] = str(1)
 
 import torch
 

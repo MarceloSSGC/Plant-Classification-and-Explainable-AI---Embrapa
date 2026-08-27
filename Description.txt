@@ -99,6 +99,9 @@ ViT-Base (B) — ~86M parâmetros (a mais usada como padrão)
 ViT-Large (L) — ~307M parâmetros
 ViT-Huge (H) — ~632M parâmetros
 
+EfficientNet-B0
+MobileNetV3Large
+RegNetY (ex: regnety_002 ou regnety_004 do timm)
 ------------------------------------------------
 domain adaptation
 icml

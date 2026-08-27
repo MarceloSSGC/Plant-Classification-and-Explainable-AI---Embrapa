@@ -110,13 +110,13 @@ DO_AUGMENTANTION: True
 # Model
 
 # DATASET_INPUT: align_bands_ecc_affine_with_retry--best_band_otsu_green--Multiview__SEED_20
-EXPERIMENT_NAME: MTV_5_BANDS_SEED_20_EPOCHS_2
+EXPERIMENT_NAME: MTV_5_BANDS_SEED_20_EPOCHS_2_MobileNetV3Large_TEST
 EXPERIMENT_TYPE: MTV_5_BANDS
 
-# SmallCNN MobileNetV3Small ResNet18 ConvNeXtTiny ViTTiny
+# SmallCNN MobileNetV3Small ResNet18 ResNet50 ConvNeXtTiny ViTTiny
 
 MODEL:
-  MODEL_NAME: SmallCNN  
+  MODEL_NAME: MobileNetV3Large  
   SEED_MODEL: 20
 
   PRETRAINED: True

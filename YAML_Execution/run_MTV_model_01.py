@@ -47,7 +47,9 @@ epochs_list = [30]
 augmentation_list = [False, True]
 dropout_list = [0.2]
 pretrained_list = [True]
-model_name_list = ["SmallCNN", "MobileNetV3Small", "ResNet18", "ConvNeXtTiny", "ViTTiny"]
+model_name_list = ['SmallCNN', 'MobileNetV3Small', 'MobileNetV3Large',
+                    'EfficientNetB0', 'ResNet18', 'ResNet50',
+                    'ConvNeXtTiny', 'ViTTiny', 'ViTSmall', 'ViTBase']
 
 #  ["SmallCNN", "MobileNetV3Small", "ResNet18", "ConvNeXtTiny", "ViTTiny"]
 

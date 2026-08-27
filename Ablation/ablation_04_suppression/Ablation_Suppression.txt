@@ -1,0 +1,286 @@
+4. Testes com Informação Visual Restrita / Suficiência sob Transformação
+
+Que tipo de característica visual é suficiente para o modelo continuar reconhecendo as espécies?
+
+Original, Greyscale, Silhouette, Edges e Texture para investigar o comportamento quando determinadas pistas visuais estavam disponíveis ou ausentes.
+
+Imagem → Silhouette → [S, S, S, S, S] → modelo original de 5 bandas
+Imagem → Greyscale(GS) → [GS, GS, GS, GS, GS] → modelo original de 5 bandas
+
+Objetivo:
+
+Investigar a suficiência de diferentes tipos de características visuais para as decisões do modelo originalmente treinado com cinco bandas multiespectrais.
+
+O objetivo não é medir diretamente a "importância" de shape, textura ou intensidade para o modelo, mas verificar quanto da capacidade de classificação originalmente adquirida pelo modelo é preservada quando sua entrada é transformada para disponibilizar predominantemente um determinado tipo de informação.
+
+O experimento busca separar, em alto nível, diferentes fontes de informação:
+
+Original:
+Espectro + forma + textura + estrutura espacial.
+
+Greyscale:
+Estrutura espacial e variações de intensidade, mas sem as diferenças multiespectrais originais entre B, G, R, NIR e Red Edge.
+
+Silhouette:
+Principalmente forma global, área ocupada e contorno externo.
+
+Edges / Canny:
+Principalmente bordas, contornos e estruturas geométricas.
+
+Texture:
+Principalmente padrões locais, procurando reduzir a disponibilidade da forma global.
+
+---------------------------------------------------------------------------
+Perguntas experimentais:
+
+Quanto da capacidade de classificação do modelo sobrevive quando a entrada é restrita a diferentes tipos de informação visual?
+O modelo consegue reconhecer as espécies quando recebe principalmente informação de forma global?
+Os contornos das plantas são suficientes para sustentar parte da classificação?
+Quanto do desempenho permanece quando as diferenças espectrais entre as cinco bandas são removidas?
+O modelo consegue classificar utilizando predominantemente padrões locais de textura?
+Qual tipo de informação visual preserva a maior parcela do desempenho original?
+Existem espécies mais reconhecíveis pela forma e outras mais reconhecíveis pela textura ou intensidade?
+As confusões entre espécies mudam dependendo do tipo de informação visual disponibilizada?
+
+O modelo consegue reconhecer espécies apenas pela forma? Pelos contornos? Pela estrutura espacial sem assinatura espectral? Pela textura?
+
+---------------------------------------------------------------------------
+O que avaliar:
+
+Accuracy global;
+Macro-F1;
+F1/Recall por espécie;
+Matriz de confusão;
+Queda de desempenho em relação à entrada original.
+
+Para cada transformação T:
+
+ΔF1_T = F1_original - F1_T
+
+ΔAcc_T = Acc_original - Acc_T
+
+Também pode ser calculada a proporção do desempenho preservado:
+
+R_T = F1_T / F1_original
+
+Exemplo:
+
+Original: F1 = 0,92
+Greyscale: F1 = 0,78
+Silhouette: F1 = 0,55
+Edges: F1 = 0,48
+Texture: F1 = 0,73
+
+---------------------------------------------------------------------------
+você ganha evidência experimental para dizer:
+
+"Existem diferentes representações restritas da imagem que preservam informação discriminativa sobre as espécies. Portanto, vamos explicitamente modelar essas fontes de informação através de views."
+
+Ou seja, ele funciona bem como um experimento exploratório/diagnóstico antes da arquitetura Multi-View.
+
+Eu só evitaria usá-lo para fazer uma afirmação forte como:
+
+"A CNN utiliza 60% shape e 40% espectro."
+
+Esse experimento sozinho não sustenta esse tipo de conclusão. Ele responde melhor:
+
+"Até que ponto a capacidade de reconhecimento adquirida pelo modelo é preservada quando restringimos a informação visual disponível?"
+
+Mas há uma ressalva muito importante no experimento 2
+Se sua CNN foi treinada apenas com imagens [B,G,R,NIR,RE] e você fornece:
+[Silhouette, Silhouette, Silhouette, Silhouette, Silhouette]
+isso é um fortíssimo distribution shift.
+Se Original = 92% e Silhouette = 15%
+você não pode concluir diretamente:
+“Forma não é importante para o modelo.”
+Pode simplesmente ser que o modelo nunca tenha visto cinco canais binários idênticos.
+Esse é exatamente um dos problemas reconhecidos por Geirhos et al. com Silhouette/Edges: desempenho ruim nessas condições isoladamente não demonstra de forma definitiva que a rede não utiliza forma.
+
+Por isso eu chamaria o experimento 2 de teste de suficiência sob transformação, e não de “importância”:
+Quanto da capacidade de classificação do modelo original sobrevive quando restringimos a entrada a determinada informação?
+
+====================================================================================
+====================================================================================
+5. Supressão de Características:
+5.1 Supressão de textura
+
+Entrada original:
+[B, G, R, NIR, RE]
+
+Transformação:
+Aplicar low-pass/blur em cada banda.
+
+[B_blur, G_blur, R_blur, NIR_blur, RE_blur]
+
+Objetivo:
+Reduzir detalhes locais e componentes de alta frequência, preservando aproximadamente estrutura global e tendências espectrais de baixa frequência.
+
+Pergunta:
+"O modelo depende de padrões locais/texturais?"
+
+Eu usaria vários níveis de blur, e não apenas um. Assim você obtém uma curva:
+
+sem blur -> leve -> médio -> forte
+
+Ressalva:
+Blur não remove exclusivamente textura. Conforme aumenta, também destrói bordas e detalhes de forma.
+
+---------------------------------------------------------------------------
+5.2 Supressão de shape / organização espacial
+
+Sua ideia de embaralhar patches é boa.
+
+Para cada banda:
+
+B -> patch shuffle(B)
+G -> patch shuffle(G)
+...
+RE -> patch shuffle(RE)
+
+Mas há um detalhe crucial: eu usaria a MESMA permutação de patches nas cinco bandas.
+
+Assim, um determinado ponto da planta continua tendo seus valores B/G/R/NIR/RE associados, mas sua posição global é alterada.
+
+Objetivo:
+Destruir progressivamente a organização espacial/forma global, preservando características locais e a correspondência espectral entre bandas.
+
+Pergunta:
+"O modelo depende da organização espacial global da planta ou consegue classificá-la a partir de características locais?"
+
+E eu variaria o tamanho dos patches:
+
+patch pequeno -> forma bastante destruída, textura local preservada
+patch médio
+patch grande -> maior quantidade de estrutura global preservada
+
+Isso gera uma análise muito mais forte do que um único shuffle.
+
+---------------------------------------------------------------------------
+5.3 Supressão da informação de cor RGB
+
+Aqui o grayscale faz sentido:
+
+RGB -> intensidade/grayscale
+
+e você mantém NIR e RE intactos:
+
+[GS, GS, GS, NIR, RE]
+
+Objetivo:
+Remover diferenças cromáticas entre B/G/R preservando estrutura espacial, intensidade e informação NIR/RE.
+
+Pergunta:
+"A diferenciação cromática no espectro visível é necessária para o modelo?"
+
+Isso é diferente de:
+
+[GS, GS, GS, GS, GS]
+
+A segunda condição remove também as diferenças espectrais associadas a NIR e RE e, portanto, é uma supressão espectral muito mais agressiva.
+
+---------------------------------------------------------------------------
+5.4 desalinhamento espacial entre bandas
+
+Originalmente, para uma posição (x,y), você possui:
+
+[B(x,y), G(x,y), R(x,y), NIR(x,y), RE(x,y)]
+
+Esses cinco valores correspondem aproximadamente à mesma região física da planta.
+
+Você então aplica uma translação diferente a cada banda:
+
+B -> deslocamento (dx1, dy1)
+G -> deslocamento (dx2, dy2)
+R -> deslocamento (dx3, dy3)
+NIR -> deslocamento (dx4, dy4)
+RE -> deslocamento (dx5, dy5)
+
+Por exemplo:
+
+B -> 10 px para direita
+G -> 5 px para cima
+R -> 8 px para esquerda
+NIR -> 12 px para baixo
+RE -> 6 px diagonal
+
+Informação mantida:
+
+Os valores originais de cada banda;
+A distribuição/histograma de intensidades de cada banda;
+A textura interna de cada banda;
+Grande parte da estrutura espacial dentro de cada banda;
+A forma da planta individualmente em cada banda;
+As características espectrais consideradas separadamente.
+
+Ou seja, olhando apenas para NIR, por exemplo, a imagem continua essencialmente sendo a mesma imagem NIR, apenas deslocada.
+
+Informação destruída/degradada:
+
+Correspondência espacial entre as bandas;
+Alinhamento pixel-a-pixel B/G/R/NIR/RE;
+Coerência do vetor espectral de cada posição;
+Relações espectrais locais entre bandas.
+
+---------------------------------------------------------------------------
+5.5 Supressão do espectro não visível
+
+[B, G, R, NIR, RE]
+->
+[B, G, R, mean(NIR), mean(RE)]
+
+-> destrói informação discriminativa específica de NIR e Red Edge
+
+-> mantém RGB + toda a organização espacial das bandas RGB
+
+Pergunta:
+"O quanto o modelo depende especificamente da informação fora do espectro visível?"
+
+Observação: isso é muito parecido com sua ablação de grupos espectrais, então provavelmente NÃO precisa entrar novamente neste experimento.
+
+---------------------------------------------------------------------------
+5.6 Supressão da Organização Espacial Completa / Pixel Shuffle Conjunto
+
+Transformação:
+
+Aplicar uma mesma permutação espacial aleatória dos pixels em todas as cinco bandas.
+
+O vetor espectral de cada pixel:
+
+[B(x,y), G(x,y), R(x,y), NIR(x,y), RE(x,y)]
+
+permanece intacto, mas é deslocado para uma posição aleatória da imagem.
+
+Informação destruída:
+
+Forma global da planta;
+Contornos;
+Textura e padrões espaciais locais;
+Relações de vizinhança entre pixels;
+Organização/localização espacial das características.
+
+Informação mantida:
+
+Valores originais das cinco bandas;
+Correspondência entre B, G, R, NIR e RE de cada pixel;
+Assinatura espectral de cada pixel;
+Distribuição global das assinaturas espectrais presentes na imagem.
+
+Pergunta experimental:
+
+"O modelo consegue reconhecer a espécie utilizando as informações espectrais dos pixels, mesmo quando toda a organização espacial da planta é destruída?"
+
+Objetivo:
+
+Avaliar quanto a classificação depende da organização espacial/morfológica da planta em oposição à informação espectral disponível nos pixels.
+
+Interpretação:
+
+Desempenho alto após Pixel Shuffle:
+-> indica que a distribuição das informações espectrais, mesmo sem organização espacial, é suficiente para preservar boa parte da capacidade de classificação.
+
+Grande queda de desempenho:
+-> indica que a organização espacial das informações é relevante para o comportamento do modelo.
+
+Ressalva:
+
+Assim como nas demais transformações, a queda de desempenho também pode ser parcialmente influenciada pelo forte distribution shift causado pelo Pixel Shuffle.
