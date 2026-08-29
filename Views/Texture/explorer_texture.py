@@ -1,4 +1,5 @@
 import os
+import numpy as np
 
 print(f'os.getcwd(): {os.getcwd()}')
 
