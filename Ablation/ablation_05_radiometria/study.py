@@ -1,4 +1,5 @@
 import os
+import numpy as np
 import pandas as pd
 import json
 
@@ -30,6 +31,19 @@ files = sorted(os.listdir(especie_dir))
 
 file_name = files[4]
 file_dir = os.path.join(especie_dir, file_name)
+
+#======================================================================
+# Media e Desvio padrão das imagens
+
+EXP_DIR = "/home/u14696181/Documents/Datasets/Embrapa_Experimentos/Results/MTV_5_BANDS_First_Models/MTV_5_BANDS__MobileNetV3Small__DROPOUT_0.2_PRETRAINED_True__EPOCHS_30_AUG"
+
+mdl_info_dir = os.path.join(EXP_DIR, 'mld_info.json')
+
+with open(mdl_info_dir, "r") as f:
+    mdl_info = json.load(f)
+
+mean_bands = np.array(mdl_info["AUGMENT"]["mean_bands"], dtype="float32")
+std_bands = np.array(mdl_info["AUGMENT"]["std_bands"], dtype="float32")
 
 #======================================================================
 # View Transformation
@@ -122,7 +136,133 @@ plot_rgb(img_5b_tr, bands_ch=(2, 1, 0))
 plot_rgb(img_5b_tr, bands_ch=(3, 1, 4))
 plot_rgb(img_5b, bands_ch=(3, 1, 4))
 
+#======================================================================
+#======================================================================
+# Exp 1
+
+# radiometria global
+
+print(f"img_5b.shape: {img_5b.shape}")
+print(f"img_5b.mean(axis=(0, 1)): \n{img_5b.mean(axis=(0, 1))}")
+print(f"img_5b.std(axis=(0, 1)): \n{img_5b.std(axis=(0, 1))}")
+
+
+# weak -> a in (0.9, 1.1)
+# middle -> a in (0.8, 1.2)
+# stronng -> a in (0.6, 1.4)
+
+a = 0.6
+
+img_5b_tr = apply_gain_transform(img_5b,  
+                                 mean_bands, std_bands,
+                                 a)
+plot_rgb_no_norm(img_5b_tr, bands_ch=(2, 1, 0))
+
+
+
+print(f"img_5b_tr.shape: {img_5b_tr.shape}")
+print(f"img_5b_tr.mean(axis=(0, 1)): \n{img_5b_tr.mean(axis=(0, 1))}")
+print(f"img_5b_tr.std(axis=(0, 1)): \n{img_5b_tr.std(axis=(0, 1))}")
+
+plot_rgb(img_5b, bands_ch=(2, 1, 0))
+plot_rgb(img_5b_tr, bands_ch=(2, 1, 0))
+
+plot_rgb_no_norm(img_5b, bands_ch=(2, 1, 0))
+plot_rgb_no_norm(img_5b_tr, bands_ch=(2, 1, 0))
+
+# Pergunta: o modelo continua classificando corretamente quando 
+# a radiometria global é alterada, mas a estrutura espacial é preservada?
+
 #----------------------------------------------------------------
+
+print(f"img_5b.shape: {img_5b.shape}")
+print(f"img_5b.mean(axis=(0, 1)): \n{img_5b.mean(axis=(0, 1))}")
+print(f"img_5b.std(axis=(0, 1)): \n{img_5b.std(axis=(0, 1))}")
+
+
+# weak -> a in (0.9, 1.1)
+# middle -> a in (0.8, 1.2)
+# stronng -> a in (0.6, 1.4)
+
+gamma = 1.02
+
+img_5b_tr = apply_gamma_transform(img_5b,  
+                                 mean_bands, std_bands,
+                                 gamma)
+
+print(f"img_5b_tr.shape: {img_5b_tr.shape}")
+print(f"img_5b_tr.mean(axis=(0, 1)): \n{img_5b_tr.mean(axis=(0, 1))}")
+print(f"img_5b_tr.std(axis=(0, 1)): \n{img_5b_tr.std(axis=(0, 1))}")
+
+plot_rgb(img_5b, bands_ch=(2, 1, 0))
+plot_rgb(img_5b_tr, bands_ch=(2, 1, 0))
+
+plot_rgb_no_norm(img_5b, bands_ch=(2, 1, 0))
+plot_rgb_no_norm(img_5b_tr, bands_ch=(2, 1, 0))
+
+#======================================================================
+#======================================================================
+
+# Original
+
+def define_trans(**kwargs):
+    def transformation(img):
+        return apply_gain_transform(img_5b=img, **kwargs)
+
+    return transformation
+
+ftest = define_trans(mean_bands=mean_bands, std_bands=std_bands, a=1.4)
+
+img_5b_tr = ftest(img_5b)
+
+
+plot_rgb_no_norm(img_5b_tr, bands_ch=(2, 1, 0))
+
+img_5b
+
+#-----------------------------------------------------------
+# Texture
+
+plot_rgb_no_norm(img_5b, bands_ch=(2, 1, 0))
+
+ftest = define_trans(mean_bands=mean_bands, std_bands=std_bands, a=1.4)
+img_5b_tr = ftest(img_5b)
+plot_rgb_no_norm(img_5b_tr, bands_ch=(2, 1, 0))
+
+img_5b_tr_tr = suppress_texture(img_5b_tr, 2)
+plot_rgb_no_norm(img_5b_tr_tr, bands_ch=(2, 1, 0))
+
+#-----------------------------------------------------------
+# Shape
+
+plot_rgb_no_norm(img_5b, bands_ch=(2, 1, 0))
+
+ftest = define_trans(mean_bands=mean_bands, std_bands=std_bands, a=1.4)
+img_5b_tr = ftest(img_5b)
+# plot_rgb_no_norm(img_5b_tr, bands_ch=(2, 1, 0))
+
+img_5b_tr_tr = suppress_shape(img_5b_tr, 64)
+plot_rgb_no_norm(img_5b_tr_tr, bands_ch=(2, 1, 0))
+
+#-----------------------------------------------------------
+# Shape
+
+plot_rgb_no_norm(img_5b, bands_ch=(3, 1, 4))
+
+
+ftest = define_trans(mean_bands=mean_bands, std_bands=std_bands, a=1.4)
+img_5b_tr = ftest(img_5b)
+# plot_rgb_no_norm(img_5b_tr, bands_ch=(2, 1, 0))
+
+img_5b_tr_tr = suppress_rgb_color(img_5b_tr)
+plot_rgb_no_norm(img_5b_tr_tr, bands_ch=(3, 1, 4))
+
+
+
+
+
+
+
 
 
 

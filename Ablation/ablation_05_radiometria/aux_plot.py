@@ -53,6 +53,27 @@ def plot_rgb(rgb_image, bands_ch=(0, 1, 2)):
     plt.axis("off")
     plt.show()
 
+#======================================================================
+
+def plot_rgb_no_norm(rgb_image, bands_ch=(0, 1, 2)):
+
+    channels = []
+
+    for band in bands_ch:
+        
+        img = rgb_image[:, :, band].astype(np.float32)
+
+        # Normalização individual para [0,1]
+        # img = (img - img.min()) / (img.max() - img.min() + 1e-8)
+        channels.append(img)
+
+    rgb = np.dstack(channels)
+
+    plt.figure(figsize=(15, 9))
+    plt.imshow(rgb)
+    plt.title(f"RGB - {bands_ch}")
+    plt.axis("off")
+    plt.show()
 
 #======================================================================
 

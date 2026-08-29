@@ -61,11 +61,12 @@ def load_5b_from_dir(image_dir: str, base_name: str):
 
 #======================================================================
 
-def plot_rgb(rgb_image, bands_ch=(3, 2, 1)):
+
+def plot_rgb(rgb_image, bands_ch=(2, 1, 0)):
 
     channels = []
 
-    for band in range(3):
+    for band in bands_ch:
         
         img = rgb_image[:, :, band].astype(np.float32)
 
@@ -80,6 +81,7 @@ def plot_rgb(rgb_image, bands_ch=(3, 2, 1)):
     plt.title(f"RGB - {bands_ch}")
     plt.axis("off")
     plt.show()
+
 
 #======================================================================
 def plot_two_imgs(rgb_img, rgb_img_masked):

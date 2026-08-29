@@ -22,7 +22,29 @@ files = sorted(set([x[:-6]for x in os.listdir(especie_dir)]))
 file_name = files[0]
 # file_name = "IMG_0008"
 
+#======================================================================
+# Load
+
 img_5b = load_5b_from_dir(especie_dir, file_name)
+
+
+# Load from Augmentation
+
+DATA_DIR = "/home/u14696181/Documents/Datasets/Embrapa_Experimentos/Datasets/Augmentation/align_bands_ecc_affine_with_retry__best_band_otsu_green__Multiview_5_BANDS__SEED_20_AUG/Train_Norm"
+especies = sorted(os.listdir(DATA_DIR))
+especie = "36_Unha_de_gato_Serra_da_Prata_06"
+especie_dir = os.path.join(DATA_DIR, especie)
+files = sorted(os.listdir(especie_dir))
+
+file_name = files[0]
+file_dir = os.path.join(especie_dir, file_name)
+
+img_5b = np.load(file_dir)
+print(f"img_5b.shape: {img_5b.shape}")
+print(f"img_5b.mean: {img_5b.mean(axis=(0, 1))}")
+print(f"img_5b.std: {img_5b.std(axis=(0, 1))}")
+
+#======================================================================
 
 plot_rgb(img_5b)
 
@@ -38,6 +60,9 @@ plot_5bands(img_5b)
 LBP = apply_lbp_1b(img_5b[:, :, 3])
 plot_band(LBP, title="Canny - NIR")
 plot_band(LBP, title="Canny - NIR", figsize=(20, 15))
+
+LBP = apply_lbp_1b(img_5b[:, :, 1], radius=2, n_points=8)
+plot_band(LBP, title="Canny - G")
 
 all_LBP = apply_lbp_5b(img_5b)
 plot_5bands(all_LBP)

@@ -1,0 +1,105 @@
+Eu estruturaria em **3 experimentos simples e complementares**, todos aplicados apenas no conjunto de teste e **sem retreinar o modelo**. O objetivo geral é verificar se as conclusões atuais — principalmente **forte dependência de textura e RGB** — permanecem sob perturbações radiométricas sintéticas.
+
+### Experimento 1 — Robustez a variações radiométricas globais
+
+**Objetivo:** verificar quanto o modelo depende dos valores absolutos de intensidade das imagens.
+
+Para cada imagem, aplicar **a mesma transformação às 5 bandas**.
+
+**1A — Ganho global**
+
+$$
+I'_b=aI_b
+$$
+
+Testar:
+
+$$
+a=\{0.6,0.8,1.0,1.2,1.4\}
+$$
+
+**1B — Gamma**
+
+$$
+I'_b=I_b^\gamma
+$$
+
+Testar:
+
+$$
+\gamma=\{0.6,0.8,1.0,1.2,1.4\}
+$$
+
+Calcular para cada condição:
+
+* Accuracy;
+* Macro-F1;
+* queda em relação ao baseline.
+
+**Pergunta:** o modelo continua classificando corretamente quando a radiometria global é alterada, mas a estrutura espacial é preservada?
+
+---
+
+### Experimento 2 — Robustez a alterações radiométricas entre bandas
+
+**Objetivo:** verificar se o modelo depende das **relações radiométricas/espectrais entre B, G, R, NIR e RE**.
+
+Aplicar ganhos diferentes para cada banda:
+
+$$
+I'_b=a_bI_b
+$$
+
+Por exemplo, para uma perturbação de intensidade \(p\):
+
+$$
+a_b\sim U(1-p,1+p)
+$$
+
+Testar:
+
+$$
+p=\{0,\;0.05,\;0.10,\;0.20,\;0.30\}.
+$$
+
+Para cada imagem, sortear independentemente um ganho para B, G, R, NIR e RE. Fazer várias repetições aleatórias por nível e reportar média ± desvio-padrão.
+
+**Pergunta:** o modelo é robusto quando cada banda sofre uma alteração radiométrica diferente?
+
+Comparar diretamente com o Experimento 1. Se ganho global quase não afetar o modelo, mas ganho independente por banda afetar fortemente, isso indica dependência das **relações espectrais entre bandas**, e não simplesmente da intensidade absoluta.
+
+---
+
+### Experimento 3 — A textura continua importante sob perturbação radiométrica?
+
+Este é o **experimento principal** para responder à pergunta original.
+
+Escolher três condições radiométricas, por exemplo:
+
+$$
+R=\{\text{original},\text{perturbação moderada},\text{perturbação forte}\}.
+$$
+
+Dentro de cada uma, repetir as três supressões que você já possui:
+
+$$
+\text{Texture},\quad \text{RGB},\quad \text{Shape}.
+$$
+
+Portanto:
+
+| Condição radiométrica | Original | Suppress Texture | Suppress RGB | Suppress Shape |
+| --------------------- | -------: | ---------------: | -----------: | -------------: |
+| Sem perturbação       |        ✓ |                ✓ |            ✓ |              ✓ |
+| Moderada              |        ✓ |                ✓ |            ✓ |              ✓ |
+| Forte                 |        ✓ |                ✓ |            ✓ |              ✓ |
+
+Para **textura**, não usar apenas o parâmetro forte atual. Usar pelo menos **leve, médio e forte**, pois o resultado de 7,1% pode estar amplificado pela intensidade da transformação.
+
+**Pergunta central:**
+
+> Sob diferentes condições radiométricas sintéticas, o ranking de dependência **Texture > RGB > Shape** permanece?
+
+Se permanecer aproximadamente estável, você terá evidência de que a predominância de textura/RGB é **robusta a alterações radiométricas sintéticas**. Se o ranking ou as curvas mudarem substancialmente, existe uma **interação entre radiometria e feature reliance**, que por si só é um resultado relevante.
+
+**Prioridade de execução:** faça primeiro **Experimento 1 → Experimento 2 → Experimento 3**. Os dois primeiros caracterizam a sensibilidade radiométrica; o terceiro conecta essa sensibilidade diretamente aos resultados de XAI/supressão que você já obteve.

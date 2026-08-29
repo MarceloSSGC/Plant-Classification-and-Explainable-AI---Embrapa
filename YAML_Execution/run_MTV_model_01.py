@@ -46,66 +46,75 @@ print("\n\n GRID: \n\n")
 epochs_list = [30]
 augmentation_list = [False, True]
 dropout_list = [0.2]
+batch_size_list = [16]
+lr_list = [1e-4]
 pretrained_list = [True]
-model_name_list = ['SmallCNN', 'MobileNetV3Small', 'MobileNetV3Large',
-                    'EfficientNetB0', 'ResNet18', 'ResNet50',
-                    'ConvNeXtTiny', 'ViTTiny', 'ViTSmall', 'ViTBase']
+model_name_list = ['MobileNetV3Large', 'EfficientNetB0', 'ResNet50', 'ViTSmall', 'ViTBase']
+# model_name_list = ['SmallCNN', 'MobileNetV3Small', 'MobileNetV3Large',
+#                     'EfficientNetB0', 'ResNet18', 'ResNet50',
+#                     'ConvNeXtTiny', 'ViTTiny', 'ViTSmall', 'ViTBase']
 
 #  ["SmallCNN", "MobileNetV3Small", "ResNet18", "ConvNeXtTiny", "ViTTiny"]
+
+print(model_name_list)
 
 print(f"Combinations: {len(list(product(epochs_list, augmentation_list, dropout_list, pretrained_list, model_name_list)))}")
 
 for epochs in epochs_list:                                  # epochs = 1
     for aug_bool in augmentation_list:                      # aug_bool = False
         for dropout in dropout_list:                        # dropout = 0.2
-            for pretrained in pretrained_list:              # pretrained = True
-                for model_name in model_name_list:          # model_name = "SmallCNN"
+            for batch_size in batch_size_list:                        # batch_size = 16
+                for lr in lr_list:                        # batch_size = 16
+                    for pretrained in pretrained_list:              # pretrained = True
+                        for model_name in model_name_list:          # model_name = "SmallCNN"
 
-                    config = yaml_file.copy()
+                            config = yaml_file.copy()
 
-                    #-----------------------------------------------------------------------
-                    # ALL PIPELINE
+                            #-----------------------------------------------------------------------
+                            # ALL PIPELINE
 
-                    print("\n\033[100;40m" + "- "*100 + "\033[0m\n")
-                    print("\033[96;91m\t === PIPELINE INICIADO === \t\033[0m \n")
+                            print("\n\033[100;40m" + "- "*100 + "\033[0m\n")
+                            print("\033[96;91m\t === PIPELINE INICIADO === \t\033[0m \n")
 
-                    #-----------------------------------------------------------------------
-
-
-                    EXPERIMENT_NAME = f"MTV_5_BANDS__{model_name}__DROPOUT_{dropout}_PRETRAINED_{pretrained}__EPOCHS_{epochs}"
-
-                    if aug_bool:
-                        config["SPLIT_DATA_NAME"] += "_AUG"
-                        config["SPLIT_NAME_TYPE"] = "Augmentation"
-
-                        EXPERIMENT_NAME += "_AUG"
-
-                    config["EXPERIMENT_NAME"] = EXPERIMENT_NAME
+                            #-----------------------------------------------------------------------
 
 
-                    config["MODEL"]["MODEL_NAME"] = model_name
-                    config["MODEL"]["PRETRAINED"] = pretrained
-                    config["MODEL"]["EPOCHS"] = epochs
-                    config["MODEL"]["DROPOUT"] = dropout
+                            EXPERIMENT_NAME = f"MTV_5_BANDS__{model_name}__DROPOUT_{dropout}_BATCH_SIZE_{batch_size}_lr_{lr}__EPOCHS_{epochs}"
 
-                    #-----------------------------------------------------------------------
+                            if aug_bool:
+                                config["SPLIT_DATA_NAME"] += "_AUG"
+                                config["SPLIT_NAME_TYPE"] = "Augmentation"
 
-                    print(f"\n\033[100;40m {config['EXPERIMENT_NAME']} \033[0m\n")
+                                EXPERIMENT_NAME += "_AUG"
 
-                    print(f"AUGMENTATION: \033[96;95m {aug_bool} \033[0m\n")
+                            config["EXPERIMENT_NAME"] = EXPERIMENT_NAME
 
-                    for x in config['MODEL']:
-                        print(f"{x}: \033[96;96m{config['MODEL'][x]}\033[0m")
 
-                    #-----------------------------------------------------------------------
+                            config["MODEL"]["MODEL_NAME"] = model_name
+                            config["MODEL"]["PRETRAINED"] = pretrained
+                            config["MODEL"]["EPOCHS"] = epochs
+                            config["MODEL"]["DROPOUT"] = dropout
+                            config["MODEL"]["BATCH_SIZE"] = batch_size
+                            config["MODEL"]["LR"] = lr
 
-                    # run_preprocessing(yaml_file)
+                            #-----------------------------------------------------------------------
 
-                    run_training(config)
+                            print(f"\n\033[100;40m {config['EXPERIMENT_NAME']} \033[0m\n")
 
-                    print("\n\033[96;91m\t === PIPELINE FINALIZADO === \t\033[0m \n\n")
+                            print(f"AUGMENTATION: \033[96;95m {aug_bool} \033[0m\n")
 
-                    sleep(5)
+                            for x in config['MODEL']:
+                                print(f"{x}: \033[96;96m{config['MODEL'][x]}\033[0m")
+
+                            #-----------------------------------------------------------------------
+
+                            # run_preprocessing(yaml_file)
+
+                            run_training(config)
+
+                            print("\n\033[96;91m\t === PIPELINE FINALIZADO === \t\033[0m \n\n")
+
+                            sleep(5)
 
 
 #======================================================================

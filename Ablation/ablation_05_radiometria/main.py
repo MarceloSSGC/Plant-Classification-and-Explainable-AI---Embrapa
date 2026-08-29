@@ -32,7 +32,7 @@ EXP_TYPE = "MTV_5_BANDS_First_Models"
 EXP_DIR = f"/home/u14696181/Documents/Datasets/Embrapa_Experimentos/Results/{EXP_TYPE}/{EXP_NAME}"
 
 
-ABL_NAME = "Ablation_04"
+ABL_NAME = "Ablation_05"
 ABL_DIR = f"/home/u14696181/Documents/Datasets/Embrapa_Experimentos/Ablation/{ABL_NAME}"
 
 #======================================================================
@@ -45,7 +45,7 @@ for X in EXP_LIST:
         EXP_LIST = [x for x in EXP_LIST if y not in x]
 
     
-for EXP_NAME in EXP_LIST:   # EXP_NAME = EXP_LIST[2]
+for EXP_NAME in EXP_LIST:   # EXP_NAME = EXP_LIST[3]
 
     print("\n" + "="*70 + "\n")
     print(f'EXP_NAME: {EXP_NAME}')
@@ -130,15 +130,58 @@ def do_ablation_04(
         especies = sorted(os.listdir(TEST_DIR))
 
         #----------------------------------------------------------------------
+
+        mean_bands = np.array(mdl_info["AUGMENT"]["mean_bands"], dtype="float32")
+        std_bands = np.array(mdl_info["AUGMENT"]["std_bands"], dtype="float32")
+
+        #----------------------------------------------------------------------
         # Cases
 
-        transformations_list = [suppress_rgb_color, suppress_texture, suppress_shape,
-                                suppress_band_alignment, suppress_non_visible_spectrum,
-                                suppress_spatial_organization]
+        # def define_refle(**kwargs):
+        #     def transformation(img):
+        #         return apply_gain_transform(img_5b=img, **kwargs)
 
-        name_cases_list = ["suppress_rgb_color", "suppress_texture", "suppress_shape",
-                                "suppress_band_alignment", "suppress_non_visible_spectrum",
-                                "suppress_spatial_organization"]
+        #     return transformation
+
+        # ftest = define_refle(mean_bands=mean_bands, std_bands=std_bands, a=0.6)
+
+        # def define_supress(**kwargs):
+        #     def transformation(img):
+        #         return suppress_texture(img_5b=img, **kwargs)
+
+        #     return transformation
+
+        # supress_funct = suppress_texture(sigma = 2)
+
+
+        # def final_trans(img_5b):
+
+        #     ff_test = define_refle(mean_bands=mean_bands, std_bands=std_bands, a=1)
+
+        #     img_5b_tr = ff_test(img_5b)
+
+
+        #-------------------------
+        # transformations_list = [define_trans(mean_bands=mean_bands, std_bands=std_bands, a=x) for x in [1.1, 1.25, 1.4]]
+
+        # name_cases_list = [f"a = {x}" for x in [1.1, 1.25, 1.4]]
+
+        #----------------------------------------------------------------------
+
+        transformations_list = []
+        name_cases_list = [f"a = {x}" for x in [1, 1.1, 1.25, 1.4]]
+
+        for a in [1, 1.1, 1.2, 1.4]:
+
+            def ath_func(img_5b):
+                img_5b_tr = apply_gain_transform(img_5b=img_5b, 
+                                                 mean_bands=mean_bands,
+                                                 std_bands=std_bands,
+                                                 a=a)
+                img_5b_tr_tr = suppress_texture(img_5b_tr, 2)
+                return img_5b_tr_tr
+
+            transformations_list.append(ath_func)
 
         #----------------------------------------------------------------------
         # For all Bands

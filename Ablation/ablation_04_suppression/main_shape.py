@@ -45,7 +45,7 @@ for X in EXP_LIST:
         EXP_LIST = [x for x in EXP_LIST if y not in x]
 
     
-for EXP_NAME in EXP_LIST:   # EXP_NAME = EXP_LIST[2]
+for EXP_NAME in EXP_LIST:   # EXP_NAME = EXP_LIST[7]
 
     print("\n" + "="*70 + "\n")
     print(f'EXP_NAME: {EXP_NAME}')
@@ -132,13 +132,17 @@ def do_ablation_04(
         #----------------------------------------------------------------------
         # Cases
 
-        transformations_list = [suppress_rgb_color, suppress_texture, suppress_shape,
-                                suppress_band_alignment, suppress_non_visible_spectrum,
-                                suppress_spatial_organization]
+        def define_trans(param):
+            def transformation(img):
+                return suppress_shape(img, param)
 
-        name_cases_list = ["suppress_rgb_color", "suppress_texture", "suppress_shape",
-                                "suppress_band_alignment", "suppress_non_visible_spectrum",
-                                "suppress_spatial_organization"]
+            return transformation
+
+        #-------------------------
+
+        transformations_list = [define_trans(k) for k in [512, 256, 128, 64, 32, 16]]
+
+        name_cases_list = [f"suppress_shape_{k}" for k in [512, 256, 128, 64, 32, 16]]
 
         #----------------------------------------------------------------------
         # For all Bands
