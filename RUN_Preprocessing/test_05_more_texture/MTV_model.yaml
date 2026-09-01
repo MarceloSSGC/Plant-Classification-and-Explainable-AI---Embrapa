@@ -1,0 +1,140 @@
+
+PC: DANTE
+INTERACTIVE: True
+
+#--------------------------------------------------------
+# Base Data
+
+# NITRO
+BASE_DATA_DIR: /media/marcelo/HD_8t/Marcelo__Seagate_8tb/Embrapa/Embrapa_Experimentos/Datasets/PlantaDaninha_BoaVista
+
+#--------------------------------------------------------
+# Alignment
+
+# Dataset Alignment
+ALIGN_DATASET_NAME: Aligned_ecc_affine_interch_45_cen_5
+
+# Alignment Method
+ALIGN_METHOD: align_bands_ecc_affine_with_retry
+
+#--------------------------------------------------------
+# Segmentation
+
+# Dataset Segmentation
+SEG_DATASET_NAME: ecc_affine_interch_45_cen_5__seg_best_band_otsu
+
+# Segmentation Method
+SEGMENTATION_METHOD: best_band_otsu_green
+
+#--------------------------------------------------------
+# Multiview
+
+# APPLY_MULTIVIEW: False
+
+# Dataset Multiview
+MULTIVIEW_DATASET_NAME: Aligned_ecc_affine_interch_45_cen_5__seg_best_band_otsu__Multiview__5_BANDS
+
+VIEWS:
+  BANDS:
+    0: 
+      funct: Iden
+      param: 
+        which_band: All
+
+# VIEWS:
+#   SHAPE:
+#     0:
+#       funct: Canny
+#       param: 
+#         which_band: NIR
+#     1: 
+#       funct: Silhouette
+#       param: 
+#         which_band: NIR
+
+#   COLOR:
+#     0:
+#       funct: HSV
+#       param: 
+#           which_band: All   # RGB
+
+#   TEXTURE:
+#     0:
+#       funct: Tophat
+#       param: 
+#         which_band: NIR
+
+#     1:
+#       funct: Coherence
+#       param: 
+#         which_band: NIR
+
+#   INDEX:
+#     0:
+#       funct: NDVI
+#       param: 
+#         which_band: All
+
+#     1:
+#       funct: NDRE
+#       param: 
+#         which_band: All
+
+#     2:
+#       funct: GNDVI
+#       param: 
+#         which_band: All
+
+#--------------------------------------------------------
+# Split
+
+SEED: 20
+
+# SPLIT_DATA_NAME: align_bands_ecc_affine_with_retry--best_band_otsu_green--Multiview__SEED_20
+SPLIT_DATA_NAME: align_bands_ecc_affine_with_retry__best_band_otsu_green__Multiview_5_BANDS__SEED_20
+# SPLIT_NAME_TYPE: Multiview_SPLIT
+SPLIT_NAME_TYPE: Multiview_5_BANDS
+
+TRAIN_SIZE: 0.75
+VAL_SIZE: 0.15
+
+#--------------------------------------------------------
+# Data Augmentation
+
+DO_AUGMENTANTION: True
+# AUG_EXPERIMENT_NAME = EXPERIMENT_NAME + "_AUG"
+# AUG_DIR_EXP = .../Datasets/run_preprocessing/{AUG_EXPERIMENT_NAME}
+
+#--------------------------------------------------------
+#--------------------------------------------------------
+# Model
+
+# DATASET_INPUT: align_bands_ecc_affine_with_retry--best_band_otsu_green--Multiview__SEED_20
+EXPERIMENT_NAME: TEST__MTV_5_BANDS_SEED_20_EPOCHS_2_MobileNetV3Large_TEST
+EXPERIMENT_TYPE: MTV_5_BANDS_PLUS_TEXTURE
+
+TRANSFORMATION_NAME: 5_bands
+
+# SmallCNN MobileNetV3Small ResNet18 ResNet50 ConvNeXtTiny ViTTiny
+
+MODEL:
+  MODEL_NAME: MobileNetV3Large  
+  SEED_MODEL: 20
+
+  PRETRAINED: True
+  BATCH_SIZE: 16
+  EPOCHS: 2
+  DROPOUT: 0.2
+  LR: 1e-4
+
+  N_BANDS: -1
+  NUM_WORKERS: 4
+  PIN_MEMORY: True
+  PERSISTENT_WORKERS: True
+
+#--------------------------------------------------------
+#--------------------------------------------------------
+# SHAP
+
+APPLY_SHAP: False
+

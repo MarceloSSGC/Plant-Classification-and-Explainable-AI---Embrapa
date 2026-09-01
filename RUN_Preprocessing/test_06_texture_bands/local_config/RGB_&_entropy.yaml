@@ -1,0 +1,116 @@
+
+PC: NITRO
+INTERACTIVE: True
+# CONFIG_NAME: RGB_&_entropy
+
+#--------------------------------------------------------
+# Base Data
+
+# NITRO
+BASE_DATA_DIR: /media/marcelo/HD_8t/Marcelo__Seagate_8tb/Embrapa/Embrapa_Experimentos/Datasets/PlantaDaninha_BoaVista
+
+#--------------------------------------------------------
+# Alignment
+
+# Dataset Alignment
+ALIGN_DATA_NAME: align_bands_ecc_affine_with_retry
+
+# Alignment Method
+ALIGN_METHOD: align_bands_ecc_affine_with_retry
+
+#--------------------------------------------------------
+# Segmentation
+
+# Dataset Segmentation
+SEG_DATA_NICKNAME: best_band_otsu_green
+
+# Segmentation Method
+SEGMENTATION_METHOD: best_band_otsu_green
+
+#--------------------------------------------------------
+# Multiview
+
+# Dataset Multiview
+MULTIVIEW_DATA_NICKNAME: RGB_&_entropy
+# MULTIVIEW_DATASET_NAME: Aligned_ecc_affine_interch_45_cen_5__seg_best_band_otsu__Multiview__Texture
+MULTIVIEW_DATA_TYPE: Multiview_Texture
+
+
+VIEWS:
+  BANDS:
+    0: 
+      funct: Iden
+      param: 
+        which_band: RGB
+
+  TEXTURE:
+    0:
+      funct: entropy
+      param: 
+        which_band: Green
+        radius: 1
+        levels: 32
+    1:
+      funct: entropy
+      param: 
+        which_band: Green
+        radius: 1
+        levels: 16
+    2:
+      funct: entropy
+      param: 
+        which_band: Green
+        radius: 2
+        levels: 16
+
+#--------------------------------------------------------
+# Split
+
+SEED: 20
+
+# SPLIT_DATA_NAME: align_bands_ecc_affine_with_retry--best_band_otsu_green--Multiview__SEED_20
+# SPLIT_DATA_NAME: align_bands_ecc_affine_with_retry__best_band_otsu_green__Multiview_5_BANDS__SEED_20
+# SPLIT_NAME_TYPE: Multiview_SPLIT
+# SPLIT_NAME_TYPE: Multiview_5_BANDS
+
+TRAIN_SIZE: 0.75
+VAL_SIZE: 0.15
+
+#--------------------------------------------------------
+# Data Augmentation
+
+# AUGMENTATION: True
+# AUG_EXPERIMENT_NAME = EXPERIMENT_NAME + "_AUG"
+# AUG_DIR_EXP = .../Datasets/run_preprocessing/{AUG_EXPERIMENT_NAME}
+
+#--------------------------------------------------------
+#--------------------------------------------------------
+# Model
+
+# DATASET_INPUT: align_bands_ecc_affine_with_retry--best_band_otsu_green--Multiview__SEED_20
+# EXPERIMENT_NAME: MTV_5_BANDS_SEED_20_EPOCHS_2_MobileNetV3Large_TEST
+# EXPERIMENT_TYPE: MTV_Texture
+
+# SmallCNN MobileNetV3Small ResNet18 ResNet50 ConvNeXtTiny ViTTiny
+
+MODEL:
+  MODEL_NAME: MobileNetV3Large  
+  SEED_MODEL: 20
+
+  PRETRAINED: True
+  BATCH_SIZE: 16
+  EPOCHS: 2
+  DROPOUT: 0.2
+  LR: 1e-4
+
+  N_BANDS: -1
+  NUM_WORKERS: 4
+  PIN_MEMORY: True
+  PERSISTENT_WORKERS: True
+
+#--------------------------------------------------------
+#--------------------------------------------------------
+# SHAP
+
+APPLY_SHAP: False
+

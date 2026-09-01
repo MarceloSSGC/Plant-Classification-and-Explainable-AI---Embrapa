@@ -265,165 +265,7 @@ def classification_metrics_dataframe(
 #======================================================================
 # Dataset Class - Multiclass (single-label)
 
-# class MultispectralWeedDataset(Dataset):
-#     def __init__(self, root_dir, transform=None, expected_bands=None):
-#         """
-#         root_dir: diretório (TRAIN_DIR, VAL_DIR ou TEST_DIR)
-#                   contendo uma subpasta por classe, e dentro de cada uma,
-#                   os arquivos .npy das imagens (H, W, N), onde N é o número
-#                   de bandas/canais resultante do pré-processamento.
-#         transform: transformações opcionais a serem aplicadas no tensor da imagem
-#         expected_bands: (opcional) número de bandas esperado (N). Se informado,
-#                   cada amostra é validada contra esse valor ao ser carregada,
-#                   levantando erro em caso de inconsistência. Se None, o número
-#                   de bandas é inferido automaticamente a partir do primeiro
-#                   arquivo do dataset e fica disponível em self.num_bands.
-#         """
-#         self.root_dir = Path(root_dir)
-#         self.transform = transform
-
-#         self.classes = sorted([
-#             d.name for d in self.root_dir.iterdir()
-#             if d.is_dir()
-#         ])
-
-#         # mapa nome da classe -> índice
-#         self.class_to_idx = {cls_name: i for i, cls_name in enumerate(self.classes)}
-
-#         self.samples = []
-
-#         for cls_name in self.classes:
-#             cls_dir = self.root_dir / cls_name
-#             cls_idx = self.class_to_idx[cls_name]
-
-#             for file_path in cls_dir.glob("*.npy"):
-#                 self.samples.append((file_path, cls_idx, cls_name))
-
-#         if not self.samples:
-#             raise RuntimeError(f"Nenhum arquivo .npy encontrado em {self.root_dir}")
-
-#         # Determina o número de bandas (N) a partir do primeiro arquivo,
-#         # ou usa/valida contra o valor informado em expected_bands.
-#         first_file = self.samples[0][0]
-#         inferred_bands = np.load(first_file, mmap_mode="r").shape[-1]
-
-#         if expected_bands is not None and inferred_bands != expected_bands:
-#             raise ValueError(
-#                 f"Número de bandas inconsistente: esperado {expected_bands}, "
-#                 f"encontrado {inferred_bands} em {first_file}"
-#             )
-
-#         self.num_bands = expected_bands if expected_bands is not None else inferred_bands
-
-#     def __len__(self):
-#         return len(self.samples)
-
-#     def __getitem__(self, idx):
-#         file_path, cls_idx, cls_name = self.samples[idx]
-
-#         img = np.load(file_path).astype(np.float32)  # (H, W, N)
-
-#         if img.shape[-1] != self.num_bands:
-#             raise ValueError(
-#                 f"{file_path} tem {img.shape[-1]} bandas, esperado {self.num_bands}"
-#             )
-
-#         img = torch.from_numpy(img)
-#         img = img.permute(2, 0, 1)  # (N, H, W)
-
-#         if self.transform is not None:
-#             img = self.transform(img)
-
-#         y_i = torch.tensor(cls_idx, dtype=torch.long)  # índice da classe (0..30)
-#         c_i = cls_name                                  # nome da espécie
-#         n_i = file_path.stem                             # nome do arquivo, ex: "IMG_0035__rotation_180"
-
-#         return img, y_i, c_i, n_i
-
-
-#----------------------------------------------------------------------
-
-# class WeedDataset_Transform(Dataset):
-#     def __init__(self, root_dir, transform=None, expected_bands=None):
-#         """
-#         root_dir: diretório (TRAIN_DIR, VAL_DIR ou TEST_DIR)
-#                   contendo uma subpasta por classe, e dentro de cada uma,
-#                   os arquivos .npy das imagens (H, W, N), onde N é o número
-#                   de bandas/canais resultante do pré-processamento.
-#         transform: transformações opcionais a serem aplicadas no tensor da imagem
-#         expected_bands: (opcional) número de bandas esperado (N). Se informado,
-#                   cada amostra é validada contra esse valor ao ser carregada,
-#                   levantando erro em caso de inconsistência. Se None, o número
-#                   de bandas é inferido automaticamente a partir do primeiro
-#                   arquivo do dataset e fica disponível em self.num_bands.
-#         """
-#         self.root_dir = Path(root_dir)
-#         self.transform = transform
-
-#         self.classes = sorted([
-#             d.name for d in self.root_dir.iterdir()
-#             if d.is_dir()
-#         ])
-
-#         # mapa nome da classe -> índice
-#         self.class_to_idx = {cls_name: i for i, cls_name in enumerate(self.classes)}
-
-#         self.samples = []
-
-#         for cls_name in self.classes:
-#             cls_dir = self.root_dir / cls_name
-#             cls_idx = self.class_to_idx[cls_name]
-
-#             for file_path in cls_dir.glob("*.npy"):
-#                 self.samples.append((file_path, cls_idx, cls_name))
-
-#         if not self.samples:
-#             raise RuntimeError(f"Nenhum arquivo .npy encontrado em {self.root_dir}")
-
-#         # Determina o número de bandas (N) a partir do primeiro arquivo,
-#         # ou usa/valida contra o valor informado em expected_bands.
-#         first_file = self.samples[0][0]
-#         inferred_bands = np.load(first_file, mmap_mode="r").shape[-1]
-
-#         if expected_bands is not None and inferred_bands != expected_bands:
-#             raise ValueError(
-#                 f"Número de bandas inconsistente: esperado {expected_bands}, "
-#                 f"encontrado {inferred_bands} em {first_file}"
-#             )
-
-#         self.num_bands = expected_bands if expected_bands is not None else inferred_bands
-
-#     def __len__(self):
-#         return len(self.samples)
-
-#     def __getitem__(self, idx):
-#         file_path, cls_idx, cls_name = self.samples[idx]
-
-#         img = np.load(file_path).astype(np.float32)  # (H, W, N)
-
-#         if self.transform is not None:
-#             # print(f'1 img.shape: {img.shape}')
-#             img = self.transform(img)
-#             # print(f'2 img.shape: {img.shape}')
-
-#         if img.shape[-1] != self.num_bands:
-#             raise ValueError(
-#                 f"{file_path} tem {img.shape[-1]} bandas, esperado {self.num_bands}"
-#             )
-
-#         img = torch.from_numpy(img)
-#         img = img.permute(2, 0, 1)  # (N, H, W)
-
-
-#         y_i = torch.tensor(cls_idx, dtype=torch.long)  # índice da classe (0..30)
-#         c_i = cls_name                                  # nome da espécie
-#         n_i = file_path.stem                             # nome do arquivo, ex: "IMG_0035__rotation_180"
-
-#         return img, y_i, c_i, n_i
-
-#----------------------------------------------------------------------
-
-class WeedDataset_Transform(Dataset):
+class MultispectralWeedDataset(Dataset):
     def __init__(self, root_dir, transform=None, expected_bands=None):
         """
         root_dir: diretório (TRAIN_DIR, VAL_DIR ou TEST_DIR)
@@ -463,12 +305,7 @@ class WeedDataset_Transform(Dataset):
         # Determina o número de bandas (N) a partir do primeiro arquivo,
         # ou usa/valida contra o valor informado em expected_bands.
         first_file = self.samples[0][0]
-
-        if transform is None: 
-            inferred_bands = np.load(first_file, mmap_mode="r").shape[-1]
-        else:
-            inferred_bands = transform(np.load(first_file, mmap_mode="r")).shape[-1]
-
+        inferred_bands = np.load(first_file, mmap_mode="r").shape[-1]
 
         if expected_bands is not None and inferred_bands != expected_bands:
             raise ValueError(
@@ -486,11 +323,6 @@ class WeedDataset_Transform(Dataset):
 
         img = np.load(file_path).astype(np.float32)  # (H, W, N)
 
-        if self.transform is not None:
-            # print(f'1 img.shape: {img.shape}')
-            img = self.transform(img)
-            # print(f'2 img.shape: {img.shape}')
-
         if img.shape[-1] != self.num_bands:
             raise ValueError(
                 f"{file_path} tem {img.shape[-1]} bandas, esperado {self.num_bands}"
@@ -499,14 +331,14 @@ class WeedDataset_Transform(Dataset):
         img = torch.from_numpy(img)
         img = img.permute(2, 0, 1)  # (N, H, W)
 
+        if self.transform is not None:
+            img = self.transform(img)
 
         y_i = torch.tensor(cls_idx, dtype=torch.long)  # índice da classe (0..30)
         c_i = cls_name                                  # nome da espécie
         n_i = file_path.stem                             # nome do arquivo, ex: "IMG_0035__rotation_180"
 
         return img, y_i, c_i, n_i
-
-
 
 # #======================================================================
 # #======================================================================

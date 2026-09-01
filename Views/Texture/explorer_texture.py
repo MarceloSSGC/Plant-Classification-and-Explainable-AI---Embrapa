@@ -62,13 +62,19 @@ LBP = apply_lbp_1b(img_5b[:, :, 3])
 plot_band(LBP, title="Canny - NIR")
 plot_band(LBP, title="Canny - NIR", figsize=(20, 15))
 
-LBP = apply_lbp_1b(img_5b[:, :, 1], radius=2, n_points=8)
+LBP = apply_lbp_1b(img_5b[:, :, 1], radius=1, n_points=8)
 plot_band(LBP, title="Canny - G")
 
 all_LBP = apply_lbp_5b(img_5b)
 plot_5bands(all_LBP)
 plot_rgb(all_LBP)
 
+
+LBP = apply_lbp_1b(img_5b[:, :, 1], radius=4, n_points=4)
+plot_band(LBP, title="Canny - G")
+
+
+# plot_rgb(keep_bigger_components(img_5b, 20))
 
 #======================================================================
 # Gabor filter bank
@@ -233,6 +239,11 @@ plot_band(blackhat_map)
 # plot_band(clip_percentile_normalize(tophat_map, percentile=0.99))
 # plot_band(clip_percentile_normalize(blackhat_map, percentile=0.99))
 
+tophat_map = apply_tophat(img_1b, bg_value=0.0, radius=20, mode='white')
+blackhat_map = apply_tophat(img_1b, bg_value=0.0, radius=15, mode='black')
+
+plot_band(tophat_map)
+plot_band(blackhat_map)
 
 #======================================================================
 # skeleton
@@ -259,6 +270,14 @@ test = stretch_border_to_background(coherence_map, size=10)
 plot_band(test, figsize=(20, 15))
 plot_band(coherence_map)
 
+
+img_1b = img_5b[:, :, 1]  # G
+orientation_map, coherence_map = apply_structure_tensor(img_1b, bg_value=0.0, sigma=1)
+
+plot_band(orientation_map)
+plot_band(coherence_map)
+plot_band(keep_bigger_components(coherence_map[:, :], 15))
+
 #======================================================================
 # Entropia local (skimage.filters.rank.entropy)
 
@@ -266,6 +285,10 @@ img_1b = img_5b[:, :, 3]  # ex: banda NIR
 entropy_map = apply_local_entropy(img_1b, bg_value=0.0, radius=5, levels=32)
 plot_band(entropy_map)
 
+
+img_1b = img_5b[:, :, 1]  # G
+entropy_map = apply_local_entropy(img_1b, bg_value=0.0, radius=4, levels=8)
+plot_band(entropy_map)
 
 #======================================================================
 #======================================================================
