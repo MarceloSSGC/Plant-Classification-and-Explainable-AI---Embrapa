@@ -1100,7 +1100,7 @@ def mulview_one_img_function(img_5b, trans_list, plot_img=False):
 
 def multiview_main_function(trans_list, SEG_DATA_DIR, MTV_DATA_DIR):
 
-    especies = os.listdir(SEG_DATA_DIR)
+    especies = sorted(os.listdir(SEG_DATA_DIR))
     if "seg_info.json" in especies:
         especies.remove("seg_info.json")
 
@@ -1129,6 +1129,7 @@ def multiview_main_function(trans_list, SEG_DATA_DIR, MTV_DATA_DIR):
 
                 if take_n_bands:
                     n_bands = img_multiview.shape[-1]
+                    print(f"\n\t\033[100;40m --- n_bands: {n_bands} ---   \033[100;0m")
                     take_n_bands = False
 
                 np.save(file_dir, img_multiview)

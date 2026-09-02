@@ -74,8 +74,17 @@ def run_training(config):
         raise ValueError(f"PC: {PC} not correct")
 
     #======================================================================
-    # GPU
+    # PC Directory
 
+    if PC == "NITRO":
+        PC_DIR = f"/media/marcelo/HD_8t/Marcelo__Seagate_8tb/Embrapa/Embrapa_Experimentos"
+    elif PC == "HELIOS":
+        PC_DIR = f"/run/media/marcelo/HD_8t/Marcelo__Seagate_8tb/Embrapa/Embrapa_Experimentos"
+    else:
+        PC_DIR = f"/home/u14696181/Documents/Datasets/Embrapa_Experimentos"
+
+    #======================================================================
+    # GPU
 
     for i in range(torch.cuda.device_count()):
         print(f"GPU {i}: {torch.cuda.get_device_name(i)}")
@@ -119,12 +128,7 @@ def run_training(config):
     else:
         TRAIN_DATA_DIR = f"Split/{SPLIT_DATE_TYPE}/{SPLIT_DATA_NAME}"
 
-    if PC == "NITRO":
-        DATA_DIR = f"/media/marcelo/HD_8t/Marcelo__Seagate_8tb/Embrapa/Embrapa_Experimentos/Datasets/{TRAIN_DATA_DIR}"
-    elif PC == "HELIOS":
-        DATA_DIR = f"/run/media/marcelo/HD_8t/Marcelo__Seagate_8tb/Embrapa/Embrapa_Experimentos/Datasets/{TRAIN_DATA_DIR}"
-    else:
-        DATA_DIR = f"/home/u14696181/Documents/Datasets/Embrapa_Experimentos/Datasets/{TRAIN_DATA_DIR}"
+    DATA_DIR = f"{PC_DIR}/Datasets/{TRAIN_DATA_DIR}"
 
     if not os.path.isdir(DATA_DIR):
         raise ValueError(f"DATA_DIR doesnt exist - {DATA_DIR[-60:]}")
@@ -137,12 +141,7 @@ def run_training(config):
 
     config["EXPERIMENT_TYPE"] = EXPERIMENT_TYPE
 
-    if PC == "NITRO":
-       DIR_EXP = f"/media/marcelo/HD_8t/Marcelo__Seagate_8tb/Embrapa/Embrapa_Experimentos/Results/{EXPERIMENT_TYPE}/{EXPERIMENT_NAME}"
-    elif PC == "HELIOS":
-       DIR_EXP = f"/run/media/marcelo/HD_8t/Marcelo__Seagate_8tb/Embrapa/Embrapa_Experimentos/Results/{EXPERIMENT_TYPE}/{EXPERIMENT_NAME}"
-    else:
-       DIR_EXP = f"/home/u14696181/Documents/Datasets/Embrapa_Experimentos/Results/{EXPERIMENT_TYPE}/{EXPERIMENT_NAME}"
+    DIR_EXP = f"{PC_DIR}/Results/{EXPERIMENT_TYPE}/{MULTIVIEW_DATA_NICKNAME}/{EXPERIMENT_NAME}"
 
     if not os.path.isdir(DIR_EXP):
         os.makedirs(DIR_EXP)
@@ -249,8 +248,8 @@ def run_training(config):
     # 2.1 DataLoaders
 
     train_loader = DataLoader(
-        # train_dataset,
-        test_dataset,
+        train_dataset,
+        # test_dataset,
         batch_size=batch_size,
         shuffle=True,
         num_workers=num_workers,
@@ -310,10 +309,13 @@ def run_training(config):
 
         print("-"*80 + f"\n\t \033[96;01m  Initialize Training  \033[0m\n")
         print(f" EXPERIMENT_NAME: \033[96;93m{EXPERIMENT_NAME}\033[0m\n")
+
+        print(f"\n AUGMENTATION: \033[96;94m{AUGMENTATION}\033[0m")
+
         for x in config["MODEL"]:
             print(f" {x}: \033[96;96m{config['MODEL'][x]}\033[0m")
 
-        print(f"\n AUGMENTATION: \033[96;93m{AUGMENTATION}\033[0m")
+        print(f"\n MULTIVIEW_DATA_NICKNAME: \033[96;95m {config['MULTIVIEW_DATA_NICKNAME']} \033[0m")
 
         print(f"\n VIEWS:")
         for X in config['VIEWS']:
@@ -367,14 +369,30 @@ def run_training(config):
         t_1 = time()
 
         #-----------------------------------------------------------------
+        # Time
 
         elapsed = round(t_1 - t_0)
+
+        # Tempo total
         hours = elapsed // 3600
         minutes = (elapsed % 3600) // 60
         seconds = elapsed % 60
 
         time_train = f"{hours} hour, {minutes} min, {seconds} sec"
-        print(f'\n time_train: {time_train}')
+
+        # Tempo médio por época
+        elapsed_epoch = round(elapsed / epochs)
+
+        hours_epoch = elapsed_epoch // 3600
+        minutes_epoch = (elapsed_epoch % 3600) // 60
+        seconds_epoch = elapsed_epoch % 60
+
+        time_epoch = f"{hours_epoch} hour, {minutes_epoch} min, {seconds_epoch} sec"
+
+        print(f"\ntime_train: {time_train}")
+        print(f"time_epoch: {time_epoch}")
+
+        #-----------------------------------------------------------------
 
         mdl_info["RUN"]["model_trained"] = True
 
@@ -431,6 +449,7 @@ def run_training(config):
         mdl_info["RUN"]["training"] = {
             "device": str(device),
             "time_train": time_train,
+            "time_epoch": time_epoch,
             "epochs": epochs,
             "best_epoch": best_epoch,
 
@@ -480,6 +499,7 @@ def run_training(config):
     df_model["AUGMENTATION"] = AUGMENTATION
     df_model["N_BANDS"] = N_BANDS
     df_model["TIME_TRAIN"] = mdl_info["RUN"]['training']['time_train']
+    df_model["TIME_EPOCH"] = mdl_info["RUN"]['training']['time_epoch']
     df_model["EPOCHS"] = mdl_info["RUN"]['training']['epochs']
     df_model["BEST_EPOCH"] = mdl_info["RUN"]['training']['best_epoch']
     df_model["N_PARAMS"] = mdl_info["RUN"]['training']['trainable_params']

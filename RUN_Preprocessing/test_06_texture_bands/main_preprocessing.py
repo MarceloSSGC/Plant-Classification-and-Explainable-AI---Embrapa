@@ -47,19 +47,30 @@ except ImportError:
 
 def run_preprocessing(config):
 
-    if PC not in ["NITRO", "HELIOS", "DANTE"]:
-        raise ValueError("PC not indentified")
-    
+
     PC = config["PC"]
     INTERACTIVE = config["INTERACTIVE"]
     SEED = config["SEED"]
     MULTIVIEW_DATA_NICKNAME = config["MULTIVIEW_DATA_NICKNAME"]
 
-
     print(f"\t  PC: \033[96;95m{PC} \033[0m\n")
     print(f"\t  Interactive: \033[96;95m{INTERACTIVE} \033[0m\n")
     print(f"\t  SEED: \033[96;95m{SEED} \033[0m\n")
     print(f"\t  MULTIVIEW_DATA_NICKNAME: \033[96;95m{MULTIVIEW_DATA_NICKNAME} \033[0m\n")
+
+
+    if PC not in ["NITRO", "HELIOS", "DANTE"]:
+        raise ValueError("PC not indentified")
+
+    #======================================================================
+    # PC Directory
+
+    if PC == "NITRO":
+        PC_DIR = f"/media/marcelo/HD_8t/Marcelo__Seagate_8tb/Embrapa/Embrapa_Experimentos"
+    elif PC == "HELIOS":
+        PC_DIR = f"/run/media/marcelo/HD_8t/Marcelo__Seagate_8tb/Embrapa/Embrapa_Experimentos"
+    else:
+        PC_DIR = f"/home/u14696181/Documents/Datasets/Embrapa_Experimentos"
 
     #======================================================================
     # Alignment
@@ -69,24 +80,28 @@ def run_preprocessing(config):
     #======================================================================
     # Base Data
 
-    BASE_DATA_DIR = config["BASE_DATA_DIR"]
+    # BASE_DATA_DIR = config["BASE_DATA_DIR"]
 
-    if PC == "HELIOS":
-        BASE_DATA_DIR = f"/run/{BASE_DATA_DIR}"
-    elif PC == "DANTE":
-       BASE_DATA_DIR = "/home/u14696181/Documents/Datasets/Embrapa_Experimentos/Datasets/PlantaDaninha_BoaVista"
+    # if PC == "HELIOS":
+    #     BASE_DATA_DIR = f"/run/{BASE_DATA_DIR}"
+    # elif PC == "DANTE":
+    #    BASE_DATA_DIR = "/home/u14696181/Documents/Datasets/Embrapa_Experimentos/Datasets/PlantaDaninha_BoaVista"
+
+    BASE_DATA_DIR = f"{PC_DIR}/Datasets/PlantaDaninha_BoaVista"
 
     #======================================================================
     # Align Dataset
 
     ALIGN_DATA_NAME = config["ALIGN_DATA_NAME"]
 
-    if PC == "NITRO":
-        ALIGH_DATA_DIR = f"/media/marcelo/HD_8t/Marcelo__Seagate_8tb/Embrapa/Embrapa_Experimentos/Datasets/Aligned/{ALIGN_DATA_NAME}"
-    elif PC == "HELIOS":
-        ALIGH_DATA_DIR = f"/run/media/marcelo/HD_8t/Marcelo__Seagate_8tb/Embrapa/Embrapa_Experimentos/Datasets/Aligned/{ALIGN_DATA_NAME}"
-    else:
-        ALIGH_DATA_DIR = f"/home/u14696181/Documents/Datasets/Embrapa_Experimentos/Datasets/Aligned/{ALIGN_DATA_NAME}"
+    # if PC == "NITRO":
+    #     ALIGH_DATA_DIR = f"/media/marcelo/HD_8t/Marcelo__Seagate_8tb/Embrapa/Embrapa_Experimentos/Datasets/Aligned/{ALIGN_DATA_NAME}"
+    # elif PC == "HELIOS":
+    #     ALIGH_DATA_DIR = f"/run/media/marcelo/HD_8t/Marcelo__Seagate_8tb/Embrapa/Embrapa_Experimentos/Datasets/Aligned/{ALIGN_DATA_NAME}"
+    # else:
+    #     ALIGH_DATA_DIR = f"/home/u14696181/Documents/Datasets/Embrapa_Experimentos/Datasets/Aligned/{ALIGN_DATA_NAME}"
+
+    ALIGH_DATA_DIR = f"{PC_DIR}/Datasets/Aligned/{ALIGN_DATA_NAME}"
 
     #======================================================================
     # Alignment Method
@@ -135,10 +150,15 @@ def run_preprocessing(config):
 
     SEG_DATA_NICKNAME = config["SEG_DATA_NICKNAME"]
     SEG_DATA_NAME = f"{ALIGN_DATA_NAME}__{SEG_DATA_NICKNAME}"
-    if PC == "NITRO":
-        SEG_DATA_DIR = f"/media/marcelo/HD_8t/Marcelo__Seagate_8tb/Embrapa/Embrapa_Experimentos/Datasets/Segmentation/{SEG_DATA_NAME}"
-    else:
-        SEG_DATA_DIR = f"/run/media/marcelo/HD_8t/Marcelo__Seagate_8tb/Embrapa/Embrapa_Experimentos/Datasets/Segmentation/{SEG_DATA_NAME}"
+
+    # if PC == "NITRO":
+    #     SEG_DATA_DIR = f"/media/marcelo/HD_8t/Marcelo__Seagate_8tb/Embrapa/Embrapa_Experimentos/Datasets/Segmentation/{SEG_DATA_NAME}"
+    # elif PC == "HELIOS":
+    #     SEG_DATA_DIR = f"/run/media/marcelo/HD_8t/Marcelo__Seagate_8tb/Embrapa/Embrapa_Experimentos/Datasets/Segmentation/{SEG_DATA_NAME}"
+    # else:
+    #     SEG_DATA_DIR = f"/home/u14696181/Documents/Datasets/Embrapa_Experimentos/Datasets/Segmentation/{SEG_DATA_NAME}"
+
+    SEG_DATA_DIR = f"{PC_DIR}/Datasets/Segmentation/{SEG_DATA_NAME}"
 
     #======================================================================
     # Segmentation Method
@@ -207,11 +227,14 @@ def run_preprocessing(config):
 
     MULTIVIEW_DATA_TYPE = config["MULTIVIEW_DATA_TYPE"]
 
-    if PC == "NITRO":
-        MTV_DATA_DIR = f"/media/marcelo/HD_8t/Marcelo__Seagate_8tb/Embrapa/Embrapa_Experimentos/Datasets/Multiview/{MULTIVIEW_DATA_TYPE}/{MULTIVIEW_DATA_NAME}"
-    else:
-        MTV_DATA_DIR = f"/run/media/marcelo/HD_8t/Marcelo__Seagate_8tb/Embrapa/Embrapa_Experimentos/Datasets/Multiview/{MULTIVIEW_DATA_TYPE}/{MULTIVIEW_DATA_NAME}"
+    # if PC == "NITRO":
+    #     MTV_DATA_DIR = f"/media/marcelo/HD_8t/Marcelo__Seagate_8tb/Embrapa/Embrapa_Experimentos/Datasets/Multiview/{MULTIVIEW_DATA_TYPE}/{MULTIVIEW_DATA_NAME}"
+    # elif PC == "HELIOS":
+    #     MTV_DATA_DIR = f"/run/media/marcelo/HD_8t/Marcelo__Seagate_8tb/Embrapa/Embrapa_Experimentos/Datasets/Multiview/{MULTIVIEW_DATA_TYPE}/{MULTIVIEW_DATA_NAME}"
+    # else:
+    #     MTV_DATA_DIR = f"/home/u14696181/Documents/Datasets/Embrapa_Experimentos/Datasets/Multiview/{MULTIVIEW_DATA_TYPE}/{MULTIVIEW_DATA_NAME}"
 
+    MTV_DATA_DIR = f"{PC_DIR}/Datasets/Multiview/{MULTIVIEW_DATA_TYPE}/{MULTIVIEW_DATA_NAME}"
 
     #======================================================================
     # Multiview in action
@@ -259,8 +282,8 @@ def run_preprocessing(config):
     # INTERACTIVE = config["INTERACTIVE"]
     # SEED = config["SEED"]
 
-    print(f"\t  Interactive: \033[96;95m{INTERACTIVE} \033[0m\n")
-    print(f"\t  SEED: \033[96;95m{SEED} \033[0m\n")
+    # print(f"\t  Interactive: \033[96;95m{INTERACTIVE} \033[0m\n")
+    # print(f"\t  SEED: \033[96;95m{SEED} \033[0m\n")
 
     #======================================================================
     #======================================================================
@@ -284,10 +307,14 @@ def run_preprocessing(config):
     config["SPLIT_DATA_NAME"] = SPLIT_DATA_NAME
     config["SPLIT_DATE_TYPE"] = SPLIT_DATE_TYPE
 
-    if PC == "NITRO":
-        SPLIT_DIR = f"/media/marcelo/HD_8t/Marcelo__Seagate_8tb/Embrapa/Embrapa_Experimentos/Datasets/Split/{SPLIT_DATE_TYPE}/{SPLIT_DATA_NAME}"
-    else:
-        SPLIT_DIR = f"/run/media/marcelo/HD_8t/Marcelo__Seagate_8tb/Embrapa/Embrapa_Experimentos/Datasets/Split/{SPLIT_DATE_TYPE}/{SPLIT_DATA_NAME}"
+    # if PC == "NITRO":
+    #     SPLIT_DIR = f"/media/marcelo/HD_8t/Marcelo__Seagate_8tb/Embrapa/Embrapa_Experimentos/Datasets/Split/{SPLIT_DATE_TYPE}/{SPLIT_DATA_NAME}"
+    # elif PC == "HELIOS":
+    #     SPLIT_DIR = f"/run/media/marcelo/HD_8t/Marcelo__Seagate_8tb/Embrapa/Embrapa_Experimentos/Datasets/Split/{SPLIT_DATE_TYPE}/{SPLIT_DATA_NAME}"
+    # else:
+    #     SPLIT_DIR = f"/home/u14696181/Documents/Datasets/Embrapa_Experimentos/Datasets/Split/{SPLIT_DATE_TYPE}/{SPLIT_DATA_NAME}"
+
+    SPLIT_DIR = f"{PC_DIR}/Datasets/Split/{SPLIT_DATE_TYPE}/{SPLIT_DATA_NAME}"
 
     if not os.path.isdir(SPLIT_DIR):
         os.makedirs(SPLIT_DIR)
@@ -377,7 +404,7 @@ def run_preprocessing(config):
     else:
         with open(split_file_dir, "r", encoding="utf-8") as file:
             split_file_names = json.load(file)
-        print("Split Names: \033[96;92mLoaded\033[0m")
+        # print("Split Names: \033[96;92mLoaded\033[0m")
 
     #======================================================================
     # DIRETÓRIOS
@@ -413,7 +440,7 @@ def run_preprocessing(config):
                     print(f'Saving image... {sample_name}  -  {partition} - {specie}')
                     np.save(output_path, img)
 
-    print("\nSplit Files: \033[96;92m Finished\033[0m\n")
+    # print("\nSplit Files: \033[96;92m Finished\033[0m\n")
 
     #======================================================================
     # Normalization
@@ -480,7 +507,7 @@ def run_preprocessing(config):
     else:
         mean_bands = np.array(split_info["SPLIT"]["mean_bands"])
         std_bands = np.array(split_info["SPLIT"]["std_bands"])
-        print(f"ETAPA 1: \033[96;92m Mean and STD Loaded\033[0m\n")
+        # print(f"ETAPA 1: \033[96;92m Mean and STD Loaded\033[0m\n")
 
 
     #------------------------------------------------------------------------
@@ -518,7 +545,7 @@ def run_preprocessing(config):
                 if (i + 1) % 10 == 0:
                     print(f"{split}: {i + 1}/{len(files)} imagens normalizadas")
 
-    print(f"ETAPA 2: \033[96;92m Normalization Finished\033[0m")
+    # print(f"ETAPA 2: \033[96;92m Normalization Finished\033[0m")
 
     ####################################################################################
     ####################################################################################
@@ -544,10 +571,14 @@ def run_preprocessing(config):
     config["AUG_DATE_NAME"] = AUG_DATE_NAME
     config["AUG_DATE_TYPE"] = AUG_DATE_TYPE
 
-    if PC == "NITRO":
-        AUG_DIR_EXP = f"/media/marcelo/HD_8t/Marcelo__Seagate_8tb/Embrapa/Embrapa_Experimentos/Datasets/Augmentation/{AUG_DATE_TYPE}/{AUG_DATE_NAME}"
-    else:
-        AUG_DIR_EXP = f"/run/media/marcelo/HD_8t/Marcelo__Seagate_8tb/Embrapa/Embrapa_Experimentos/Datasets/Augmentation/{AUG_DATE_TYPE}/{AUG_DATE_NAME}"
+    # if PC == "NITRO":
+    #     AUG_DIR_EXP = f"/media/marcelo/HD_8t/Marcelo__Seagate_8tb/Embrapa/Embrapa_Experimentos/Datasets/Augmentation/{AUG_DATE_TYPE}/{AUG_DATE_NAME}"
+    # elif PC == "HELIOS":
+    #     AUG_DIR_EXP = f"/run/media/marcelo/HD_8t/Marcelo__Seagate_8tb/Embrapa/Embrapa_Experimentos/Datasets/Augmentation/{AUG_DATE_TYPE}/{AUG_DATE_NAME}"
+    # else:
+    #     AUG_DIR_EXP = f"/home/u14696181/Documents/Datasets/Embrapa_Experimentos/Datasets/Augmentation/{AUG_DATE_TYPE}/{AUG_DATE_NAME}"
+
+    AUG_DIR_EXP = f"{PC_DIR}/Datasets/Augmentation/{AUG_DATE_TYPE}/{AUG_DATE_NAME}"
 
     os.makedirs(AUG_DIR_EXP, exist_ok=True)
 
@@ -648,7 +679,7 @@ def run_preprocessing(config):
 
         aug_factor = augmentation_factor(n_sample)
 
-        print(f"especie: {especie}   --   aug_factor: {aug_factor}   --   n_sample:{n_sample}")
+        # print(f"especie: {especie}   --   aug_factor: {aug_factor}   --   n_sample:{n_sample}")
 
         for ith_file in files:  # ith_file = files[1]
 
@@ -750,7 +781,7 @@ def run_preprocessing(config):
     else:
         mean_bands = np.array(aug_infos["AUGMENTATION"]["mean_bands"])
         std_bands = np.array(aug_infos["AUGMENTATION"]["std_bands"])
-        print(f"ETAPA 1: \033[96;92m Mean and STD Loaded\033[0m\n")
+        # print(f"ETAPA 1: \033[96;92m Mean and STD Loaded\033[0m\n")
 
     #------------------------------------------------------------------------
     # ETAPA 2: NORMALIZAR TRAIN, VAL E TEST
@@ -792,7 +823,7 @@ def run_preprocessing(config):
                 if (i + 1) % 10 == 0:
                     print(f"{split}: {i + 1}/{len(files)} imagens normalizadas")
 
-    print(f" ETAPA 2: \033[96;92m Normalization:Done\033[0m")
+    # print(f" ETAPA 2: \033[96;92m Normalization:Done\033[0m")
 
     # ============================================================
 
