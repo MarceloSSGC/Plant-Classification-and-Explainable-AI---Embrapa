@@ -17,8 +17,8 @@ try:
     from aux_model import *
     from aux_only_models import *
 except ImportError:
-    from RUN_Preprocessing.test_04_experiments.aux_model import *
-    from RUN_Preprocessing.test_04_experiments.aux_only_models import *
+    from RUN_Preprocessing.test_06_texture_bands.aux_model import *
+    from RUN_Preprocessing.test_06_texture_bands.aux_only_models import *
 
 os.environ["CUBLAS_WORKSPACE_CONFIG"] = ":4096:8"
 

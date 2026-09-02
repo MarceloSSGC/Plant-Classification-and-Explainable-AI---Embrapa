@@ -5,7 +5,10 @@ import cv2
 import matplotlib.pyplot as plt
 from copy import deepcopy
 
-from temp_transformation import *
+try:
+    from temp_transformation import *
+except ImportError:
+    from RUN_Preprocessing.test_06_texture_bands.temp_transformation import *
 
 
 #======================================================================

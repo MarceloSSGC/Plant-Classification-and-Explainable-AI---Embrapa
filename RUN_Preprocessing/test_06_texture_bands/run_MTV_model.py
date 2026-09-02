@@ -6,7 +6,10 @@ from itertools import product
 print(f"\n work_dir: {os.getcwd()[-50:]} \n")
 
 # Nitro
-os.chdir("/home/marcelo/Documents/VSCode_python/Agro/SIMIDS/Planta_Daninha_Boa_Vista")
+# os.chdir("/home/marcelo/Documents/VSCode_python/Agro/SIMIDS/Planta_Daninha_Boa_Vista")
+
+# DANTE
+os.chdir("/home/u14696181/Documents/python_projects/Planta_Daninha_Embrapa")
 
 from RUN_Preprocessing.test_06_texture_bands.main_preprocessing import run_preprocessing
 from RUN_Preprocessing.test_06_texture_bands.main_run import run_training

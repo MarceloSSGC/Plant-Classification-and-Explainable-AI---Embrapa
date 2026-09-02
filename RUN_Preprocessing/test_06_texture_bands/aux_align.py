@@ -551,7 +551,7 @@ def align_main_function(align_method, data_dir, align_data_dir):
     if not os.path.isdir(data_dir):
         raise ValueError(f"data_dir = {data_dir} doesnt exist")
     
-    especies = os.listdir(data_dir)
+    especies = sorted(os.listdir(data_dir))
     os.makedirs(align_data_dir, exist_ok=True)
 
     for especie in especies: # especie = especies[0]

@@ -47,7 +47,9 @@ except ImportError:
 
 def run_preprocessing(config):
 
-
+    if PC not in ["NITRO", "HELIOS", "DANTE"]:
+        raise ValueError("PC not indentified")
+    
     PC = config["PC"]
     INTERACTIVE = config["INTERACTIVE"]
     SEED = config["SEED"]
@@ -69,8 +71,10 @@ def run_preprocessing(config):
 
     BASE_DATA_DIR = config["BASE_DATA_DIR"]
 
-    if PC != "NITRO":
+    if PC == "HELIOS":
         BASE_DATA_DIR = f"/run/{BASE_DATA_DIR}"
+    elif PC == "DANTE":
+       BASE_DATA_DIR = "/home/u14696181/Documents/Datasets/Embrapa_Experimentos/Datasets/PlantaDaninha_BoaVista"
 
     #======================================================================
     # Align Dataset
@@ -79,9 +83,10 @@ def run_preprocessing(config):
 
     if PC == "NITRO":
         ALIGH_DATA_DIR = f"/media/marcelo/HD_8t/Marcelo__Seagate_8tb/Embrapa/Embrapa_Experimentos/Datasets/Aligned/{ALIGN_DATA_NAME}"
-    else:
+    elif PC == "HELIOS":
         ALIGH_DATA_DIR = f"/run/media/marcelo/HD_8t/Marcelo__Seagate_8tb/Embrapa/Embrapa_Experimentos/Datasets/Aligned/{ALIGN_DATA_NAME}"
-
+    else:
+        ALIGH_DATA_DIR = f"/home/u14696181/Documents/Datasets/Embrapa_Experimentos/Datasets/Aligned/{ALIGN_DATA_NAME}"
 
     #======================================================================
     # Alignment Method
