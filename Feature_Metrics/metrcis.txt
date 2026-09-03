@@ -1,0 +1,24 @@
+| Grupo                                          | Métricas / descritores                                                                                                                                                           |
+| ---------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Forma / Shape**                              | Área; Perímetro; Circularidade; Solidez; Momentos de Hu; Distância de Hausdorff entre contornos                                                                                  |
+| **Textura**                                    | GLCM — especialmente **contraste, homogeneidade, energia e correlação**; LBP (Local Binary Patterns), comparando os histogramas                                                  |
+| **Cor — RGB**                                  | Média por canal; Desvio-padrão por canal; Histogramas de R, G e B; Distância de Wasserstein entre histogramas/distribuições                                                      |
+| **Espectral — NIR / Red Edge / demais bandas** | Média e desvio-padrão por banda; Histogramas/distribuições por banda; Distância de Wasserstein entre distribuições; comparação dos **vetores/assinaturas espectrais** dos pixels |
+| **Índices de vegetação**                       | NDVI; NDRE e, eventualmente, comparação das distribuições desses índices                                                                                                         |
+
+
+
+| Transformação  | Propriedade-alvo                  | Métrica que eu priorizaria              | Controle de preservação              |
+| -------------- | --------------------------------- | --------------------------------------- | ------------------------------------ |
+| Gaussian blur  | High-frequency/local structure    | **HFER**                                | média/distribuição por banda         |
+| Patch shuffle  | Long-range spatial organization   | **Spatial autocorrelation vs distance** | histogramas + distribuição espectral |
+| RGB→Gray       | Chromatic information             | **Chroma \(C^*_{ab}\)**                 | luminância + NIR/RE                  |
+| Band shift     | Cross-band spatial correspondence | **Cross-band spatial correlation**      | histogramas individuais              |
+| NIR/RE removal | Non-visible spectral information  | **separabilidade entre classes**        | RGB exatamente preservado            |
+| Pixel shuffle  | All spatial organization          | **Spatial autocorrelation + GLCM**      | distribuição espectral conjunta      |
+
+
+
+
+
+
