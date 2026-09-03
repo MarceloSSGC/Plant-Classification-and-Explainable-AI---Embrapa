@@ -31,7 +31,7 @@ SEGMENTATION_METHOD: best_band_otsu_green
 # Multiview
 
 # Dataset Multiview
-MULTIVIEW_DATA_NICKNAME: RGB_&_entropy
+MULTIVIEW_DATA_NICKNAME: RGB_entropy
 # MULTIVIEW_DATASET_NAME: Aligned_ecc_affine_interch_45_cen_5__seg_best_band_otsu__Multiview__Texture
 MULTIVIEW_DATA_TYPE: Multiview_Texture
 
@@ -104,7 +104,7 @@ MODEL:
   LR: 1e-4
 
   N_BANDS: -1
-  NUM_WORKERS: 4
+  NUM_WORKERS: 8
   PIN_MEMORY: True
   PERSISTENT_WORKERS: True
 

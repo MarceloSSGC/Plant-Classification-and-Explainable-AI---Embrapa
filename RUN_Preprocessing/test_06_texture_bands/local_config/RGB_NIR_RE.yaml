@@ -31,7 +31,7 @@ SEGMENTATION_METHOD: best_band_otsu_green
 # Multiview
 
 # Dataset Multiview
-MULTIVIEW_DATA_NICKNAME: RGB
+MULTIVIEW_DATA_NICKNAME: RGB_NIR_RE
 # MULTIVIEW_DATASET_NAME: Aligned_ecc_affine_interch_45_cen_5__seg_best_band_otsu__Multiview__Texture
 MULTIVIEW_DATA_TYPE: Multiview_Texture
 
@@ -41,7 +41,7 @@ VIEWS:
     0: 
       funct: Iden
       param: 
-        which_band: RGB
+        which_band: All
 
   # TEXTURE:
   #   0:

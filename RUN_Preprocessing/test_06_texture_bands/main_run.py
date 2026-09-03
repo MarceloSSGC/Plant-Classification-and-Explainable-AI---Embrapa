@@ -221,8 +221,10 @@ def run_training(config):
     batch_size = config["MODEL"]["BATCH_SIZE"]
     lr = config["MODEL"]["LR"]
     num_workers = config["MODEL"]["NUM_WORKERS"]
+    # num_workers = 0
     pin_memory = config["MODEL"]["PIN_MEMORY"]
     persistent_workers = config["MODEL"]["PERSISTENT_WORKERS"]
+    # persistent_workers = False
 
     # Model Config
 
@@ -280,7 +282,7 @@ def run_training(config):
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     torch_cuda_is_available = torch.cuda.is_available()
-    torch_cuda_get_device_name = torch.cuda.get_device_name(0)
+    torch_cuda_get_device_name = torch.cuda.get_device_name(0) if torch_cuda_is_available else None
 
     mdl_info["RUN"]["cuda"] = {
     "device": str(device),
@@ -310,7 +312,7 @@ def run_training(config):
         print("-"*80 + f"\n\t \033[96;01m  Initialize Training  \033[0m\n")
         print(f" EXPERIMENT_NAME: \033[96;93m{EXPERIMENT_NAME}\033[0m\n")
 
-        print(f"\n AUGMENTATION: \033[96;94m{AUGMENTATION}\033[0m")
+        print(f"\n AUGMENTATION: \033[96;95m{AUGMENTATION}\033[0m\n")
 
         for x in config["MODEL"]:
             print(f" {x}: \033[96;96m{config['MODEL'][x]}\033[0m")
@@ -496,6 +498,7 @@ def run_training(config):
 
     df_model = pd.DataFrame([config["MODEL"]])
     df_model["SEED_MODEL"] = SEED_MODEL
+    df_model["NICKNAME"] = config['MULTIVIEW_DATA_NICKNAME']
     df_model["AUGMENTATION"] = AUGMENTATION
     df_model["N_BANDS"] = N_BANDS
     df_model["TIME_TRAIN"] = mdl_info["RUN"]['training']['time_train']
@@ -503,6 +506,9 @@ def run_training(config):
     df_model["EPOCHS"] = mdl_info["RUN"]['training']['epochs']
     df_model["BEST_EPOCH"] = mdl_info["RUN"]['training']['best_epoch']
     df_model["N_PARAMS"] = mdl_info["RUN"]['training']['trainable_params']
+    df_model["DEVICE"] = str(device)
+    df_model["CUDA_IS_AVAILABLE"] = torch_cuda_is_available
+    df_model["CUDA_DEVICE_NAME"] = torch_cuda_get_device_name
 
     #======================================================================
     # Metrics

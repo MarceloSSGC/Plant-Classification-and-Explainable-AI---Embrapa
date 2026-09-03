@@ -1,0 +1,131 @@
+Claro. O contexto atual pode ser resumido assim:
+
+### Contexto do estudo
+
+Você está trabalhando com **classificação de espécies de plantas daninhas por Deep Learning**, utilizando um dataset próprio de **imagens multiespectrais com cinco bandas** — RGB + NIR + Red Edge. Você já obteve desempenho alto com CNNs, então o objetivo científico deixou de ser simplesmente buscar mais acurácia e passou a ser **entender de quais características visuais/espectrais os modelos dependem para realizar a classificação**.
+
+A ideia central é desenvolver um estudo de **dependência/sensibilidade a características**, com caráter de **Explainable AI (XAI) global e diagnóstico**.
+
+### Metodologia que estamos construindo
+
+Você quer partir de um modelo já treinado e aplicar, **somente no conjunto de teste**, transformações destinadas a suprimir seletivamente determinadas famílias de características, mantendo as demais o máximo possível.
+
+As principais famílias consideradas são:
+
+* **Forma (shape/morfologia)** — uma transformação candidata é o *patch shuffle*, que destrói organização espacial global, preservando bastante da informação local.
+* **Textura** — uma candidata é *Gaussian blur* controlado, removendo detalhes locais/alta frequência.
+* **Cor** — informação RGB.
+* **Informação espectral** — particularmente NIR, Red Edge e índices de vegetação, como NDVI/NDRE.
+
+Para cada transformação, você compara o desempenho com o teste original. Se, por exemplo,
+
+$$
+Acc_{\text{original}}=96\%, \qquad
+Acc_{\text{sem textura}}=70\%,
+$$
+
+a queda de 26 pontos percentuais é uma medida da **sensibilidade do modelo à intervenção sobre textura**.
+
+Isso produz, para cada modelo, algo como um **perfil de dependência**:
+
+$$
+\text{Textura} > \text{Forma} > \text{Espectral} > \text{Cor}.
+$$
+
+### O problema metodológico central
+
+Uma preocupação importante que identificamos é que **queda de acurácia não implica automaticamente dependência daquela característica**.
+
+A transformação pode simplesmente ter produzido *distribution/domain shift*.
+
+Por isso, você quer validar quantitativamente cada transformação. A lógica é:
+
+> Se afirmo que suprimi textura, preciso mostrar que métricas de textura mudaram significativamente, enquanto métricas de forma, cor e espectro permaneceram relativamente estáveis.
+
+Para isso, discutimos métricas como **área, perímetro, circularidade, solidez, momentos de Hu e Hausdorff** para forma; **GLCM e LBP** para textura; e **histogramas, estatísticas por canal/banda, Wasserstein e assinaturas espectrais** para RGB/NIR/Red Edge.
+
+Como suas máscaras apresentam pequenos fragmentos de segmentação, você também pretende considerar a **maior componente conexa** antes de calcular descritores geométricos.
+
+### Grad-CAM e estabilidade das explicações
+
+Uma segunda frente é utilizar **Grad-CAM antes e depois das transformações**.
+
+No caso particularmente interessante do *patch shuffle*, você pode guardar a permutação dos patches, calcular o Grad-CAM na imagem embaralhada e depois **remapear a explicação para as posições originais**.
+
+Assim surgem duas perguntas diferentes:
+
+$$
+\boxed{\text{A predição permaneceu estável?}}
+$$
+
+e
+
+$$
+\boxed{\text{A explicação permaneceu estável?}}
+$$
+
+Um modelo pode continuar classificando corretamente depois do *shuffle*, mas passar a utilizar regiões completamente diferentes. Isso permite estudar não apenas robustez da predição, mas também **estabilidade da evidência utilizada pelo modelo**.
+
+### O objetivo posterior ao diagnóstico
+
+Aqui está uma das partes mais importantes da sua proposta: **o diagnóstico não é o fim do trabalho**.
+
+Depois de descobrir a característica dominante, você quer testar **duas estratégias opostas**.
+
+**Reforço da característica dominante:** se textura for a característica à qual o modelo é mais sensível, fornecer representações/extratores explícitos de textura e verificar se isso aumenta o desempenho.
+
+**Complementação:** fornecer informação relacionada às características às quais o modelo é menos dependente, como forma, tentando produzir uma utilização mais distribuída das evidências.
+
+Isso transforma a pergunta de simples XAI em:
+
+> **Podemos utilizar o diagnóstico de dependência de características para orientar racionalmente o redesenho do modelo?**
+
+Essa é uma das ideias metodológicas centrais que estamos desenvolvendo.
+
+### Objetivo aplicado à agricultura
+
+Há ainda uma hipótese prática particularmente importante.
+
+Se o diagnóstico mostrar, por exemplo, grande dependência de **textura**, você pretende testar algo como:
+
+$$
+\text{RGB + NIR + Red Edge}
+$$
+
+versus
+
+$$
+\text{RGB + representação explícita de textura}.
+$$
+
+Se a segunda configuração alcançar desempenho equivalente ou superior, você poderia mostrar que, **nesse dataset e nas condições estudadas**, NIR e Red Edge não foram necessários para atingir o melhor desempenho.
+
+Isso tem uma consequência prática: potencialmente substituir um sistema multiespectral por aquisição **RGB convencional**, reduzindo requisitos e custo de sensoriamento.
+
+Portanto, a narrativa não seria simplesmente *"textura melhora classificação"*, mas:
+
+> **diagnóstico de dependência → identificação da característica relevante → intervenção guiada pelo diagnóstico → simplificação do sistema de sensoriamento.**
+
+### Escopo dos seus estudos
+
+Você está pensando em dois níveis de publicação.
+
+O **primeiro trabalho**, mais restrito, seria voltado para **IA aplicada à agricultura/agricultura de precisão**, utilizando seu dataset de plantas daninhas. O foco seria demonstrar o pipeline diagnóstico e sua utilidade prática, sem fazer alegações excessivamente gerais.
+
+Um trabalho posterior, mais ambicioso e próximo de **Computer Vision/XAI**, generalizaria a metodologia para vários datasets e famílias arquiteturais. Nesse cenário, seria especialmente interessante mostrar que CNNs, MobileNets, ResNets e Vision Transformers apresentam **perfis diferentes de dependência de características**.
+
+Inclusive, discutimos que um resultado como
+
+$$
+\text{CNN}\rightarrow\text{fortemente sensível à textura}
+$$
+
+enquanto
+
+$$
+\text{ViT}\rightarrow\text{mais sensível à forma}
+$$
+
+seria metodologicamente muito interessante: indicaria que o método não está simplesmente medindo o dano genérico causado pelas transformações, mas potencialmente identificando **estratégias distintas de representação entre arquiteturas**.
+
+Em essência, portanto, seu estudo está evoluindo de **“classificar plantas daninhas”** para **“diagnosticar quais evidências os modelos utilizam e usar esse diagnóstico para orientar intervenções no próprio sistema de classificação”**. Essa é hoje a linha conceitual que conecta seus experimentos de supressão, métricas de validação, Grad-CAM, extração de características e eventual substituição do sensoriamento multiespectral por RGB.
