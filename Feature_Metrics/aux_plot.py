@@ -53,6 +53,28 @@ def plot_rgb(rgb_image, bands_ch=(2, 1, 0)):
     plt.axis("off")
     plt.show()
 
+#----------------------------------------------------------------------
+
+def plot_rgb_no_norm(rgb_image, bands_ch=(2, 1, 0)):
+
+    channels = []
+
+    for band in bands_ch:
+        
+        img = rgb_image[:, :, band].astype(np.float32)
+
+        # Normalização individual para [0,1]
+        # img = (img - img.min()) / (img.max() - img.min() + 1e-8)
+        channels.append(img)
+
+    rgb = np.dstack(channels)
+
+    plt.figure(figsize=(15, 9))
+    plt.imshow(rgb)
+    plt.title(f"RGB - {bands_ch}")
+    plt.axis("off")
+    plt.show()
+
 
 #======================================================================
 
@@ -230,7 +252,7 @@ def plot_ablation_4_metric(
 
 import matplotlib.pyplot as plt
 
-def plotar_barras(dados):
+def plotar_barras(dados, title=None):
     """
     Recebe uma lista de tuplas (x_i, y_i) e plota um gráfico
     de barras preservando a ordem original dos x_i.
@@ -258,7 +280,10 @@ def plotar_barras(dados):
     plt.xticks(posicoes, nomes)
     plt.xlabel("x")
     plt.ylabel("y")
+    if title is not None:
+        plt.title(title)
 
     plt.tight_layout()
     plt.show()
+
 #======================================================================

@@ -1,3 +1,9 @@
+Vamos pensar primeiro sobre as transformações que eu tenho e depois vamos para o caso mais geral (M_i, T_i). Vamos estudar um caso particular. Dada essas transformações (Patch Shuffle, ..., Remoção espectral (zerar NIR/RE)), liste 3 métricas para:
+M_1 (é "destruída" ou decresce com Patch Shuffle, mas se mantem ou descresce pouco com Gaussian Blur e Grayscale/dessaturação)
+M_2 (é "destruída" ou decresce com Gaussian Blur, mas se mantem ou descresce pouco com Patch Shuffle e Grayscale/dessaturação)
+M_3 ...
+
+
 | Grupo                                          | Métricas / descritores                                                                                                                                                           |
 | ---------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Forma / Shape**                              | Área; Perímetro; Circularidade; Solidez; Momentos de Hu; Distância de Hausdorff entre contornos                                                                                  |
@@ -18,7 +24,35 @@
 | Pixel shuffle  | All spatial organization          | **Spatial autocorrelation + GLCM**      | distribuição espectral conjunta      |
 
 
+Shape
+
+Low-frequency spatial coherence / autocorrelação em grandes escalas: deve cair com patch shuffle e ser pouco afetada por grayscale; blur leve/moderado tende a preservar.
+Moran’s I em escala global: mede autocorrelação espacial global; patch shuffle tende a reduzir bastante.
+Semivariograma / range espacial: o patch shuffle deve encurtar ou distorcer o alcance espacial; grayscale preserva e blur moderado tende a alterar pouco o range global.
+Fourier low-frequency energy organization: não apenas energia em baixa frequência, mas distribuição/coerência das componentes de baixa frequência. Patch shuffle tende a desorganizar isso.
+Wavelet energy em escalas grossas: coeficientes de baixa resolução capturam estrutura global; patch shuffle deve afetar mais que blur.
+Global contour continuity / edge connectivity: patch shuffle quebra contornos longos; grayscale preserva, e blur moderado apenas suaviza.
+Connected-component / skeleton continuity sobre uma máscara ou mapa de bordas: patch shuffle fragmenta a estrutura global, enquanto grayscale praticamente não altera.
 
 
+Claude
+**M₁ (Patch Shuffle):**
+1. Autocorrelação espacial de longo alcance
+2. Descritores de forma (compacidade, Hu moments) da maior componente conexa
+3. SSIM entre versões *coarse*/downsampled
 
+**M₂ (Gaussian Blur):**
+1. Variância do Laplaciano (luminância)
+2. GLCM contrast/energy, offset pequeno
+3. Razão energia alta/baixa frequência (FFT/wavelet)
+
+**M₃ (Grayscale/Dessaturação):**
+1. Chroma média (Lab ou HSV-S)
+2. Divergência entre canais RGB (|R-G|, |G-B|, |R-B|)
+3. Entropia/variância circular do histograma de Hue
+
+**M₄ (Remoção espectral NIR/RE):**
+1. Média/variância por banda (NIR, RE) ou NDVI/NDRE médio
+2. Wasserstein entre distribuições NDVI/NDRE
+3. Correlação pixel-a-pixel NIR–Red
 

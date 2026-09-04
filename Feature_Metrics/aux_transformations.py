@@ -2,25 +2,6 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-import torch
-import torch.nn as nn
-from torch.utils.data import Dataset, DataLoader
-import torch.nn.functional as F
-import torch.optim as optim
-
-from sklearn.metrics import (
-    accuracy_score,
-    balanced_accuracy_score,
-    precision_recall_fscore_support,
-    precision_score,
-    recall_score,
-    f1_score,
-    cohen_kappa_score,
-    matthews_corrcoef,
-    classification_report,
-    confusion_matrix
-)
-
 from time import sleep
 from copy import deepcopy
 
@@ -31,260 +12,34 @@ print(f"\n\033[100;40m\t     --- Auxiliar Transformations ---     \t\t\033[0m\n"
 
 #======================================================================
 #======================================================================
-# Metrics
-
-def classification_metrics_dataframe(
-    y_real: np.ndarray,
-    y_pred: np.ndarray,
-    class_names=None,
-    zero_division=0
-) -> pd.DataFrame:
-    """
-    Calcula métricas de classificação e retorna um DataFrame
-    com uma única linha.
-
-    Parameters
-    ----------
-    y_real : np.ndarray
-        Classes verdadeiras, com formato (n_amostras,).
-
-    y_pred : np.ndarray
-        Classes preditas, com formato (n_amostras,).
-
-    class_names : dict, list ou tuple, opcional
-        Nomes das classes.
-
-        Pode ser um dicionário no formato:
-            {0: "classe_A", 1: "classe_B"}
-
-        Ou uma lista:
-            ["classe_A", "classe_B"]
-
-        Caso não seja informado, serão utilizados os próprios
-        valores das classes.
-
-    zero_division : int ou float, padrão=0
-        Valor usado quando precision ou recall não puderem ser
-        calculados por ausência de amostras ou predições.
-
-    Returns
-    -------
-    pd.DataFrame
-        DataFrame com uma linha contendo as métricas gerais
-        e as métricas de cada classe.
-    """
-
-    # --------------------------------------------------------------
-    # Validação e padronização das entradas
-    # --------------------------------------------------------------
-    y_real = np.asarray(y_real).reshape(-1)
-    y_pred = np.asarray(y_pred).reshape(-1)
-
-    if y_real.size == 0:
-        raise ValueError("y_real não pode estar vazio.")
-
-    if y_pred.size == 0:
-        raise ValueError("y_pred não pode estar vazio.")
-
-    if y_real.shape[0] != y_pred.shape[0]:
-        raise ValueError(
-            "y_real e y_pred precisam ter o mesmo número de elementos. "
-            f"Recebido: {y_real.shape[0]} e {y_pred.shape[0]}."
-        )
-
-    # Inclui classes presentes em y_real ou y_pred
-    labels = np.unique(
-        np.concatenate([y_real, y_pred])
-    )
-
-    # --------------------------------------------------------------
-    # Define os nomes das classes
-    # --------------------------------------------------------------
-    if class_names is None:
-        label_to_name = {
-            label: str(label)
-            for label in labels
-        }
-
-    elif isinstance(class_names, dict):
-        label_to_name = {
-            label: str(class_names.get(label, label))
-            for label in labels
-        }
-
-    elif isinstance(class_names, (list, tuple)):
-        label_to_name = {}
-
-        for label in labels:
-            try:
-                label_to_name[label] = str(class_names[int(label)])
-            except (IndexError, TypeError, ValueError):
-                label_to_name[label] = str(label)
-
-    else:
-        raise TypeError(
-            "class_names deve ser None, dict, list ou tuple."
-        )
-
-    # --------------------------------------------------------------
-    # Métricas gerais
-    # --------------------------------------------------------------
-    metrics = {
-        "n_amostras": y_real.shape[0],
-
-        "acuracia": accuracy_score(
-            y_real,
-            y_pred
-        ),
-
-        "acuracia_balanceada": balanced_accuracy_score(
-            y_real,
-            y_pred
-        ),
-
-        "precision_macro": precision_score(
-            y_real,
-            y_pred,
-            labels=labels,
-            average="macro",
-            zero_division=zero_division
-        ),
-
-        "precision_micro": precision_score(
-            y_real,
-            y_pred,
-            labels=labels,
-            average="micro",
-            zero_division=zero_division
-        ),
-
-        "precision_weighted": precision_score(
-            y_real,
-            y_pred,
-            labels=labels,
-            average="weighted",
-            zero_division=zero_division
-        ),
-
-        "recall_macro": recall_score(
-            y_real,
-            y_pred,
-            labels=labels,
-            average="macro",
-            zero_division=zero_division
-        ),
-
-        "recall_micro": recall_score(
-            y_real,
-            y_pred,
-            labels=labels,
-            average="micro",
-            zero_division=zero_division
-        ),
-
-        "recall_weighted": recall_score(
-            y_real,
-            y_pred,
-            labels=labels,
-            average="weighted",
-            zero_division=zero_division
-        ),
-
-        "f1_macro": f1_score(
-            y_real,
-            y_pred,
-            labels=labels,
-            average="macro",
-            zero_division=zero_division
-        ),
-
-        "f1_micro": f1_score(
-            y_real,
-            y_pred,
-            labels=labels,
-            average="micro",
-            zero_division=zero_division
-        ),
-
-        "f1_weighted": f1_score(
-            y_real,
-            y_pred,
-            labels=labels,
-            average="weighted",
-            zero_division=zero_division
-        ),
-
-        "cohen_kappa": cohen_kappa_score(
-            y_real,
-            y_pred
-        ),
-
-        "matthews_corrcoef": matthews_corrcoef(
-            y_real,
-            y_pred
-        )
-    }
-
-    # --------------------------------------------------------------
-    # Métricas por classe
-    # --------------------------------------------------------------
-    precision_per_class, recall_per_class, f1_per_class, support = (
-        precision_recall_fscore_support(
-            y_real,
-            y_pred,
-            labels=labels,
-            average=None,
-            zero_division=zero_division
-        )
-    )
-
-    for label, precision, recall, f1, n_samples in zip(
-        labels,
-        precision_per_class,
-        recall_per_class,
-        f1_per_class,
-        support
-    ):
-        class_name = label_to_name[label]
-
-        # Evita espaços e caracteres pouco convenientes nas colunas
-        class_name = (
-            class_name
-            .strip()
-            .replace(" ", "_")
-            .replace("/", "_")
-        )
-
-        metrics[f"precision__{class_name}"] = precision
-        metrics[f"recall__{class_name}"] = recall
-        metrics[f"f1__{class_name}"] = f1
-        metrics[f"support__{class_name}"] = int(n_samples)
-
-    return pd.DataFrame([metrics])
-
-#======================================================================
-#======================================================================
 #======================================================================
 # Color
 
-def suppress_rgb_color(image: np.ndarray) -> np.ndarray:
+def suppress_rgb_color(image: np.ndarray, discolor: float = 1.0) -> np.ndarray:
     """
     Aplica a transformação de supressão de cor RGB (item 5.3).
 
     Recebe uma imagem multiespectral com 5 bandas na ordem:
     [Blue, Green, Red, NIR, RedEdge]
 
-    Converte as bandas B, G, R em uma única banda grayscale (mantendo
-    a mesma escala/dtype das bandas originais) e a replica nos três
-    primeiros canais, preservando NIR e Red Edge inalterados.
+    Converte as bandas B, G, R em uma única banda grayscale e interpola
+    entre a imagem original (discolor=0) e a versão totalmente
+    dessaturada (discolor=1), preservando NIR e Red Edge inalterados
+    em qualquer caso.
 
-    Resultado: [GS, GS, GS, NIR, RE]
+    Resultado: [B', G', R', NIR, RE], onde
+        canal' = (1 - discolor) * canal_original + discolor * grayscale
 
     Parameters
     ----------
     image : np.ndarray
         Array de shape (H, W, 5), dtype float ou uint, bandas na ordem
         [B, G, R, NIR, RE].
+    discolor : float
+        Intensidade da dessaturação, entre 0 e 1.
+        0 = imagem original (RGB intacto).
+        1 = imagem totalmente grayscale (equivalente à função original).
+        Valores intermediários = interpolação linear entre as duas.
 
     Returns
     -------
@@ -294,6 +49,9 @@ def suppress_rgb_color(image: np.ndarray) -> np.ndarray:
     if image.ndim != 3 or image.shape[-1] != 5:
         raise ValueError(f"Esperado array (H, W, 5), recebido {image.shape}")
 
+    if not (0.0 <= discolor <= 1.0):
+        raise ValueError(f"discolor deve estar em [0, 1], recebido {discolor}")
+
     orig_dtype = image.dtype
 
     blue  = image[..., 0].astype(np.float64)
@@ -302,21 +60,45 @@ def suppress_rgb_color(image: np.ndarray) -> np.ndarray:
     nir   = image[..., 3]
     red_edge = image[..., 4]
 
-    # Pesos de luminosidade padrão (Rec. 601), aplicados na ordem R, G, B
+    # Pesos de luminosidade padrão (Rec. 601)
     grayscale = 0.299 * red + 0.587 * green + 0.114 * blue
+
+    # Interpolação linear entre canal original e grayscale
+    blue_out  = (1 - discolor) * blue  + discolor * grayscale
+    green_out = (1 - discolor) * green + discolor * grayscale
+    red_out   = (1 - discolor) * red   + discolor * grayscale
 
     # Ajusta dtype de volta ao original (evita overflow/truncamento indevido)
     if np.issubdtype(orig_dtype, np.integer):
         info = np.iinfo(orig_dtype)
-        grayscale = np.clip(grayscale, info.min, info.max)
-    grayscale = grayscale.astype(orig_dtype)
+        blue_out  = np.clip(blue_out, info.min, info.max)
+        green_out = np.clip(green_out, info.min, info.max)
+        red_out   = np.clip(red_out, info.min, info.max)
+
+    blue_out  = blue_out.astype(orig_dtype)
+    green_out = green_out.astype(orig_dtype)
+    red_out   = red_out.astype(orig_dtype)
 
     result = np.stack(
-        [grayscale, grayscale, grayscale, nir, red_edge],
+        [blue_out, green_out, red_out, nir, red_edge],
         axis=-1
     )
 
     return result
+
+#----------------------------------------------------------------------
+
+def step_suppress_rgb_color(image: np.ndarray = None, discolor_list: list = [0, 0.17, 0.33, 0.5, 0.67, 0.83, 1], return_list=False):
+
+    if return_list:
+        return discolor_list
+
+    imgs_list = []
+
+    for discolor in discolor_list:
+        imgs_list.append(suppress_rgb_color(image, discolor))
+
+    return imgs_list
 
 #======================================================================
 # Texture
@@ -393,6 +175,24 @@ def suppress_texture_all_levels(image: np.ndarray) -> dict[str, np.ndarray]:
         level: suppress_texture(image, sigma=s)
         for level, s in BLUR_LEVELS.items()
     }
+
+#----------------------------------------------------------------------
+
+def step_suppress_texture(image: np.ndarray = None, sigma_list: list = [0, 1, 2, 3, 4, 5, 6], return_list=False):
+
+    if return_list:
+        return sigma_list
+
+    imgs_list = []
+
+    for sigma in sigma_list:
+        if sigma == 0:
+            imgs_list.append(image)
+        else:
+            imgs_list.append(suppress_texture(image, sigma))
+
+    return imgs_list
+
 
 #======================================================================
 # Shape
@@ -502,8 +302,26 @@ def suppress_shape_all_levels(image: np.ndarray, seed: int | None = None) -> dic
         for level, ps in PATCH_SIZE_LEVELS.items()
     }
 
-#======================================================================
+#----------------------------------------------------------------------
 
+def step_suppress_shape(image: np.ndarray = None, patch_size_list: list = [None, 1024, 512, 256, 128, 64, 32], return_list=False):
+
+    if return_list:
+        return patch_size_list
+
+    imgs_list = []
+
+    for patch_size in patch_size_list:
+        if patch_size is None:
+            imgs_list.append(image)
+        else:
+            imgs_list.append(suppress_shape(image, patch_size))
+
+    return imgs_list
+
+#======================================================================
+#======================================================================
+# Alignment
 
 def suppress_band_alignment(
     image: np.ndarray,

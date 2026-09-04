@@ -194,6 +194,7 @@ def plot_5bands(img_5b, fontsize=18):
 
 #======================================================================
 #======================================================================
+#======================================================================
 # SHAPE
 
 #----------------------------------------------------------------------
@@ -1133,6 +1134,70 @@ def multiview_main_function(trans_list, SEG_DATA_DIR, MTV_DATA_DIR):
                     take_n_bands = False
 
                 np.save(file_dir, img_multiview)
+
+    return n_bands
+
+#----------------------------------------------------------------------
+
+from joblib import Parallel, delayed
+
+def _process_single_file(old_files_dir, new_files_dir, file_name, trans_list):
+    """
+    Processa um único arquivo: carrega as 5 bandas, gera a multivisão
+    e salva o resultado em disco (se ainda não existir).
+    Retorna o número de bandas gerado (ou None se o arquivo já existia).
+    """
+    file_dir = os.path.join(new_files_dir, f"{file_name}.npy")
+
+    if os.path.isfile(file_dir):
+        return None
+
+    img_5b = load_5b_from_dir(old_files_dir, file_name)
+    img_multiview = mulview_one_img_function(img_5b, trans_list)
+
+    np.save(file_dir, img_multiview)
+
+    return img_multiview.shape[-1]
+
+
+def multiview_main_function_PARALLEL(trans_list, SEG_DATA_DIR, MTV_DATA_DIR, n_jobs=10, verbose=5):
+
+    especies = sorted(os.listdir(SEG_DATA_DIR))
+    if "seg_info.json" in especies:
+        especies.remove("seg_info.json")
+
+    # Monta a lista de todas as tarefas (especie, file_name) a serem processadas
+    tasks = []
+
+    for i, especie in enumerate(especies):
+
+        print(f'i: {i} - especie: {especie}')
+
+        new_files_dir = os.path.join(MTV_DATA_DIR, especie)
+        os.makedirs(new_files_dir, exist_ok=True)
+
+        old_files_dir = os.path.join(SEG_DATA_DIR, especie)
+        files = sorted(set([x[:-6] for x in os.listdir(old_files_dir)]))
+
+        for file_name in files:
+            tasks.append((old_files_dir, new_files_dir, file_name))
+
+    # Executa em paralelo (multiprocessing via joblib)
+    results = Parallel(n_jobs=n_jobs, verbose=verbose)(
+        delayed(_process_single_file)(old_files_dir, new_files_dir, file_name, trans_list)
+        for old_files_dir, new_files_dir, file_name in tasks
+    )
+
+    # Recupera n_bands a partir do primeiro resultado válido (não None)
+    n_bands_values = [r for r in results if r is not None]
+
+    if n_bands_values:
+        n_bands = n_bands_values[0]
+        print(f"\n\t\033[100;40m --- n_bands: {n_bands} ---   \033[100;0m")
+    else:
+        # Todos os arquivos já existiam, ninguém foi processado nesta chamada
+        n_bands = None
+        print("\n\t\033[100;40m --- Nenhum arquivo novo processado (n_bands indefinido) ---   \033[100;0m")
 
     return n_bands
 

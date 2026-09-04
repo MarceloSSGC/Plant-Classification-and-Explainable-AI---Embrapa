@@ -32,7 +32,7 @@ print("\n\n GRID: \n\n")
 
 # multiview_data_nickname_list = ["RGB_&_entropy.yaml"]
 # multiview_data_nickname_list = ["RGB_NIR_RE.yaml", "RGB.yaml", "RGB_entropy.yaml"]
-multiview_data_nickname_list = ["RGB.yaml"]
+multiview_data_nickname_list = ["RGB_LBP.yaml"]
 
 epochs_list = [1]
 augmentation_list = [True]

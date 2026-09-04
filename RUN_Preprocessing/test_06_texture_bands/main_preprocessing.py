@@ -248,7 +248,8 @@ def run_preprocessing(config):
             mtv_info = json.load(file)
     else:
 
-        n_bands = multiview_main_function(trans_list, SEG_DATA_DIR, MTV_DATA_DIR)
+        # n_bands = multiview_main_function(trans_list, SEG_DATA_DIR, MTV_DATA_DIR)
+        n_bands = multiview_main_function_PARALLEL(trans_list, SEG_DATA_DIR, MTV_DATA_DIR)
 
         mtv_info = seg_info.copy()
         mtv_info["MULTIVIEW_DATA_NICKNAME"] = MULTIVIEW_DATA_NICKNAME
