@@ -9,10 +9,10 @@ try:
     from aux_augm import augmentation_compilation
 
 except ImportError:
-        from RUN_Preprocessing.test_06_texture_bands.aux_align import align_main_function
-        from RUN_Preprocessing.test_06_texture_bands.aux_seg import *
-        from RUN_Preprocessing.test_06_texture_bands.aux_multiview_functions import *
-        from RUN_Preprocessing.test_06_texture_bands.aux_augm import augmentation_compilation
+        from RUN_Preprocessing.test_07_models_speed.aux_align import align_main_function
+        from RUN_Preprocessing.test_07_models_speed.aux_seg import *
+        from RUN_Preprocessing.test_07_models_speed.aux_multiview_functions import *
+        from RUN_Preprocessing.test_07_models_speed.aux_augm import augmentation_compilation
 
 
 #======================================================================
@@ -549,6 +549,8 @@ def run_preprocessing(config):
                 if (i + 1) % 10 == 0:
                     print(f"{split}: {i + 1}/{len(files)} imagens normalizadas")
 
+    print(f"\nSplit and Normalization ✅\n")
+
     # print(f"ETAPA 2: \033[96;92m Normalization Finished\033[0m")
 
     ####################################################################################
@@ -822,6 +824,7 @@ def run_preprocessing(config):
                     print(f"{split}: {i + 1}/{len(files)} imagens normalizadas")
 
     # print(f" ETAPA 2: \033[96;92m Normalization:Done\033[0m")
+    print(f"\nAugmentation ✅\n")
 
     # ============================================================
 
