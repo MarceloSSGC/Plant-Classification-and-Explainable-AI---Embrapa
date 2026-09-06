@@ -457,7 +457,7 @@ from scipy.ndimage import distance_transform_edt
 def _prepare_filled_image(img_1b, mask, bg_value):
     """Normaliza e preenche o fundo com o valor de folha mais próximo,
     evitando que a borda folha/fundo contamine o filtro."""
-    img = img_1b.astype(np.float64)
+    img = img_1b.astype(np.float32)
 
     if mask is None:
         mask = img != bg_value
@@ -541,7 +541,7 @@ from scipy.ndimage import distance_transform_edt
 def _prepare_filled_image(img_1b, mask, bg_value):
     """Normaliza e preenche o fundo com o valor de folha mais próximo,
     evitando que a borda folha/fundo contamine o filtro."""
-    img = img_1b.astype(np.float64)
+    img = img_1b.astype(np.float32)
 
     if mask is None:
         mask = img != bg_value

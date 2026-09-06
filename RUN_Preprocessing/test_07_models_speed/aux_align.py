@@ -352,7 +352,7 @@ def align_bands_ecc_affine_with_retry(
 
                 shift_est = np.asarray(
                     shift_est,
-                    dtype=np.float64
+                    dtype=np.float32
                 )
 
                 if shift_est.shape != (2,):
@@ -537,7 +537,7 @@ def save_multiband_image(img, directory, image_name, dtype=None):
 # align_main_function
 
 # align_method = ALIGN_METHOD
-# data_dir = DATA_DIR
+# data_dir = BASE_DATA_DIR
 # align_data_dir = ALIGH_DATA_DIR
 
 def align_main_function(align_method, data_dir, align_data_dir):
@@ -564,8 +564,8 @@ def align_main_function(align_method, data_dir, align_data_dir):
         os.makedirs(new_especie_dir, exist_ok=True)
 
         files_full = [x[:-6] for x in os.listdir(old_especie_dir) if "tif" in x]
-        files = list(set(files_full))
-        files.sort()
+        files = sorted(set(files_full))
+
 
         for ith, ith_file in enumerate(files): # ith, ith_file = 0, files[0]
 

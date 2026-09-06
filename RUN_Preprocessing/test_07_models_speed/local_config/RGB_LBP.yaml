@@ -98,15 +98,15 @@ MODEL:
   SEED_MODEL: 20
 
   PRETRAINED: True
-  BATCH_SIZE: 16
-  EPOCHS: 2
+  BATCH_SIZE: 8
+  EPOCHS: 3
   DROPOUT: 0.2
   LR: 1e-4
 
   N_BANDS: -1
-  # NUM_WORKERS: 8
-  # PIN_MEMORY: True
-  # PERSISTENT_WORKERS: True
+  NUM_WORKERS: 8
+  PIN_MEMORY: True
+  PERSISTENT_WORKERS: True
 
 #--------------------------------------------------------
 #--------------------------------------------------------

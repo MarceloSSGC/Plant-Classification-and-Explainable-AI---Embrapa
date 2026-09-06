@@ -1,5 +1,6 @@
 import os
 import json
+import random
 
 # Auxiliar
 try:
@@ -61,7 +62,6 @@ def run_preprocessing(config):
     print(f"\t  SEED: \033[96;95m{SEED} \033[0m\n")
     print(f"\t  MULTIVIEW_DATA_NICKNAME: \033[96;95m{MULTIVIEW_DATA_NICKNAME} \033[0m\n")
 
-
     if PC not in ["NITRO", "HELIOS", "DANTE"]:
         raise ValueError("PC not indentified")
 
@@ -83,26 +83,12 @@ def run_preprocessing(config):
     #======================================================================
     # Base Data
 
-    # BASE_DATA_DIR = config["BASE_DATA_DIR"]
-
-    # if PC == "HELIOS":
-    #     BASE_DATA_DIR = f"/run/{BASE_DATA_DIR}"
-    # elif PC == "DANTE":
-    #    BASE_DATA_DIR = "/home/u14696181/Documents/Datasets/Embrapa_Experimentos/Datasets/PlantaDaninha_BoaVista"
-
     BASE_DATA_DIR = f"{PC_DIR}/Datasets/PlantaDaninha_BoaVista"
 
     #======================================================================
     # Align Dataset
 
     ALIGN_DATA_NAME = config["ALIGN_DATA_NAME"]
-
-    # if PC == "NITRO":
-    #     ALIGH_DATA_DIR = f"/media/marcelo/HD_8t/Marcelo__Seagate_8tb/Embrapa/Embrapa_Experimentos/Datasets/Aligned/{ALIGN_DATA_NAME}"
-    # elif PC == "HELIOS":
-    #     ALIGH_DATA_DIR = f"/run/media/marcelo/HD_8t/Marcelo__Seagate_8tb/Embrapa/Embrapa_Experimentos/Datasets/Aligned/{ALIGN_DATA_NAME}"
-    # else:
-    #     ALIGH_DATA_DIR = f"/home/u14696181/Documents/Datasets/Embrapa_Experimentos/Datasets/Aligned/{ALIGN_DATA_NAME}"
 
     ALIGH_DATA_DIR = f"{PC_DIR}/Datasets/Aligned/{ALIGN_DATA_NAME}"
 
@@ -153,13 +139,6 @@ def run_preprocessing(config):
 
     SEG_DATA_NICKNAME = config["SEG_DATA_NICKNAME"]
     SEG_DATA_NAME = f"{ALIGN_DATA_NAME}__{SEG_DATA_NICKNAME}"
-
-    # if PC == "NITRO":
-    #     SEG_DATA_DIR = f"/media/marcelo/HD_8t/Marcelo__Seagate_8tb/Embrapa/Embrapa_Experimentos/Datasets/Segmentation/{SEG_DATA_NAME}"
-    # elif PC == "HELIOS":
-    #     SEG_DATA_DIR = f"/run/media/marcelo/HD_8t/Marcelo__Seagate_8tb/Embrapa/Embrapa_Experimentos/Datasets/Segmentation/{SEG_DATA_NAME}"
-    # else:
-    #     SEG_DATA_DIR = f"/home/u14696181/Documents/Datasets/Embrapa_Experimentos/Datasets/Segmentation/{SEG_DATA_NAME}"
 
     SEG_DATA_DIR = f"{PC_DIR}/Datasets/Segmentation/{SEG_DATA_NAME}"
 
@@ -230,13 +209,6 @@ def run_preprocessing(config):
 
     MULTIVIEW_DATA_TYPE = config["MULTIVIEW_DATA_TYPE"]
 
-    # if PC == "NITRO":
-    #     MTV_DATA_DIR = f"/media/marcelo/HD_8t/Marcelo__Seagate_8tb/Embrapa/Embrapa_Experimentos/Datasets/Multiview/{MULTIVIEW_DATA_TYPE}/{MULTIVIEW_DATA_NAME}"
-    # elif PC == "HELIOS":
-    #     MTV_DATA_DIR = f"/run/media/marcelo/HD_8t/Marcelo__Seagate_8tb/Embrapa/Embrapa_Experimentos/Datasets/Multiview/{MULTIVIEW_DATA_TYPE}/{MULTIVIEW_DATA_NAME}"
-    # else:
-    #     MTV_DATA_DIR = f"/home/u14696181/Documents/Datasets/Embrapa_Experimentos/Datasets/Multiview/{MULTIVIEW_DATA_TYPE}/{MULTIVIEW_DATA_NAME}"
-
     MTV_DATA_DIR = f"{PC_DIR}/Datasets/Multiview/{MULTIVIEW_DATA_TYPE}/{MULTIVIEW_DATA_NAME}"
 
     #======================================================================
@@ -251,8 +223,8 @@ def run_preprocessing(config):
             mtv_info = json.load(file)
     else:
 
-        # n_bands = multiview_main_function(trans_list, SEG_DATA_DIR, MTV_DATA_DIR)
-        n_bands = multiview_main_function_PARALLEL(trans_list, SEG_DATA_DIR, MTV_DATA_DIR)
+        n_bands = multiview_main_function(trans_list, SEG_DATA_DIR, MTV_DATA_DIR)
+        # n_bands = multiview_main_function_PARALLEL(trans_list, SEG_DATA_DIR, MTV_DATA_DIR)
 
         mtv_info = seg_info.copy()
         mtv_info["MULTIVIEW_DATA_NICKNAME"] = MULTIVIEW_DATA_NICKNAME
@@ -277,17 +249,7 @@ def run_preprocessing(config):
     ####################################################################################
     # Split
 
-    import random
-
     print(f"\n\033[100;01m\t     --- Start Split ---     \t\033[0m\n")
-
-    #======================================================================
-
-    # INTERACTIVE = config["INTERACTIVE"]
-    # SEED = config["SEED"]
-
-    # print(f"\t  Interactive: \033[96;95m{INTERACTIVE} \033[0m\n")
-    # print(f"\t  SEED: \033[96;95m{SEED} \033[0m\n")
 
     #======================================================================
     #======================================================================
@@ -310,13 +272,6 @@ def run_preprocessing(config):
 
     config["SPLIT_DATA_NAME"] = SPLIT_DATA_NAME
     config["SPLIT_DATE_TYPE"] = SPLIT_DATE_TYPE
-
-    # if PC == "NITRO":
-    #     SPLIT_DIR = f"/media/marcelo/HD_8t/Marcelo__Seagate_8tb/Embrapa/Embrapa_Experimentos/Datasets/Split/{SPLIT_DATE_TYPE}/{SPLIT_DATA_NAME}"
-    # elif PC == "HELIOS":
-    #     SPLIT_DIR = f"/run/media/marcelo/HD_8t/Marcelo__Seagate_8tb/Embrapa/Embrapa_Experimentos/Datasets/Split/{SPLIT_DATE_TYPE}/{SPLIT_DATA_NAME}"
-    # else:
-    #     SPLIT_DIR = f"/home/u14696181/Documents/Datasets/Embrapa_Experimentos/Datasets/Split/{SPLIT_DATE_TYPE}/{SPLIT_DATA_NAME}"
 
     SPLIT_DIR = f"{PC_DIR}/Datasets/Split/{SPLIT_DATE_TYPE}/{SPLIT_DATA_NAME}"
 
@@ -459,40 +414,152 @@ def run_preprocessing(config):
 
     N_BANDS = split_info["MULTIVIEW"]["N_BANDS"]
 
-    if "mean_bands" not in split_info["SPLIT"].keys() or "std_bands" not in split_info["SPLIT"].keys():
+    if (
+        "mean_bands" not in split_info["SPLIT"]
+        or "std_bands" not in split_info["SPLIT"]
+    ):
 
         print("Calculate mean and standard deviation per band using TRAIN....")
 
+        # Acumuladores em float64 para maior estabilidade numérica
         sum_bands = np.zeros(N_BANDS, dtype=np.float64)
         sum_sq_bands = np.zeros(N_BANDS, dtype=np.float64)
+
+        # Contagem é inteira
         count_pixels = np.zeros(N_BANDS, dtype=np.int64)
 
         train_files = list(TRAIN_DIR.rglob("*.npy"))
 
+        if len(train_files) == 0:
+            raise RuntimeError(f"Nenhum arquivo .npy encontrado em {TRAIN_DIR}")
+
         print(f"Número de imagens em Train: {len(train_files)}")
 
-        for i, file_path in enumerate(train_files): # i, file_path = 0, train_files[0]
-            img = np.load(file_path)    # (H, W, N_BANDS)
+        for i, file_path in enumerate(train_files):
 
-            img = img.astype(np.float64)
+            # --------------------------------------------------------------
+            # Carregar imagem
+            # --------------------------------------------------------------
 
-            # Soma por banda
-            sum_bands += img.sum(axis=(0, 1))
+            img = np.load(file_path)  # esperado: (H, W, N_BANDS)
 
-            # Soma dos quadrados por banda
-            sum_sq_bands += (img ** 2).sum(axis=(0, 1))
+            # Validação do formato
+            if img.ndim != 3:
+                raise ValueError(
+                    f"Imagem com dimensionalidade inválida:\n"
+                    f"Arquivo: {file_path}\n"
+                    f"Shape encontrado: {img.shape}"
+                )
 
-            # Número de pixels por banda
+            if img.shape[-1] != N_BANDS:
+                raise ValueError(
+                    f"Número de bandas inconsistente:\n"
+                    f"Arquivo: {file_path}\n"
+                    f"Esperado: {N_BANDS}\n"
+                    f"Encontrado: {img.shape[-1]}"
+                )
+
+            # Dados de imagem padronizados em float32
+            img = img.astype(np.float32, copy=False)
+
+            # --------------------------------------------------------------
+            # Verificar NaN / Inf ANTES do cálculo das estatísticas
+            # --------------------------------------------------------------
+
+            if not np.isfinite(img).all():
+
+                n_nan = np.isnan(img).sum()
+                n_posinf = np.isposinf(img).sum()
+                n_neginf = np.isneginf(img).sum()
+
+                raise ValueError(
+                    f"Valores inválidos encontrados antes da normalização:\n"
+                    f"Arquivo: {file_path}\n"
+                    f"NaN: {n_nan}\n"
+                    f"+Inf: {n_posinf}\n"
+                    f"-Inf: {n_neginf}"
+                )
+
+            # --------------------------------------------------------------
+            # Estatísticas
+            #
+            # A imagem permanece float32, mas as reduções são feitas
+            # explicitamente em float64.
+            # --------------------------------------------------------------
+
+            sum_bands += img.sum(
+                axis=(0, 1),
+                dtype=np.float64
+            )
+
+            sum_sq_bands += np.square(
+                img,
+                dtype=np.float64
+            ).sum(
+                axis=(0, 1),
+                dtype=np.float64
+            )
+
+            # Número de pixels de cada banda
             h, w, c = img.shape
             count_pixels += h * w
 
             if (i + 1) % 10 == 0:
-                print(f"Processadas {i + 1}/{len(train_files)} imagens")
+                print(
+                    f"Processadas {i + 1}/{len(train_files)} imagens"
+                )
+
+        # --------------------------------------------------------------
+        # Média
+        # --------------------------------------------------------------
 
         mean_bands = sum_bands / count_pixels
 
-        var_bands = (sum_sq_bands / count_pixels) - (mean_bands ** 2)
+        # --------------------------------------------------------------
+        # Variância
+        #
+        # Var(X) = E[X²] - E[X]²
+        # --------------------------------------------------------------
+
+        var_bands = (
+            sum_sq_bands / count_pixels
+        ) - (mean_bands ** 2)
+
+        # Proteção contra pequenos valores negativos causados apenas
+        # por erro numérico de ponto flutuante.
+        var_bands = np.maximum(var_bands, 0.0)
+
         std_bands = np.sqrt(var_bands)
+
+        # --------------------------------------------------------------
+        # Validação das estatísticas calculadas
+        # --------------------------------------------------------------
+
+        if not np.all(np.isfinite(mean_bands)):
+            raise ValueError(
+                f"Média contém NaN/Inf:\n{mean_bands}"
+            )
+
+        if not np.all(np.isfinite(std_bands)):
+            raise ValueError(
+                f"Desvio padrão contém NaN/Inf:\n{std_bands}"
+            )
+
+        # Uma banda constante ou quase constante não deve ser
+        # normalizada por divisão sem antes investigar a causa.
+        if np.any(std_bands < 1e-8):
+
+            problematic_bands = np.where(std_bands < 1e-8)[0]
+
+            raise ValueError(
+                f"Desvio padrão zero ou muito pequeno.\n"
+                f"Bandas problemáticas: {problematic_bands.tolist()}\n"
+                f"STD: {std_bands}"
+            )
+
+        # --------------------------------------------------------------
+        # Resultado
+        # --------------------------------------------------------------
 
         print("\nMédia por banda:")
         print(mean_bands)
@@ -500,36 +567,108 @@ def run_preprocessing(config):
         print("\nDesvio padrão por banda:")
         print(std_bands)
 
+        print("\nVariância por banda:")
+        print(var_bands)
+
+        # Salvar no JSON
         split_info["SPLIT"]["mean_bands"] = mean_bands.tolist()
         split_info["SPLIT"]["std_bands"] = std_bands.tolist()
 
         with open(split_info_dir, "w", encoding="utf-8") as file:
             json.dump(split_info, file, indent=4)
-        
-        print(f"ETAPA 1: \033[96;92m Mean and STD Calculated\033[0m\n")
+
+        print(
+            f"\nETAPA 1: \033[96;92m"
+            f"Mean and STD Calculated"
+            f"\033[0m\n"
+        )
 
     else:
-        mean_bands = np.array(split_info["SPLIT"]["mean_bands"])
-        std_bands = np.array(split_info["SPLIT"]["std_bands"])
-        # print(f"ETAPA 1: \033[96;92m Mean and STD Loaded\033[0m\n")
 
+        # Carregar explicitamente como float64 porque essas estatísticas
+        # serão usadas em operações numéricas de normalização.
+        mean_bands = np.asarray(
+            split_info["SPLIT"]["mean_bands"],
+            dtype=np.float64
+        )
+
+        std_bands = np.asarray(
+            split_info["SPLIT"]["std_bands"],
+            dtype=np.float64
+        )
+
+        # Também validar estatísticas previamente salvas
+        if not np.all(np.isfinite(mean_bands)):
+            raise ValueError(
+                f"mean_bands carregado contém NaN/Inf:\n{mean_bands}"
+            )
+
+        if not np.all(np.isfinite(std_bands)):
+            raise ValueError(
+                f"std_bands carregado contém NaN/Inf:\n{std_bands}"
+            )
+
+        if np.any(std_bands < 1e-8):
+            raise ValueError(
+                f"std_bands carregado contém valores zero "
+                f"ou muito pequenos:\n{std_bands}"
+            )
 
     #------------------------------------------------------------------------
     # ETAPA 2: NORMALIZAR TRAIN, VAL E TEST
 
-    mean_bands = mean_bands.reshape(1, 1, N_BANDS)
-    std_bands = std_bands.reshape(1, 1, N_BANDS)
+    # Estatísticas em float64
+    mean_bands = np.asarray(mean_bands, dtype=np.float64).reshape(
+        1, 1, N_BANDS
+    )
 
-    for split in partitions:    # split = "Train"
-        
+    std_bands = np.asarray(std_bands, dtype=np.float64).reshape(
+        1, 1, N_BANDS
+    )
+
+    #------------------------------------------------------------------------
+    # Validar estatísticas antes de iniciar a normalização
+
+    if not np.all(np.isfinite(mean_bands)):
+        raise ValueError(
+            f"mean_bands contém NaN/Inf:\n{mean_bands}"
+        )
+
+    if not np.all(np.isfinite(std_bands)):
+        raise ValueError(
+            f"std_bands contém NaN/Inf:\n{std_bands}"
+        )
+
+    if np.any(std_bands < 1e-8):
+        problematic_bands = np.where(
+            std_bands.reshape(-1) < 1e-8
+        )[0]
+
+        raise ValueError(
+            f"Desvio padrão zero ou muito pequeno.\n"
+            f"Bandas problemáticas: {problematic_bands.tolist()}\n"
+            f"STD: {std_bands.reshape(-1)}"
+        )
+
+
+    #------------------------------------------------------------------------
+    # Normalizar cada partição
+
+    for split in partitions:    # "Train", "Val", "Test"
+
         input_dir = SPLIT_DIR / split
         output_dir = SPLIT_DIR / f"{split}_Norm"
 
         files = list(input_dir.rglob("*.npy"))
 
-        # print(f"\nNormalizando {split}: {len(files)} imagens")
+        if len(files) == 0:
+            raise RuntimeError(
+                f"Nenhum arquivo .npy encontrado em {input_dir}"
+            )
 
-        for i, file_path in enumerate(files):   # i, file_path = 0, files[0]
+        print(f"\nNormalizando {split}: {len(files)} imagens")
+
+        for i, file_path in enumerate(files):
 
             relative_path = file_path.relative_to(input_dir)
 
@@ -538,18 +677,112 @@ def run_preprocessing(config):
 
             if not os.path.isfile(output_path):
 
-                img = np.load(file_path)  # (H, W, 5)
-                img = img.astype(np.float32)
+                #--------------------------------------------------------------
+                # Carregar imagem
+                #--------------------------------------------------------------
+
+                img = np.load(file_path)
+
+                # Esperado: (H, W, N_BANDS)
+                if img.ndim != 3:
+                    raise ValueError(
+                        f"Imagem com dimensionalidade inválida:\n"
+                        f"Arquivo: {file_path}\n"
+                        f"Shape encontrado: {img.shape}"
+                    )
+
+                if img.shape[-1] != N_BANDS:
+                    raise ValueError(
+                        f"Número de bandas inconsistente:\n"
+                        f"Arquivo: {file_path}\n"
+                        f"Esperado: {N_BANDS}\n"
+                        f"Encontrado: {img.shape[-1]}"
+                    )
+
+                #--------------------------------------------------------------
+                # Padronizar dados da imagem em float32
+                #--------------------------------------------------------------
+
+                img = img.astype(np.float32, copy=False)
+
+                #--------------------------------------------------------------
+                # Verificar entrada ANTES da normalização
+                #--------------------------------------------------------------
+
+                if not np.isfinite(img).all():
+
+                    n_nan = np.isnan(img).sum()
+                    n_posinf = np.isposinf(img).sum()
+                    n_neginf = np.isneginf(img).sum()
+
+                    raise ValueError(
+                        f"Valores inválidos ANTES da normalização:\n"
+                        f"Arquivo: {file_path}\n"
+                        f"NaN: {n_nan}\n"
+                        f"+Inf: {n_posinf}\n"
+                        f"-Inf: {n_neginf}"
+                    )
+
+                #--------------------------------------------------------------
+                # Normalização
+                #
+                # img         -> float32
+                # mean/std    -> float64
+                # img_norm    -> temporariamente float64
+                #--------------------------------------------------------------
 
                 img_norm = (img - mean_bands) / std_bands
+
+                #--------------------------------------------------------------
+                # Verificar resultado da normalização
+                #--------------------------------------------------------------
+
+                if not np.isfinite(img_norm).all():
+
+                    n_nan = np.isnan(img_norm).sum()
+                    n_posinf = np.isposinf(img_norm).sum()
+                    n_neginf = np.isneginf(img_norm).sum()
+
+                    raise ValueError(
+                        f"Valores inválidos CRIADOS pela normalização:\n"
+                        f"Arquivo: {file_path}\n"
+                        f"NaN: {n_nan}\n"
+                        f"+Inf: {n_posinf}\n"
+                        f"-Inf: {n_neginf}\n"
+                        f"Mean: {mean_bands.reshape(-1)}\n"
+                        f"STD: {std_bands.reshape(-1)}"
+                    )
+
+                #--------------------------------------------------------------
+                # Arquivo final sempre em float32
+                #--------------------------------------------------------------
+
                 img_norm = img_norm.astype(np.float32)
+
+                # Verificação final após conversão para float32.
+                # Também detecta eventual overflow na conversão.
+                if not np.isfinite(img_norm).all():
+
+                    raise ValueError(
+                        f"NaN/Inf após conversão para float32:\n"
+                        f"Arquivo: {file_path}\n"
+                        f"Min: {np.nanmin(img_norm)}\n"
+                        f"Max: {np.nanmax(img_norm)}"
+                    )
+
+                #--------------------------------------------------------------
+                # Salvar
+                #--------------------------------------------------------------
 
                 np.save(output_path, img_norm)
 
-                if (i + 1) % 10 == 0:
-                    print(f"{split}: {i + 1}/{len(files)} imagens normalizadas")
+            if (i + 1) % 10 == 0:
+                print(
+                    f"{split}: {i + 1}/{len(files)} imagens processadas"
+                )
 
-    print(f"\nSplit and Normalization ✅\n")
+
+    print("\nSplit and Normalization ✅\n")
 
     # print(f"ETAPA 2: \033[96;92m Normalization Finished\033[0m")
 
@@ -557,7 +790,6 @@ def run_preprocessing(config):
     ####################################################################################
     ####################################################################################
     # Data Augmentation
-
 
 
     print(f"\n\033[100;01m\t     --- Start Data Augmentation ---     \t\033[0m\n")
@@ -570,13 +802,6 @@ def run_preprocessing(config):
 
     config["AUG_DATE_NAME"] = AUG_DATE_NAME
     config["AUG_DATE_TYPE"] = AUG_DATE_TYPE
-
-    # if PC == "NITRO":
-    #     AUG_DIR_EXP = f"/media/marcelo/HD_8t/Marcelo__Seagate_8tb/Embrapa/Embrapa_Experimentos/Datasets/Augmentation/{AUG_DATE_TYPE}/{AUG_DATE_NAME}"
-    # elif PC == "HELIOS":
-    #     AUG_DIR_EXP = f"/run/media/marcelo/HD_8t/Marcelo__Seagate_8tb/Embrapa/Embrapa_Experimentos/Datasets/Augmentation/{AUG_DATE_TYPE}/{AUG_DATE_NAME}"
-    # else:
-    #     AUG_DIR_EXP = f"/home/u14696181/Documents/Datasets/Embrapa_Experimentos/Datasets/Augmentation/{AUG_DATE_TYPE}/{AUG_DATE_NAME}"
 
     AUG_DIR_EXP = f"{PC_DIR}/Datasets/Augmentation/{AUG_DATE_TYPE}/{AUG_DATE_NAME}"
 
@@ -726,43 +951,162 @@ def run_preprocessing(config):
     AUG_DIR_EXP = Path(AUG_DIR_EXP)
     AUG_TRAIN_DIR = AUG_DIR_EXP / "Train"
 
+
     #------------------------------------------------------------------------
     # ETAPA 1: CALCULAR MÉDIA E DESVIO PADRÃO POR BANDA USANDO TRAIN
 
-    if "mean_bands" not in aug_infos["AUGMENTATION"].keys() or "std_bands" not in aug_infos["AUGMENTATION"].keys():
+    if (
+        "mean_bands" not in aug_infos["AUGMENTATION"]
+        or "std_bands" not in aug_infos["AUGMENTATION"]
+    ):
 
         print("Calculate mean and standard deviation per band using TRAIN....")
 
+        # Acumuladores em float64 para estabilidade numérica
         sum_bands = np.zeros(N_BANDS, dtype=np.float64)
         sum_sq_bands = np.zeros(N_BANDS, dtype=np.float64)
+
+        # Contagem de pixels é inteira
         count_pixels = np.zeros(N_BANDS, dtype=np.int64)
 
         train_files = list(AUG_TRAIN_DIR.rglob("*.npy"))
 
+        if len(train_files) == 0:
+            raise RuntimeError(
+                f"Nenhum arquivo .npy encontrado em {AUG_TRAIN_DIR}"
+            )
+
         print(f"Número de imagens em Train: {len(train_files)}")
 
         for i, file_path in enumerate(train_files):
-            img = np.load(file_path)  # (H, W, N_BANDS)
 
-            img = img.astype(np.float64)
+            #--------------------------------------------------------------
+            # Carregar imagem
+            #--------------------------------------------------------------
 
-            # Soma por banda
-            sum_bands += img.sum(axis=(0, 1))
+            img = np.load(file_path)  # esperado: (H, W, N_BANDS)
 
-            # Soma dos quadrados por banda
-            sum_sq_bands += (img ** 2).sum(axis=(0, 1))
+            # Validar dimensionalidade
+            if img.ndim != 3:
+                raise ValueError(
+                    f"Imagem com dimensionalidade inválida:\n"
+                    f"Arquivo: {file_path}\n"
+                    f"Shape encontrado: {img.shape}"
+                )
+
+            # Validar número de bandas
+            if img.shape[-1] != N_BANDS:
+                raise ValueError(
+                    f"Número de bandas inconsistente:\n"
+                    f"Arquivo: {file_path}\n"
+                    f"Esperado: {N_BANDS}\n"
+                    f"Encontrado: {img.shape[-1]}"
+                )
+
+            #--------------------------------------------------------------
+            # Padronizar imagem em float32
+            #--------------------------------------------------------------
+
+            img = img.astype(np.float32, copy=False)
+
+            #--------------------------------------------------------------
+            # Verificar NaN / Inf ANTES do cálculo das estatísticas
+            #--------------------------------------------------------------
+
+            if not np.isfinite(img).all():
+
+                n_nan = np.isnan(img).sum()
+                n_posinf = np.isposinf(img).sum()
+                n_neginf = np.isneginf(img).sum()
+
+                raise ValueError(
+                    f"Valores inválidos encontrados no dataset aumentado:\n"
+                    f"Arquivo: {file_path}\n"
+                    f"NaN: {n_nan}\n"
+                    f"+Inf: {n_posinf}\n"
+                    f"-Inf: {n_neginf}"
+                )
+
+            #--------------------------------------------------------------
+            # Estatísticas
+            #
+            # Imagem: float32
+            # Acumulação/redução: float64
+            #--------------------------------------------------------------
+
+            sum_bands += img.sum(
+                axis=(0, 1),
+                dtype=np.float64
+            )
+
+            sum_sq_bands += np.square(
+                img,
+                dtype=np.float64
+            ).sum(
+                axis=(0, 1),
+                dtype=np.float64
+            )
 
             # Número de pixels por banda
-            h, w, c = img.shape
+            h, w, _ = img.shape
             count_pixels += h * w
 
             if (i + 1) % 10 == 0:
-                print(f"Processadas {i + 1}/{len(train_files)} imagens")
+                print(
+                    f"Processadas {i + 1}/{len(train_files)} imagens"
+                )
+
+        #--------------------------------------------------------------
+        # Média por banda
+        #--------------------------------------------------------------
 
         mean_bands = sum_bands / count_pixels
 
-        var_bands = (sum_sq_bands / count_pixels) - (mean_bands ** 2)
+        #--------------------------------------------------------------
+        # Variância e desvio padrão
+        #
+        # Var(X) = E[X²] - E[X]²
+        #--------------------------------------------------------------
+
+        var_bands = (
+            sum_sq_bands / count_pixels
+        ) - (mean_bands ** 2)
+
+        # Evitar pequenos valores negativos causados exclusivamente
+        # por erro numérico de ponto flutuante
+        var_bands = np.maximum(var_bands, 0.0)
+
         std_bands = np.sqrt(var_bands)
+
+        #--------------------------------------------------------------
+        # Validar estatísticas calculadas
+        #--------------------------------------------------------------
+
+        if not np.all(np.isfinite(mean_bands)):
+            raise ValueError(
+                f"Média contém NaN/Inf:\n{mean_bands}"
+            )
+
+        if not np.all(np.isfinite(std_bands)):
+            raise ValueError(
+                f"Desvio padrão contém NaN/Inf:\n{std_bands}"
+            )
+
+        if np.any(std_bands < 1e-8):
+
+            problematic_bands = np.where(
+                std_bands < 1e-8
+            )[0]
+
+            raise ValueError(
+                f"Desvio padrão zero ou muito pequeno.\n"
+                f"Bandas problemáticas: {problematic_bands.tolist()}\n"
+                f"STD: {std_bands}"
+            )
+
+        #--------------------------------------------------------------
+        # Resultados
+        #--------------------------------------------------------------
 
         print("\nMédia por banda:")
         print(mean_bands)
@@ -770,61 +1114,262 @@ def run_preprocessing(config):
         print("\nDesvio padrão por banda:")
         print(std_bands)
 
+        print("\nVariância por banda:")
+        print(var_bands)
+
+        #--------------------------------------------------------------
+        # Salvar estatísticas
+        #--------------------------------------------------------------
+
         aug_infos["AUGMENTATION"]["mean_bands"] = mean_bands.tolist()
         aug_infos["AUGMENTATION"]["std_bands"] = std_bands.tolist()
 
         with open(AUG_DIR_INFOS, "w", encoding="utf-8") as file:
             json.dump(aug_infos, file, indent=4)
-        
-        print(f"ETAPA 1: \033[96;92m Mean and STD Calculated\033[0m\n")
+
+        print(
+            f"\nETAPA 1: \033[96;92m"
+            f"Mean and STD Calculated"
+            f"\033[0m\n"
+        )
 
     else:
-        mean_bands = np.array(aug_infos["AUGMENTATION"]["mean_bands"])
-        std_bands = np.array(aug_infos["AUGMENTATION"]["std_bands"])
-        # print(f"ETAPA 1: \033[96;92m Mean and STD Loaded\033[0m\n")
 
+        # Estatísticas carregadas como float64
+        mean_bands = np.asarray(
+            aug_infos["AUGMENTATION"]["mean_bands"],
+            dtype=np.float64
+        )
+
+        std_bands = np.asarray(
+            aug_infos["AUGMENTATION"]["std_bands"],
+            dtype=np.float64
+        )
+
+        #--------------------------------------------------------------
+        # Validar estatísticas previamente armazenadas
+        #--------------------------------------------------------------
+
+        if not np.all(np.isfinite(mean_bands)):
+            raise ValueError(
+                f"mean_bands carregado contém NaN/Inf:\n{mean_bands}"
+            )
+
+        if not np.all(np.isfinite(std_bands)):
+            raise ValueError(
+                f"std_bands carregado contém NaN/Inf:\n{std_bands}"
+            )
+
+        if np.any(std_bands < 1e-8):
+            raise ValueError(
+                f"std_bands carregado contém valores zero "
+                f"ou muito pequenos:\n{std_bands}"
+            )
+
+        
     #------------------------------------------------------------------------
     # ETAPA 2: NORMALIZAR TRAIN, VAL E TEST
 
-    mean_bands = mean_bands.reshape(1, 1, N_BANDS)
-    std_bands = std_bands.reshape(1, 1, N_BANDS)
+    # Estatísticas em float64
+    mean_bands = np.asarray(
+        mean_bands,
+        dtype=np.float64
+    ).reshape(1, 1, N_BANDS)
 
-    for split in ["Train", "Val", "Test"]:    # split = "Train"
+    std_bands = np.asarray(
+        std_bands,
+        dtype=np.float64
+    ).reshape(1, 1, N_BANDS)
 
+
+    #------------------------------------------------------------------------
+    # Validar estatísticas antes de iniciar a normalização
+
+    if not np.all(np.isfinite(mean_bands)):
+        raise ValueError(
+            f"mean_bands contém NaN/Inf:\n{mean_bands}"
+        )
+
+    if not np.all(np.isfinite(std_bands)):
+        raise ValueError(
+            f"std_bands contém NaN/Inf:\n{std_bands}"
+        )
+
+    if np.any(std_bands < 1e-8):
+
+        problematic_bands = np.where(
+            std_bands.reshape(-1) < 1e-8
+        )[0]
+
+        raise ValueError(
+            f"Desvio padrão zero ou muito pequeno.\n"
+            f"Bandas problemáticas: {problematic_bands.tolist()}\n"
+            f"STD: {std_bands.reshape(-1)}"
+        )
+
+
+    #------------------------------------------------------------------------
+    # Normalizar Train, Val e Test
+
+    for split in ["Train", "Val", "Test"]:
+
+        # Train aumentado
         if split == "Train":
             input_dir = AUG_DIR_EXP / split
+
+        # Val e Test originais
         else:
             input_dir = SPLIT_DIR / split
 
         output_dir = AUG_DIR_EXP / f"{split}_Norm"
 
-
         files = list(input_dir.rglob("*.npy"))
 
-        # print(f"\nNormalizando {split}: {len(files)} imagens")
+        if len(files) == 0:
+            raise RuntimeError(
+                f"Nenhum arquivo .npy encontrado em {input_dir}"
+            )
 
-        for i, file_path in enumerate(files):   # i, file_path = 0, files[0]
+        print(f"\nNormalizando {split}: {len(files)} imagens")
+
+        for i, file_path in enumerate(files):
 
             relative_path = file_path.relative_to(input_dir)
 
             output_path = output_dir / relative_path
-            output_path.parent.mkdir(parents=True, exist_ok=True)
+            output_path.parent.mkdir(
+                parents=True,
+                exist_ok=True
+            )
 
             if not os.path.isfile(output_path):
 
-                img = np.load(file_path)  # (H, W, 5)
-                img = img.astype(np.float32)
+                #--------------------------------------------------------------
+                # Carregar imagem
+                #--------------------------------------------------------------
 
-                img_norm = (img - mean_bands) / std_bands
+                img = np.load(file_path)
+
+                # Esperado: (H, W, N_BANDS)
+                if img.ndim != 3:
+                    raise ValueError(
+                        f"Imagem com dimensionalidade inválida:\n"
+                        f"Arquivo: {file_path}\n"
+                        f"Shape encontrado: {img.shape}"
+                    )
+
+                if img.shape[-1] != N_BANDS:
+                    raise ValueError(
+                        f"Número de bandas inconsistente:\n"
+                        f"Arquivo: {file_path}\n"
+                        f"Esperado: {N_BANDS}\n"
+                        f"Encontrado: {img.shape[-1]}"
+                    )
+
+                #--------------------------------------------------------------
+                # Padronizar imagem em float32
+                #--------------------------------------------------------------
+
+                img = img.astype(
+                    np.float32,
+                    copy=False
+                )
+
+                #--------------------------------------------------------------
+                # Verificar NaN / Inf ANTES da normalização
+                #--------------------------------------------------------------
+
+                if not np.isfinite(img).all():
+
+                    n_nan = np.isnan(img).sum()
+                    n_posinf = np.isposinf(img).sum()
+                    n_neginf = np.isneginf(img).sum()
+
+                    raise ValueError(
+                        f"Valores inválidos ANTES da normalização:\n"
+                        f"Split: {split}\n"
+                        f"Arquivo: {file_path}\n"
+                        f"NaN: {n_nan}\n"
+                        f"+Inf: {n_posinf}\n"
+                        f"-Inf: {n_neginf}"
+                    )
+
+                #--------------------------------------------------------------
+                # Normalização
+                #
+                # img      -> float32
+                # mean/std -> float64
+                # resultado temporário -> float64
+                #--------------------------------------------------------------
+
+                img_norm = (
+                    img - mean_bands
+                ) / std_bands
+
+                #--------------------------------------------------------------
+                # Verificar resultado ANTES da conversão para float32
+                #--------------------------------------------------------------
+
+                if not np.isfinite(img_norm).all():
+
+                    n_nan = np.isnan(img_norm).sum()
+                    n_posinf = np.isposinf(img_norm).sum()
+                    n_neginf = np.isneginf(img_norm).sum()
+
+                    raise ValueError(
+                        f"Valores inválidos CRIADOS pela normalização:\n"
+                        f"Split: {split}\n"
+                        f"Arquivo: {file_path}\n"
+                        f"NaN: {n_nan}\n"
+                        f"+Inf: {n_posinf}\n"
+                        f"-Inf: {n_neginf}\n"
+                        f"Mean: {mean_bands.reshape(-1)}\n"
+                        f"STD: {std_bands.reshape(-1)}"
+                    )
+
+                #--------------------------------------------------------------
+                # Arquivo normalizado final sempre em float32
+                #--------------------------------------------------------------
+
                 img_norm = img_norm.astype(np.float32)
 
-                np.save(output_path, img_norm)
+                #--------------------------------------------------------------
+                # Verificação final após conversão para float32
+                #--------------------------------------------------------------
 
-                if (i + 1) % 10 == 0:
-                    print(f"{split}: {i + 1}/{len(files)} imagens normalizadas")
+                if not np.isfinite(img_norm).all():
 
-    # print(f" ETAPA 2: \033[96;92m Normalization:Done\033[0m")
-    print(f"\nAugmentation ✅\n")
+                    n_nan = np.isnan(img_norm).sum()
+                    n_posinf = np.isposinf(img_norm).sum()
+                    n_neginf = np.isneginf(img_norm).sum()
+
+                    raise ValueError(
+                        f"Valores inválidos após conversão para float32:\n"
+                        f"Split: {split}\n"
+                        f"Arquivo: {file_path}\n"
+                        f"NaN: {n_nan}\n"
+                        f"+Inf: {n_posinf}\n"
+                        f"-Inf: {n_neginf}"
+                    )
+
+                #--------------------------------------------------------------
+                # Salvar
+                #--------------------------------------------------------------
+
+                np.save(
+                    output_path,
+                    img_norm
+                )
+
+            if (i + 1) % 10 == 0:
+                print(
+                    f"{split}: "
+                    f"{i + 1}/{len(files)} imagens processadas"
+                )
+
+
+    print("\nAugmentation ✅\n")
+
 
     # ============================================================
 

@@ -20,7 +20,7 @@ except ImportError:
     from RUN_Preprocessing.test_07_models_speed.aux_model import *
     from RUN_Preprocessing.test_07_models_speed.aux_only_models import *
 
-os.environ["CUBLAS_WORKSPACE_CONFIG"] = ":4096:8"
+# os.environ["CUBLAS_WORKSPACE_CONFIG"] = ":4096:8"
 
 
 #======================================================================
@@ -84,12 +84,12 @@ def run_training(config):
     torch.cuda.manual_seed(SEED_MODEL)
     torch.cuda.manual_seed_all(SEED_MODEL)
 
-    # Algoritmos determinísticos
-    torch.use_deterministic_algorithms(True)
+    # # Algoritmos determinísticos
+    # torch.use_deterministic_algorithms(True)
 
-    # # cuDNN
-    torch.backends.cudnn.benchmark = False
-    torch.backends.cudnn.deterministic = False
+    # # # cuDNN
+    # torch.backends.cudnn.benchmark = False
+    # torch.backends.cudnn.deterministic = False
 
     #======================================================================
     # Dataset & Directories
@@ -184,6 +184,10 @@ def run_training(config):
     print(f"Val: \033[96;92m{len(val_dataset)}\033[0m")
     print(f"Test: \033[96;92m{len(test_dataset)}\033[0m \n")
 
+    N_BANDS = train_dataset.num_bands
+
+    print(f" Num Bands: \033[96;95m{N_BANDS} \033[0m \n")
+
     #======================================================================
     # Model Config
 
@@ -193,17 +197,14 @@ def run_training(config):
         "Test": len(test_dataset),
         }
 
-    N_BANDS = mdl_info["RUN"]['N_BANDS']
     config["MODEL"]["N_BANDS"] = N_BANDS
 
     epochs = config["MODEL"]["EPOCHS"]
     batch_size = config["MODEL"]["BATCH_SIZE"]
     lr = config["MODEL"]["LR"]
-    # num_workers = config["MODEL"]["NUM_WORKERS"]
-    # num_workers = 0
-    # pin_memory = config["MODEL"]["PIN_MEMORY"]
-    # persistent_workers = config["MODEL"]["PERSISTENT_WORKERS"]
-    # persistent_workers = False
+    num_workers = config["MODEL"]["NUM_WORKERS"]
+    pin_memory = config["MODEL"]["PIN_MEMORY"]
+    persistent_workers = config["MODEL"]["PERSISTENT_WORKERS"]
 
     # Model Config
 
@@ -219,9 +220,9 @@ def run_training(config):
         "DROPOUT": config["MODEL"]["DROPOUT"],
 
         "N_BANDS": N_BANDS,
-        # "NUM_WORKERS": config["MODEL"]["NUM_WORKERS"],
-        # "PIN_MEMORY": config["MODEL"]["PIN_MEMORY"],
-        # "PERSISTENT_WORKERS": config["MODEL"]["PERSISTENT_WORKERS"],
+        "NUM_WORKERS": config["MODEL"]["NUM_WORKERS"],
+        "PIN_MEMORY": config["MODEL"]["PIN_MEMORY"],
+        "PERSISTENT_WORKERS": config["MODEL"]["PERSISTENT_WORKERS"],
 
     }
 
@@ -233,27 +234,27 @@ def run_training(config):
         # test_dataset,
         batch_size=batch_size,
         shuffle=True,
-        # num_workers=num_workers,
-        # pin_memory=pin_memory,
-        # persistent_workers=persistent_workers
+        num_workers=num_workers,
+        pin_memory=pin_memory,
+        persistent_workers=persistent_workers
     )
 
     val_loader = DataLoader(
         val_dataset,
         batch_size=batch_size,
         shuffle=False,
-        # num_workers=num_workers,
-        # pin_memory=pin_memory,
-        # persistent_workers=persistent_workers
+        num_workers=num_workers,
+        pin_memory=pin_memory,
+        persistent_workers=persistent_workers
     )
 
     test_loader = DataLoader(
         test_dataset,
         batch_size=batch_size,
         shuffle=False,
-        # num_workers=num_workers,
-        # pin_memory=pin_memory,
-        # persistent_workers=persistent_workers
+        num_workers=num_workers,
+        pin_memory=pin_memory,
+        persistent_workers=persistent_workers
     )
 
     #======================================================================
@@ -1033,3 +1034,5 @@ def run_training(config):
 
 
 
+# Eliminar a segunda passagem completa pelo Train a cada época, se você não precisar das métricas de Train. Esse é provavelmente um dos maiores ganhos ainda disponíveis. No fit() dos seus modelos, depois do treinamento da época, você percorre novamente train_loader para calcular métricas. Assim, cada época lê/processa Train duas vezes. Se calcular apenas train_loss/accuracy durante o próprio treinamento, pode economizar uma quantidade significativa de tempo.
+# Calcular métricas caras somente quando necessário. F1, balanced accuracy, precision, recall, kappa etc. não precisam necessariamente ser calculadas para Train em todas as épocas. Você pode manter as métricas importantes de Val para seleção do melhor modelo e reduzir o trabalho sobre Train.
