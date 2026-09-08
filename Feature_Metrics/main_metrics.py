@@ -167,9 +167,35 @@ lrso_texture = [metric(x) for x in imgs_texture]
 lrso_shape = [metric(x) for x in imgs_shape]
 # lrso_shape = [abs(metric(x)) for x in imgs_shape]
 
-lrso_color_norm = [x/max(lrso_color) for x in lrso_color]
-lrso_texture_norm = [x/max(lrso_texture) for x in lrso_texture]
-lrso_shape_norm = [x/max(lrso_shape) for x in lrso_shape]
+lrso_color_norm = [x/lrso_color[0] for x in lrso_color]
+lrso_texture_norm = [x/lrso_texture[0] for x in lrso_texture]
+lrso_shape_norm = [x/lrso_shape[0] for x in lrso_shape]
+
+
+plotar_barras(list(zip(step_suppress_rgb_color(return_list=True), lrso_color_norm)))
+plotar_barras(list(zip(step_suppress_texture(return_list=True), lrso_texture_norm)))
+plotar_barras(list(zip(step_suppress_shape(return_list=True), lrso_shape_norm)))
+
+#----------------------------------------------------------------------
+# shape_descriptors
+# shape_descriptors_cl
+# coarse_ssim
+# coarse_ssim_gpt
+
+imgs_color = step_suppress_rgb_color(img_5b)
+imgs_texture = step_suppress_texture(img_5b)
+imgs_shape = step_suppress_shape(img_5b)
+
+metric = shape_descriptors_TEST
+
+lrso_color = [metric(x) for x in imgs_color]
+lrso_texture = [metric(x) for x in imgs_texture]
+lrso_shape = [metric(x) for x in imgs_shape]
+# lrso_shape = [abs(metric(x)) for x in imgs_shape]
+
+lrso_color_norm = [x/lrso_color[0] for x in lrso_color]
+lrso_texture_norm = [x/lrso_texture[0] for x in lrso_texture]
+lrso_shape_norm = [x/lrso_shape[0] for x in lrso_shape]
 
 
 plotar_barras(list(zip(step_suppress_rgb_color(return_list=True), lrso_color_norm)))

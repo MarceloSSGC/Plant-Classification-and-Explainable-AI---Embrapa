@@ -369,6 +369,13 @@ def shape_descriptors(img_5b: np.ndarray) -> dict:
         "hu_7": float(hu_log[6]),
     }
 
+
+def shape_descriptors_TEST(img_5b: np.ndarray) -> dict:
+
+    data = shape_descriptors(img_5b)
+    return data['compactness']
+
+
 #----------------------------------------------------------------------
 # Claude
 
@@ -485,6 +492,8 @@ def shape_distance(desc_a: dict, desc_b: dict, hu_weight: float = 1.0) -> float:
     d_hu = np.linalg.norm(desc_a["hu_moments"] - desc_b["hu_moments"])
 
     return float(d_compact + d_solid + hu_weight * d_hu)
+
+#----------------------------------------------------------------------
 
 
 #======================================================================
