@@ -67,7 +67,7 @@ dropout = 0.2
 batch_size = 8
 lr = 1e-4
 pretrained = True
-model_name = "ResNet18"
+model_name = "ViTTiny"
 
 
 for multiview_data_nickname in multiview_data_nickname_list:          # model_name = "SmallCNN"

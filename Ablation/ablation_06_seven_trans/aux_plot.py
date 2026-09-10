@@ -33,7 +33,7 @@ def load_5b_from_dir(image_dir: str, base_name: str):
 
 #======================================================================
 
-def plot_rgb(rgb_image, bands_ch=(2, 1, 0)):
+def plot_rgb(rgb_image, bands_ch=(0, 1, 2)):
 
     channels = []
 
@@ -43,28 +43,6 @@ def plot_rgb(rgb_image, bands_ch=(2, 1, 0)):
 
         # Normalização individual para [0,1]
         img = (img - img.min()) / (img.max() - img.min() + 1e-8)
-        channels.append(img)
-
-    rgb = np.dstack(channels)
-
-    plt.figure(figsize=(15, 9))
-    plt.imshow(rgb)
-    plt.title(f"RGB - {bands_ch}")
-    plt.axis("off")
-    plt.show()
-
-#----------------------------------------------------------------------
-
-def plot_rgb_no_norm(rgb_image, bands_ch=(2, 1, 0)):
-
-    channels = []
-
-    for band in bands_ch:
-        
-        img = rgb_image[:, :, band].astype(np.float32)
-
-        # Normalização individual para [0,1]
-        # img = (img - img.min()) / (img.max() - img.min() + 1e-8)
         channels.append(img)
 
     rgb = np.dstack(channels)
@@ -249,46 +227,11 @@ def plot_ablation_4_metric(
 
 
 #======================================================================
-
-import matplotlib.pyplot as plt
-
-def plotar_barras(dados, title=None):
-    """
-    Recebe uma lista de tuplas (x_i, y_i) e plota um gráfico
-    de barras preservando a ordem original dos x_i.
-
-    Exemplo:
-        dados = [
-            ("João", 10),
-            ("Maria", 25),
-            ("Pedro", 15)
-        ]
-    """
-    if not dados:
-        raise ValueError("A lista não pode estar vazia.")
-
-    # Mantém exatamente a ordem recebida
-    nomes = [x for x, _ in dados]
-    valores = [y for _, y in dados]
-
-    # Posições numéricas garantem que nenhuma ordenação seja feita
-    posicoes = range(len(dados))
-
-    plt.figure(figsize=(10, 6))
-    plt.bar(posicoes, valores)
-
-    plt.xticks(posicoes, nomes)
-    plt.xlabel("x")
-    plt.ylabel("y")
-    if title is not None:
-        plt.title(title)
-
-    plt.tight_layout()
-    plt.show()
+#======================================================================
+#======================================================================
 
 #======================================================================
 
-import matplotlib.pyplot as plt
 
 import matplotlib.pyplot as plt
 

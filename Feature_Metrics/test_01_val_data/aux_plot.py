@@ -288,7 +288,6 @@ def plotar_barras(dados, title=None):
 
 #======================================================================
 
-import matplotlib.pyplot as plt
 
 import matplotlib.pyplot as plt
 

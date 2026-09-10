@@ -1,0 +1,55 @@
+As transformações de **supressão de características** mencionadas no texto são: 
+
+1. **Supressão de textura — Low-pass / Blur**
+
+   * Aplicar blur separadamente em cada uma das 5 bandas.
+   * `[B_blur, G_blur, R_blur, NIR_blur, RE_blur]`
+   * Reduz detalhes locais e componentes de alta frequência, buscando preservar estrutura global e tendências espectrais de baixa frequência.
+   * O texto sugere testar diferentes intensidades: **sem blur → leve → médio → forte**. 
+
+2. **Supressão de shape / organização espacial — Patch Shuffle**
+
+   * Dividir a imagem em patches e embaralhá-los.
+   * Usar **a mesma permutação nas cinco bandas**, mantendo a correspondência B/G/R/NIR/RE dentro de cada região.
+   * Destrói progressivamente a organização espacial/forma global, preservando características locais.
+   * Sugere variar o tamanho dos patches: **pequeno → médio → grande**. 
+
+3. **Supressão da informação de cor RGB — Grayscale**
+
+   * Converter RGB para grayscale, mantendo NIR e Red Edge:
+   * `[GS, GS, GS, NIR, RE]`
+   * Remove diferenças cromáticas entre B/G/R, preservando estrutura espacial, intensidade e NIR/RE. 
+
+4. **Desalinhamento espacial entre bandas — Band Shifting**
+
+   * Aplicar uma **translação espacial diferente para cada banda**.
+   * Preserva grande parte da informação individual de cada banda, mas degrada a correspondência espacial pixel-a-pixel entre B/G/R/NIR/RE e as relações espectrais locais. 
+
+5. **Supressão do espectro não visível — NIR/RE constantes**
+
+   * Substituir NIR e Red Edge por seus valores médios:
+   * `[B, G, R, mean(NIR), mean(RE)]`
+   * Remove a informação discriminativa espacial específica de NIR e RE, mantendo RGB e sua organização espacial.
+   * O próprio texto observa que isso é semelhante à **ablação de grupos espectrais** e talvez seja redundante. 
+
+6. **Supressão completa da organização espacial — Pixel Shuffle conjunto**
+
+   * Aplicar **a mesma permutação aleatória dos pixels às cinco bandas**.
+   * Cada vetor `[B, G, R, NIR, RE]` permanece intacto, mas vai para uma posição espacial aleatória.
+   * Destrói forma, contornos, textura, vizinhança e organização espacial, enquanto preserva a **assinatura espectral de cada pixel** e sua distribuição global. 
+
+Em resumo, são **6 transformações**: **Blur, Patch Shuffle, RGB→Grayscale, desalinhamento entre bandas, supressão de NIR/RE e Pixel Shuffle conjunto**.
+
+
+Sugestão de enquadramento para o artigo
+
+Em vez de importar a dicotomia shape-vs-texture como está, 
+provavelmente rende mais reformular como um eixo triplo: 
+forma/organização espacial, textura local, e assinatura 
+espectral (visível vs. não-visível). Isso é uma contribuição 
+mais honesta ao domínio multiespectral, e conecta melhor 
+com a arquitetura Multi-View que você mencionou estar 
+mirando — cada view corresponderia a um desses eixos, e 
+o experimento de suficiência (seção 4) mais as supressões 
+(seção 5) dariam evidência empírica para justificar cada 
+view separadamente.

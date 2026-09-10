@@ -1376,7 +1376,7 @@ def mean_chroma(
 # mean_chroma
 # std_chroma
 
-def mean_chroma_test(
+def mean_chroma__mean_chroma(
     img_5b: np.ndarray,
     mask_background: bool = True,
     input_range: tuple = None,
@@ -1387,7 +1387,7 @@ def mean_chroma_test(
     mask_background,
     input_range)
 
-    return data["std_chroma"]
+    return data["mean_chroma"]
 
 
 #======================================================================
