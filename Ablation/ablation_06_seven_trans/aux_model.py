@@ -4,7 +4,7 @@ import pandas as pd
 
 import torch
 import torch.nn as nn
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import Dataset, DataLoader, Subset
 import torch.nn.functional as F
 import torch.optim as optim
 
@@ -773,7 +773,28 @@ class WeedDataset_Transform(Dataset):
 
         return img, y_i, c_i, n_i
 
-    
+#======================================================================
+
+def get_species_subset(dataset: WeedDataset_Transform, species_name: str) -> Subset:
+    """
+    Retorna um Subset do dataset completo contendo apenas as amostras
+    da espécie informada, preservando o class_to_idx original.
+    """
+    if species_name not in dataset.class_to_idx:
+        raise ValueError(f"Espécie '{species_name}' não encontrada em {dataset.classes}")
+
+    target_idx = dataset.class_to_idx[species_name]
+
+    indices = [
+        i for i, (_, cls_idx, _) in enumerate(dataset.samples)
+        if cls_idx == target_idx
+    ]
+
+    if not indices:
+        raise RuntimeError(f"Nenhuma amostra encontrada para '{species_name}'")
+
+    return Subset(dataset, indices)
+
 #======================================================================
 # Dataset Class - Multiclass (single-label)
 

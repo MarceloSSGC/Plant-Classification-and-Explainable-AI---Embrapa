@@ -103,47 +103,50 @@ def step_suppress_rgb_color(image: np.ndarray = None, discolor_list: list = [0, 
 
 #----------------------------------------------------------------------
 
-def suppress_rgbnirre_color(
+def suppress_colors(
     image: np.ndarray,
     discolor: float = 1.0
 ) -> np.ndarray:
     """
-    Aplica supressão de cor às 5 bandas da imagem multiespectral.
+    Aplica supressão de cor a uma imagem multibanda.
 
-    Recebe uma imagem multiespectral com 5 bandas na ordem:
-    [Blue, Green, Red, NIR, RedEdge]
+    Para cada pixel, calcula a média aritmética de todas as bandas e
+    interpola cada banda entre seu valor original (discolor=0) e essa
+    média (discolor=1).
 
-    Calcula, para cada pixel, a média aritmética das 5 bandas e interpola
-    entre cada banda original (discolor=0) e essa média (discolor=1).
+    Para uma imagem com N bandas:
 
-    Resultado: [B', G', R', NIR', RE'], onde
+        mean = (band_1 + band_2 + ... + band_N) / N
 
-        mean = (B + G + R + NIR + RE) / 5
-
-        canal' = (1 - discolor) * canal_original + discolor * mean
+        band_i' = (1 - discolor) * band_i + discolor * mean
 
     Parameters
     ----------
     image : np.ndarray
-        Array de shape (H, W, 5), dtype float ou uint, bandas na ordem
-        [B, G, R, NIR, RE].
+        Array de shape (H, W, N), onde N >= 1 representa o número
+        de bandas da imagem.
 
-    discolor : float
+    discolor : float, default=1.0
         Intensidade da supressão de cor, entre 0 e 1.
 
         0 = imagem original.
-        1 = todas as bandas recebem a média aritmética das 5 bandas.
-        Valores intermediários = interpolação linear entre a banda
-        original e a média.
+        1 = todas as bandas recebem a média aritmética das N bandas.
+        Valores intermediários realizam uma interpolação linear entre
+        cada banda original e a média.
 
     Returns
     -------
     np.ndarray
-        Array de shape (H, W, 5) com o mesmo dtype da entrada.
+        Array de shape (H, W, N), com o mesmo dtype da entrada.
     """
-    if image.ndim != 3 or image.shape[-1] != 5:
+    if image.ndim != 3:
         raise ValueError(
-            f"Esperado array (H, W, 5), recebido {image.shape}"
+            f"Esperado array (H, W, N), recebido {image.shape}"
+        )
+
+    if image.shape[-1] < 1:
+        raise ValueError(
+            "A imagem deve possuir pelo menos uma banda."
         )
 
     if not (0.0 <= discolor <= 1.0):
@@ -153,13 +156,19 @@ def suppress_rgbnirre_color(
 
     orig_dtype = image.dtype
 
-    # Converte para float para evitar overflow durante soma/interpolação
+    # Converte para float para evitar overflow durante os cálculos
     image_float = image.astype(np.float64)
 
-    # Média aritmética das 5 bandas para cada pixel
-    mean = np.mean(image_float, axis=-1, keepdims=True)
+    # Média aritmética de todas as bandas para cada pixel.
+    # keepdims=True mantém shape (H, W, 1), permitindo broadcasting
+    # sobre as N bandas.
+    mean = np.mean(
+        image_float,
+        axis=-1,
+        keepdims=True
+    )
 
-    # Interpolação de cada banda em direção à média
+    # Interpolação linear de cada banda em direção à média
     result = (
         (1.0 - discolor) * image_float
         + discolor * mean
@@ -168,7 +177,11 @@ def suppress_rgbnirre_color(
     # Garante os limites do dtype original
     if np.issubdtype(orig_dtype, np.integer):
         info = np.iinfo(orig_dtype)
-        result = np.clip(result, info.min, info.max)
+        result = np.clip(
+            result,
+            info.min,
+            info.max
+        )
 
     return result.astype(orig_dtype)
 
@@ -702,6 +715,252 @@ def suppress_spatial_organization(image: np.ndarray, seed: int | None = None) ->
     result = shuffled_flat.reshape(H, W, C)
 
     return result.astype(orig_dtype)
+
+
+#======================================================================
+
+def suppress_non_visible_spectrum(
+    image: np.ndarray,
+    suppression: float = 1.0
+) -> np.ndarray:
+    """
+    Aplica supressão linear do espectro não visível, reduzindo as
+    bandas NIR e Red Edge.
+
+    A intensidade da supressão é controlada pelo parâmetro `suppression`:
+
+        0.0 = nenhuma supressão (imagem original)
+        1.0 = supressão completa de NIR e Red Edge
+        valores intermediários = supressão linear
+
+    A transformação aplicada é:
+
+        NIR' = (1 - suppression) * NIR
+        RE'  = (1 - suppression) * RE
+
+    As bandas visíveis B, G e R permanecem inalteradas.
+
+    Resultado:
+        [B, G, R, NIR', RE']
+
+    Parameters
+    ----------
+    image : np.ndarray
+        Array de shape (H, W, 5), bandas na ordem
+        [B, G, R, NIR, RE].
+
+    suppression : float, default=1.0
+        Intensidade da supressão do espectro não visível.
+        Deve estar no intervalo [0, 1].
+
+        0 = imagem original.
+        1 = NIR e RE completamente zerados.
+
+    Returns
+    -------
+    np.ndarray
+        Array de shape (H, W, 5), com o mesmo dtype da entrada.
+    """
+    if image.ndim != 3 or image.shape[-1] != 5:
+        raise ValueError(
+            f"Esperado array (H, W, 5), recebido {image.shape}"
+        )
+
+    if not (0.0 <= suppression <= 1.0):
+        raise ValueError(
+            f"suppression deve estar em [0, 1], recebido {suppression}"
+        )
+
+    orig_dtype = image.dtype
+
+    # Trabalha em float para permitir valores intermediários
+    result = image.astype(np.float64).copy()
+
+    # Supressão linear das bandas não visíveis
+    factor = 1.0 - suppression
+
+    result[..., 3] *= factor  # NIR
+    result[..., 4] *= factor  # Red Edge
+
+    # Garante os limites do dtype original
+    if np.issubdtype(orig_dtype, np.integer):
+        info = np.iinfo(orig_dtype)
+        result = np.clip(result, info.min, info.max)
+
+    return result.astype(orig_dtype)
+
+#======================================================================
+#======================================================================
+#======================================================================
+#======================================================================
+
+from scipy import ndimage
+
+
+def keep_bigger_components(
+    img: np.ndarray,
+    n_components: int = 1
+) -> np.ndarray:
+    """
+    Mantém apenas as n maiores componentes conexas de uma imagem segmentada.
+
+    Parameters
+    ----------
+    img : np.ndarray
+        Imagem segmentada nos formatos:
+            - (X, Y): imagem de uma banda
+            - (X, Y, N): imagem com N bandas
+
+        Um pixel é considerado background quando todas as suas bandas
+        possuem valor 0.
+
+    n_components : int, default=1
+        Número de maiores componentes conexas a serem mantidas.
+        Deve ser >= 1.
+
+    Returns
+    -------
+    img_bigger_comp : np.ndarray
+        Imagem contendo apenas as n maiores componentes conexas,
+        com o mesmo shape e dtype da imagem de entrada.
+    """
+
+    # Validação
+    if not isinstance(img, np.ndarray):
+        raise TypeError("img deve ser um numpy.ndarray.")
+
+    if img.ndim not in (2, 3):
+        raise ValueError(
+            "img deve possuir dimensão (X, Y) ou (X, Y, N). "
+            f"Recebido: {img.shape}"
+        )
+
+    if not isinstance(n_components, (int, np.integer)) or n_components < 1:
+        raise ValueError("n_components deve ser um inteiro >= 1.")
+
+    # Guarda a dimensionalidade original
+    original_ndim = img.ndim
+
+    # Converte temporariamente (X, Y) -> (X, Y, 1)
+    if original_ndim == 2:
+        img_work = img[..., np.newaxis]
+    else:
+        img_work = img
+
+    # Máscara 2D:
+    # foreground se pelo menos uma banda for diferente de zero
+    mask = np.any(img_work != 0, axis=-1)
+
+    # Conectividade 8
+    structure = np.ones((3, 3), dtype=np.uint8)
+
+    # Identifica componentes conexas
+    labeled, num_components = ndimage.label(
+        mask,
+        structure=structure
+    )
+
+    # Se não houver componentes
+    if num_components == 0:
+        return np.zeros_like(img)
+
+    # Área de cada componente
+    areas = np.bincount(labeled.ravel())
+
+    # Label 0 corresponde ao background
+    areas[0] = 0
+
+    # Número de componentes que serão mantidas
+    n_keep = min(n_components, num_components)
+
+    # Labels das n maiores componentes
+    biggest_labels = np.argpartition(
+        areas,
+        -n_keep
+    )[-n_keep:]
+
+    # Máscara final
+    bigger_components_mask = np.isin(
+        labeled,
+        biggest_labels
+    )
+
+    # Aplica a máscara em todas as bandas
+    img_bigger_comp = np.where(
+        bigger_components_mask[..., np.newaxis],
+        img_work,
+        0
+    )
+
+    # Retorna com a mesma dimensionalidade da entrada
+    if original_ndim == 2:
+        img_bigger_comp = img_bigger_comp[..., 0]
+
+    return img_bigger_comp
+
+
+#======================================================================
+
+from scipy import ndimage
+import numpy as np
+
+
+def count_connected_components(img: np.ndarray) -> int:
+    """
+    Conta o número de componentes conexas de uma imagem segmentada.
+
+    Parameters
+    ----------
+    img : np.ndarray
+        Imagem segmentada nos formatos:
+            - (X, Y): imagem de uma banda
+            - (X, Y, N): imagem com N bandas
+
+        Para imagens multibanda, um pixel é considerado background
+        somente quando todas as suas bandas possuem valor 0.
+
+        Um pixel pertence ao foreground quando pelo menos uma de suas
+        bandas possui valor diferente de 0.
+
+    Returns
+    -------
+    int
+        Número de componentes conexas presentes no foreground da imagem.
+
+    Notes
+    -----
+    É utilizada conectividade 8, ou seja, pixels conectados pelas
+    laterais ou pelas diagonais pertencem à mesma componente.
+    """
+
+    # Validação
+    if not isinstance(img, np.ndarray):
+        raise TypeError("img deve ser um numpy.ndarray.")
+
+    if img.ndim not in (2, 3):
+        raise ValueError(
+            "img deve possuir dimensão (X, Y) ou (X, Y, N). "
+            f"Recebido: {img.shape}"
+        )
+
+    # Cria máscara 2D de foreground
+    if img.ndim == 2:
+        mask = img != 0
+    else:
+        # Foreground se pelo menos uma banda for diferente de zero
+        mask = np.any(img != 0, axis=-1)
+
+    # Conectividade 8
+    structure = np.ones((3, 3), dtype=np.uint8)
+
+    # Identifica e conta as componentes conexas
+    _, num_components = ndimage.label(
+        mask,
+        structure=structure
+    )
+
+    return int(num_components)
+
 
 #======================================================================
 #======================================================================

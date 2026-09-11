@@ -116,13 +116,15 @@ for X in EXP_LIST:
     # do_ablation_04(TEST_DATA_DIR, EXP_DIR, ABL_DIR)
 
 
-transformation = suppress_rgbnirre_color
-transformation_params = [0, 0.17, 0.33, 0.5, 0.67, 0.83, 1]
+transformation = suppress_texture_mask_aware
+transformation_params = [0, 1, 2, 3, 4, 5, 6]
 # transformation_name = "suppress_rgbnirre_color"
 
 #======================================================================
 
-def do_ablation_06(
+ESPECIE = especie
+
+def do_ablation_06__each_especie(
         VAL_DATA_DIR,
         EXP_DIR,
         ABL_DIR,
@@ -137,10 +139,9 @@ def do_ablation_06(
     output_dir = ABL_DIR
     os.makedirs(output_dir, exist_ok=True)
 
-    df_all_dir = f"{output_dir}/df_all_{transformation.__name__}.csv"
-    # fig_dir = f"{output_dir}/ablation_study.png"
+    df_dir = f"{output_dir}/df_{transformation.__name__}_especies.csv"
 
-    if not os.path.isfile(df_all_dir) or do_again:
+    if not os.path.isfile(df_dir) or do_again:
 
         #------------------------------------------------------------------
         # INFO
@@ -208,7 +209,7 @@ def do_ablation_06(
 
             return trans_function
 
-        #-------------------------
+        #----------------------------------------------------------------------
 
         transformations_list = [define_trans(k) for k in transformation_params]
 
@@ -217,63 +218,63 @@ def do_ablation_06(
         #----------------------------------------------------------------------
         # For all Bands
 
-        df_all = df_metric_val.copy()
+        df = []
+        df_dist = dict()
 
-        df_all_col = list(df_all.columns)
-        df_all["EXP"] = "Original"
-        df_all_col.insert(15, "EXP")
+        for i, especie in enumerate(especies):  # i = 0
 
-        df_all = df_all[df_all_col]
+            df_especie = []
 
-        df_temp = df_all.iloc[:, :22].copy()
+            for j, transform in enumerate(transformations_list):   # j = 0
 
-        for i, transform in enumerate(transformations_list):   # i = 0
+                print("\n"+ "="*80 + f"\n (i, j): {(i, j)} - {name_cases_list[j]} - {especie}")
+                # transform = transformations_list[0]
 
-            print("\n"+ "="*80 + f"\n i: {i} -- {transformation_params[i]} - {name_cases_list[i]}")
-            # transform = transformations_list[0]
+                val_dataset = WeedDataset_Transform(VAL_DIR, transform=transform)
 
-            val_dataset = WeedDataset_Transform(VAL_DIR, transform=transform)
+                # subset de uma única espécie, mantendo o mapeamento de classes original
+                species_subset = get_species_subset(val_dataset, especie)
 
-            print(f"mean: \n{val_dataset[2][0].mean(axis=(1, 2))}")
-            print(f"std: \n{val_dataset[2][0].std(axis=(1, 2))}")
+                species_loader = DataLoader(
+                    species_subset,
+                    batch_size=32,
+                    shuffle=False,
+                )
+
+                # files = sorted(os.listdir(os.path.join(VAL_DATA_DIR, especie)))
+                # file_name = files[1]
+                # file_fir = os.path.join(VAL_DATA_DIR, especie, file_name)
+
+                # img = np.load(file_fir).astype("float32")
+
+                # plot_rgb(img)
+                
+                with torch.no_grad():
+                    new_val_results = model.predict(species_loader, device=device)
+
+                y_val_real = new_val_results["true"]
+                y_val_pred = new_val_results["preds"]
+
+                df_metric_val_abl = classification_metrics_dataframe(y_val_real, y_val_pred, especies)
+
+                df_especie.append(df_metric_val_abl.loc[0, "acuracia"])
+
+            df_dist.update({especie: len(os.listdir(os.path.join(VAL_DIR, especie)))})
+
+            df.append(df_especie)
 
 
-            N_BANDS = int(mdl_info["RUN"]['N_BANDS'])
-            batch_size = int(df_metric_val.loc[0, "BATCH_SIZE"])
-            num_workers = int(df_metric_val.loc[0, "NUM_WORKERS"])
-            pin_memory = int(df_metric_val.loc[0, "PIN_MEMORY"])
-            persistent_workers = int(df_metric_val.loc[0, "PERSISTENT_WORKERS"])
 
-            val_loader = DataLoader(
-                val_dataset,
-                batch_size=batch_size,
-                shuffle=False,
-                num_workers=num_workers,
-                pin_memory=pin_memory,
-                persistent_workers=persistent_workers
-            )
+        df = pd.DataFrame(df, index=df_dist.keys())
 
-            new_val_results = model.predict(val_loader, device=device)
+        plot_heatmap(df, invert_cmap=True)
 
-            y_val_real = new_val_results["true"]
-            y_val_pred = new_val_results["preds"]
-
-            df_metric_val_abl = classification_metrics_dataframe(y_val_real, y_val_pred, especies)
-
-            # df_temp["EXP"] = "Only_" + "_".join([str(x) for x in sorted(set(range(5)) - set(bands))])
-            df_temp["EXP"] = name_cases_list[i]
-            df_metric_val_abl = pd.concat([df_temp, df_metric_val_abl], axis=1)
-
-            df_all = pd.concat([df_all, df_metric_val_abl], axis=0).reset_index(drop=True)
-
-        p(df_all)
-
-        df_all.to_csv(df_all_dir, index=False)
+        df.to_csv(df_dir, index=False)
 
     else:
-        df_all = pd.read_csv(df_all_dir)
+        df = pd.read_csv(df_dir)
 
-    return df_all
+    return df
 
         # #------------------------------------------------------------------
         # # PLOT

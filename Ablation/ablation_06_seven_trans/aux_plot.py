@@ -400,4 +400,183 @@ def plotar_multiplas_linhas(dados, nomes, norm=True, title=None, figsize=(10, 6)
     plt.show()
 
 #======================================================================
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+
+
+def plot_heatmap(
+    df: pd.DataFrame,
+    figsize: tuple = (10, 6),
+    title: str = None,
+    annotate: bool = True,
+    decimals: int = 2
+) -> None:
+    """
+    Plota um heatmap a partir de um DataFrame com valores entre 0 e 1.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        DataFrame contendo valores numéricos entre 0 e 1.
+
+    figsize : tuple, default=(10, 6)
+        Tamanho da figura.
+
+    title : str, optional
+        Título do gráfico.
+
+    annotate : bool, default=True
+        Se True, exibe o valor numérico dentro de cada célula.
+
+    decimals : int, default=2
+        Número de casas decimais exibidas nas células.
+    """
+    if not isinstance(df, pd.DataFrame):
+        raise TypeError("df deve ser um pandas.DataFrame.")
+
+    values = df.to_numpy(dtype=float)
+
+    if np.isnan(values).any():
+        raise ValueError("O DataFrame contém valores NaN.")
+
+    if np.any((values < 0) | (values > 1)):
+        raise ValueError(
+            "Todos os valores do DataFrame devem estar entre 0 e 1."
+        )
+
+    fig, ax = plt.subplots(figsize=figsize)
+
+    # Heatmap com escala fixa entre 0 e 1
+    im = ax.imshow(
+        values,
+        vmin=0,
+        vmax=1,
+        aspect="auto"
+    )
+
+    # Labels dos eixos
+    ax.set_xticks(np.arange(len(df.columns)))
+    ax.set_xticklabels(df.columns)
+
+    ax.set_yticks(np.arange(len(df.index)))
+    ax.set_yticklabels(df.index)
+
+    # Valores dentro das células
+    if annotate:
+        for i in range(values.shape[0]):
+            for j in range(values.shape[1]):
+                ax.text(
+                    j,
+                    i,
+                    f"{values[i, j]:.{decimals}f}",
+                    ha="center",
+                    va="center"
+                )
+
+    # Barra lateral de escala
+    cbar = fig.colorbar(im, ax=ax)
+    cbar.set_label("Valor")
+
+    if title is not None:
+        ax.set_title(title)
+
+    ax.set_xlabel("Colunas")
+    ax.set_ylabel("Linhas")
+
+    plt.tight_layout()
+    plt.show()
+
+
+
+def plot_heatmap(
+    df: pd.DataFrame,
+    figsize: tuple = (10, 6),
+    title: str = None,
+    annotate: bool = True,
+    decimals: int = 2,
+    cmap: str = "YlGnBu",
+    invert_cmap: bool = False,
+    xlabel: str = None,
+    ylabel: str = None,
+) -> None:
+    """
+    Plota um heatmap para um DataFrame com valores entre 0 e 1.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        DataFrame contendo valores numéricos entre 0 e 1.
+
+    figsize : tuple, default=(10, 6)
+        Tamanho da figura.
+
+    title : str, optional
+        Título do gráfico.
+
+    annotate : bool, default=True
+        Exibe os valores dentro das células.
+
+    decimals : int, default=2
+        Número de casas decimais das anotações.
+
+    cmap : str, default="YlGnBu"
+        Paleta de cores do heatmap.
+
+    invert_cmap : bool, default=False
+        Se True, inverte a ordem das cores do colormap.
+
+    xlabel : str, optional
+        Nome do eixo X.
+
+    ylabel : str, optional
+        Nome do eixo Y.
+    """
+    if not isinstance(df, pd.DataFrame):
+        raise TypeError("df deve ser um pandas.DataFrame.")
+
+    values = df.to_numpy(dtype=float)
+
+    if np.any((values < 0) | (values > 1)):
+        raise ValueError(
+            "Todos os valores devem estar entre 0 e 1."
+        )
+
+    # Inverte o colormap
+    if invert_cmap:
+        cmap = cmap + "_r"
+
+    plt.figure(figsize=figsize)
+
+    ax = sns.heatmap(
+        df,
+        annot=annotate,
+        fmt=f".{decimals}f",
+        cmap=cmap,
+        vmin=0,
+        vmax=1,
+        linewidths=0.5,
+        linecolor="white",
+        cbar_kws={
+            "label": "Valor",
+            "shrink": 0.85
+        }
+    )
+
+    if title is not None:
+        ax.set_title(
+            title,
+            fontsize=14,
+            pad=15
+        )
+
+    ax.set_xlabel(xlabel if xlabel else "")
+    ax.set_ylabel(ylabel if ylabel else "")
+
+    plt.xticks(rotation=0)
+    plt.yticks(rotation=0)
+
+    plt.tight_layout()
+    plt.show()
+
 #======================================================================
