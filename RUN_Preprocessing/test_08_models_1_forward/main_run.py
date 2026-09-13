@@ -144,7 +144,10 @@ def run_training(config):
     else:
         TRAIN_DATA_DIR = f"Split/{SPLIT_DATE_TYPE}/{SPLIT_DATA_NAME}"
 
-    DATA_DIR = f"{PC_DIR}/Datasets/{TRAIN_DATA_DIR}"
+    if 'NEW_DATA_DIR' in config.keys():
+        DATA_DIR = f"/home/marcelo/Documents/Datasets/Embrapa/Experimentos/Datasets/{TRAIN_DATA_DIR}"
+    else:
+        DATA_DIR = f"{PC_DIR}/Datasets/{TRAIN_DATA_DIR}"
 
     if not os.path.isdir(DATA_DIR):
         raise ValueError(f"DATA_DIR doesnt exist - {DATA_DIR[-60:]}")
@@ -361,7 +364,7 @@ def run_training(config):
             # Aquecendo
 
             print("\n Aquecendo Dataset \n")
-            aquecer_cache(TRAIN_DIR, max_workers=8)
+            # aquecer_cache(TRAIN_DIR, max_workers=4)
 
             #-----------------------------------------------------------------
             # Instanciação do modelo

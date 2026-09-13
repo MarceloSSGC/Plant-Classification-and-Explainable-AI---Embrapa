@@ -10,11 +10,14 @@ print(f"\n work_dir: {os.getcwd()[-50:]} \n")
 # os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 
 
-# Nitro
+# NITRO
 # os.chdir("/home/marcelo/Documents/VSCode_python/Agro/SIMIDS/Planta_Daninha_Boa_Vista")
 
-# DANTE
-os.chdir("/home/u14696181/Documents/python_projects/Planta_Daninha_Embrapa")
+# HELIOS
+os.chdir("/home/marcelo/Documents/python_projects/USP/Planta_Daninha_Embrapa/Plant-Classification-and-Explainable-AI---Embrapa/")
+
+# # DANTE
+# os.chdir("/home/u14696181/Documents/python_projects/Planta_Daninha_Embrapa")
 
 from RUN_Preprocessing.test_08_models_1_forward.main_preprocessing import run_preprocessing
 from RUN_Preprocessing.test_08_models_1_forward.main_run import run_training
@@ -35,7 +38,7 @@ print("\n\n GRID: \n")
 
 # multiview_data_nickname_list = ["RGB_NIR_RE.yaml", "RGB.yaml", "RGB_entropy.yaml"]
 # multiview_data_nickname_list = ["RGB_NIR_RE.yaml", "RGB_entropy.yaml", "RGB.yaml", "RGB_LBP.yaml"]
-multiview_data_nickname_list = ["RGB_LBP.yaml"]
+multiview_data_nickname_list = ["RGB_NIR_RE.yaml"]
 
 seed_model_list = list(range(10, 60, 10))
 
