@@ -45,9 +45,9 @@ else:
 VAL_DATA_DIR = "/home/u14696181/Documents/Datasets/Embrapa_Experimentos/Datasets/Augmentation/Multiview_Texture__AUG/align_bands_ecc_affine_with_retry__best_band_otsu_green__RGB_NIR_RE__SEED_20__T_0.75_V_0.15__AUG/Val_Norm"
 
 # EXP_NAME = "MTV_TEXTURE__RGB_NIR_RE__MobileNetV3Small__DROPOUT_0.2_BATCH_SIZE_8_lr_0.0001_EPOCHS_30_AUG_True_SEED_10"
-# EXP_NAME = "MTV_TEXTURE__RGB_NIR_RE__ResNet18__DROPOUT_0.2_BATCH_SIZE_8_lr_0.0001_EPOCHS_30_AUG_True"
+EXP_NAME = "MTV_TEXTURE__RGB_NIR_RE__ResNet18__DROPOUT_0.2_BATCH_SIZE_8_lr_0.0001_EPOCHS_30_AUG_True"
 # EXP_NAME = "MTV_TEXTURE__RGB_NIR_RE__ViTTiny__DROPOUT_0.2_BATCH_SIZE_8_lr_0.0001_EPOCHS_30_AUG_True_SEED_20"
-EXP_NAME = "MTV_TEXTURE__RGB_NIR_RE__SmallCNN__DROPOUT_0.2_BATCH_SIZE_8_lr_0.0001_EPOCHS_30_AUG_True"
+# EXP_NAME = "MTV_TEXTURE__RGB_NIR_RE__SmallCNN__DROPOUT_0.2_BATCH_SIZE_8_lr_0.0001_EPOCHS_30_AUG_True"
 
 BAND_TYPE = "Multiview_Texture__AUG"
 EXP_TYPE = "RGB_NIR_RE"
@@ -61,16 +61,16 @@ ABL_DIR = f"/home/u14696181/Documents/Datasets/Embrapa_Experimentos/Ablation/{AB
 #-----------------------------------------------------------------------
 # NITRO
 
-VAL_DATA_DIR = f"---{PC_DIR}/Datasets/Multiview_5_BANDS/align_bands_ecc_affine_with_retry__best_band_otsu_green__Multiview_5_BANDS__SEED_20/Val_Norm/"
+# VAL_DATA_DIR = f"---{PC_DIR}/Datasets/Multiview_5_BANDS/align_bands_ecc_affine_with_retry__best_band_otsu_green__Multiview_5_BANDS__SEED_20/Val_Norm/"
 
-EXP_NAME = "MTV_TEXTURE__RGB_NIR_RE__MobileNetV3Small__DROPOUT_0.2_BATCH_SIZE_8_lr_0.0001_EPOCHS_30_AUG_True"
-BAND_TYPE = "Multiview_Texture__AUG"
-EXP_TYPE = "RGB_NIR_RE"
-EXP_DIR = f"/media/marcelo/HD_8t/Marcelo__Seagate_8tb/Embrapa/Embrapa_Experimentos/Results_Dante_2026-09-10/{BAND_TYPE}/{EXP_TYPE}/{EXP_NAME}"
+# EXP_NAME = "MTV_TEXTURE__RGB_NIR_RE__MobileNetV3Small__DROPOUT_0.2_BATCH_SIZE_8_lr_0.0001_EPOCHS_30_AUG_True"
+# BAND_TYPE = "Multiview_Texture__AUG"
+# EXP_TYPE = "RGB_NIR_RE"
+# EXP_DIR = f"/media/marcelo/HD_8t/Marcelo__Seagate_8tb/Embrapa/Embrapa_Experimentos/Results_Dante_2026-09-10/{BAND_TYPE}/{EXP_TYPE}/{EXP_NAME}"
 
 
-ABL_NAME = "Ablation_06_seven_trans"
-ABL_DIR = f"{PC_DIR}/Ablation/{ABL_NAME}/{BAND_TYPE}/{EXP_TYPE}/{EXP_NAME}"
+# ABL_NAME = "Ablation_06_seven_trans"
+# ABL_DIR = f"{PC_DIR}/Ablation/{ABL_NAME}/{BAND_TYPE}/{EXP_TYPE}/{EXP_NAME}"
 
 #======================================================================
 # See image
@@ -89,9 +89,16 @@ count_connected_components(img)
 img = keep_bigger_components(img, 20)
 
 img_trans = suppress_texture(img)
-img_trans = suppress_texture_mask_aware(img, sigma=2)
-img_trans = suppress_colors(img)
+img_trans = suppress_texture_mask_aware(img)
+img_trans = suppress_local_shape_contour(img, sigma=2)
+img_trans = suppress_shape_elastic_deformation(img, intensity=30)
+img_trans = elastic_deformation_local(img, intensity=20, size=50)
 plot_rgb(img_trans)
+
+mdl_info_dir = os.path.join(EXP_DIR, 'mld_info.json')
+
+with open(mdl_info_dir, "r") as f:
+    mdl_info = json.load(f)
 
 
 #======================================================================
@@ -363,7 +370,8 @@ df_all_texture_ma = do_ablation_06(
         EXP_DIR,
         ABL_DIR,
         transformation,
-        transformation_params,     
+        transformation_params,
+        # True     
 )
 
 df_all_texture_ma_ = df_all_texture_ma.drop(0, axis=0).reset_index(drop=True)
@@ -414,13 +422,69 @@ plotar_multiplas_linhas([df_all_color_nirre_["acuracia"],
                          df_all_shape_["acuracia"]], 
                          nomes=["Color", "Texture", "Shape"], norm=False, title=None, figsize=(10, 6))
 
-
+title = "ResNet18"
 plotar_multiplas_linhas([df_all_color_nirre_["acuracia"], 
                          df_all_texture_ma_["acuracia"],
                          df_all_shape_["acuracia"],
                          df_all_no_nirre_["acuracia"]], 
-                         nomes=["Color", "Texture", "Shape", "No_NIRRE"], norm=False, title="SmallCNN", figsize=(10, 6))
+                         nomes=["Color", "Texture", "Shape", "No_NIRRE"], norm=False, title=title, figsize=(10, 6))
 
 
 #======================================================================
 #======================================================================
+#======================================================================
+# suppress_local_shape_contour
+
+transformation = suppress_local_shape_contour
+transformation_params = [0, 1, 2, 4, 6, 10, 15]
+
+df_all_local_contour = do_ablation_06(
+        VAL_DATA_DIR,
+        EXP_DIR,
+        ABL_DIR,
+        transformation,
+        transformation_params,
+)
+
+df_all_local_contour_ = df_all_local_contour.drop(0, axis=0).reset_index(drop=True)
+plotar_linhas([(i, x) for i, x in enumerate(df_all_local_contour_["acuracia"])], norm=True, title=None, figsize=(10, 6))
+
+#-----------------------------------------------------------------------
+
+title = "ResNet18"
+plotar_multiplas_linhas([df_all_color_nirre_["acuracia"], 
+                         df_all_texture_ma_["acuracia"],
+                         df_all_shape_["acuracia"],
+                         df_all_no_nirre_["acuracia"],
+                         df_all_local_contour_["acuracia"]
+                         ], 
+                         nomes=["Color", "Texture", "Shape", "No_NIRRE", "local_contour"], norm=False, title=title, figsize=(10, 6))
+
+#======================================================================
+# suppress_shape_elastic_deformation
+
+transformation = suppress_shape_elastic_deformation
+transformation_params = [0, 2, 5, 10, 15, 20, 30]
+
+df_all_elastic_deformation = do_ablation_06(
+        VAL_DATA_DIR,
+        EXP_DIR,
+        ABL_DIR,
+        transformation,
+        transformation_params,
+)
+
+df_all_elastic_deformation_ = df_all_elastic_deformation.drop(0, axis=0).reset_index(drop=True)
+plotar_linhas([(i, x) for i, x in enumerate(df_all_elastic_deformation_["acuracia"])], norm=True, title=None, figsize=(10, 6))
+
+#-----------------------------------------------------------------------
+
+title = "ResNet18"
+plotar_multiplas_linhas([df_all_color_nirre_["acuracia"], 
+                         df_all_texture_ma_["acuracia"],
+                         df_all_shape_["acuracia"],
+                         df_all_no_nirre_["acuracia"],
+                         df_all_elastic_deformation_["acuracia"]
+                         ], 
+                         nomes=["Color", "Texture", "Shape", "No_NIRRE", "elastic_deformation"], norm=False, title=title, figsize=(10, 6))
+

@@ -37,7 +37,6 @@ def load_config(path):
 
 print("\n\n GRID: \n")
 
-# multiview_data_nickname_list = ["RGB_NIR_RE.yaml", "RGB.yaml", "RGB_entropy.yaml"]
 # multiview_data_nickname_list = ["RGB_NIR_RE.yaml", "RGB_entropy.yaml", "RGB.yaml", "RGB_LBP.yaml"]
 multiview_data_nickname_list = ["RGB_NIR_RE.yaml"]
 
@@ -50,14 +49,11 @@ batch_size_list = [8]
 lr_list = [1e-4]
 pretrained_list = [True]
 model_name_list = ['MobileNetV3Small', 'SmallCNN', 'ConvNeXtTiny', 'ViTTiny']
-# model_name_list = ["MobileNetV3Small", 'SmallCNN', 'ResNet18', 'ConvNeXtTiny', 'ViTTiny']
-# model_name_list = ['MobileNetV3Large', 'EfficientNetB0', 'ResNet50', 'ViTSmall', 'ViTBase']
 
 # model_name_list = ['SmallCNN', 'MobileNetV3Small', 'MobileNetV3Large',
 #                     'EfficientNetB0', 'ResNet18', 'ResNet50',
 #                     'ConvNeXtTiny', 'ViTTiny', 'ViTSmall', 'ViTBase']
 
-#  ["SmallCNN", "MobileNetV3Small", "ResNet18", "ConvNeXtTiny", "ViTTiny"]
 
 print(model_name_list)
 

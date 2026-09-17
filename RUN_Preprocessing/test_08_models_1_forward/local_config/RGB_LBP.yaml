@@ -111,5 +111,5 @@ MODEL:
 #--------------------------------------------------------
 # SHAP
 
-APPLY_SHAP: False
+APPLY_SHAP: True
 

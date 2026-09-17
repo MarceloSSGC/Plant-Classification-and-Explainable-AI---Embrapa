@@ -103,47 +103,50 @@ def step_suppress_rgb_color(image: np.ndarray = None, discolor_list: list = [0, 
 
 #----------------------------------------------------------------------
 
-def suppress_rgbnirre_color(
+def suppress_colors(
     image: np.ndarray,
     discolor: float = 1.0
 ) -> np.ndarray:
     """
-    Aplica supressão de cor às 5 bandas da imagem multiespectral.
+    Aplica supressão de cor a uma imagem multibanda.
 
-    Recebe uma imagem multiespectral com 5 bandas na ordem:
-    [Blue, Green, Red, NIR, RedEdge]
+    Para cada pixel, calcula a média aritmética de todas as bandas e
+    interpola cada banda entre seu valor original (discolor=0) e essa
+    média (discolor=1).
 
-    Calcula, para cada pixel, a média aritmética das 5 bandas e interpola
-    entre cada banda original (discolor=0) e essa média (discolor=1).
+    Para uma imagem com N bandas:
 
-    Resultado: [B', G', R', NIR', RE'], onde
+        mean = (band_1 + band_2 + ... + band_N) / N
 
-        mean = (B + G + R + NIR + RE) / 5
-
-        canal' = (1 - discolor) * canal_original + discolor * mean
+        band_i' = (1 - discolor) * band_i + discolor * mean
 
     Parameters
     ----------
     image : np.ndarray
-        Array de shape (H, W, 5), dtype float ou uint, bandas na ordem
-        [B, G, R, NIR, RE].
+        Array de shape (H, W, N), onde N >= 1 representa o número
+        de bandas da imagem.
 
-    discolor : float
+    discolor : float, default=1.0
         Intensidade da supressão de cor, entre 0 e 1.
 
         0 = imagem original.
-        1 = todas as bandas recebem a média aritmética das 5 bandas.
-        Valores intermediários = interpolação linear entre a banda
-        original e a média.
+        1 = todas as bandas recebem a média aritmética das N bandas.
+        Valores intermediários realizam uma interpolação linear entre
+        cada banda original e a média.
 
     Returns
     -------
     np.ndarray
-        Array de shape (H, W, 5) com o mesmo dtype da entrada.
+        Array de shape (H, W, N), com o mesmo dtype da entrada.
     """
-    if image.ndim != 3 or image.shape[-1] != 5:
+    if image.ndim != 3:
         raise ValueError(
-            f"Esperado array (H, W, 5), recebido {image.shape}"
+            f"Esperado array (H, W, N), recebido {image.shape}"
+        )
+
+    if image.shape[-1] < 1:
+        raise ValueError(
+            "A imagem deve possuir pelo menos uma banda."
         )
 
     if not (0.0 <= discolor <= 1.0):
@@ -153,13 +156,19 @@ def suppress_rgbnirre_color(
 
     orig_dtype = image.dtype
 
-    # Converte para float para evitar overflow durante soma/interpolação
+    # Converte para float para evitar overflow durante os cálculos
     image_float = image.astype(np.float64)
 
-    # Média aritmética das 5 bandas para cada pixel
-    mean = np.mean(image_float, axis=-1, keepdims=True)
+    # Média aritmética de todas as bandas para cada pixel.
+    # keepdims=True mantém shape (H, W, 1), permitindo broadcasting
+    # sobre as N bandas.
+    mean = np.mean(
+        image_float,
+        axis=-1,
+        keepdims=True
+    )
 
-    # Interpolação de cada banda em direção à média
+    # Interpolação linear de cada banda em direção à média
     result = (
         (1.0 - discolor) * image_float
         + discolor * mean
@@ -168,7 +177,11 @@ def suppress_rgbnirre_color(
     # Garante os limites do dtype original
     if np.issubdtype(orig_dtype, np.integer):
         info = np.iinfo(orig_dtype)
-        result = np.clip(result, info.min, info.max)
+        result = np.clip(
+            result,
+            info.min,
+            info.max
+        )
 
     return result.astype(orig_dtype)
 
@@ -268,6 +281,118 @@ def step_suppress_texture(image: np.ndarray = None, sigma_list: list = [0, 1, 2,
     return imgs_list
 #----------------------------------------------------------------------
 
+# def suppress_texture_mask_aware(
+#     image: np.ndarray,
+#     sigma: float = 5
+# ) -> np.ndarray:
+#     """
+#     Aplica supressão de textura via low-pass gaussiano, ignorando o
+#     background da imagem.
+
+#     Um pixel é considerado background somente quando todas as 5 bandas
+#     possuem valor zero:
+
+#         [B, G, R, NIR, RE] == [0, 0, 0, 0, 0]
+
+#     O filtro gaussiano é aplicado independentemente em cada banda,
+#     considerando apenas pixels pertencentes à imagem (foreground).
+#     Pixels de background não contribuem para o cálculo do blur e
+#     permanecem com valor zero no resultado.
+
+#     Isso evita que valores zero do background reduzam artificialmente
+#     os valores dos pixels próximos às bordas do foreground.
+
+#     Parameters
+#     ----------
+#     image : np.ndarray
+#         Array de shape (H, W, 5), bandas na ordem
+#         [B, G, R, NIR, RE].
+
+#     sigma : float
+#         Desvio-padrão do filtro gaussiano, em pixels.
+#         Quanto maior, mais forte a supressão de textura.
+
+#     Returns
+#     -------
+#     np.ndarray
+#         Array de shape (H, W, 5), com o mesmo dtype da entrada.
+#         O background permanece zero.
+#     """
+#     if image.ndim != 3 or image.shape[-1] != 5:
+#         raise ValueError(
+#             f"Esperado array (H, W, 5), recebido {image.shape}"
+#         )
+
+#     if sigma <= 0:
+#         raise ValueError(
+#             f"sigma deve ser > 0, recebido {sigma}"
+#         )
+
+#     orig_dtype = image.dtype
+#     image_f = image.astype(np.float64)
+
+#     # Foreground: pixel em que pelo menos uma das 5 bandas é diferente de zero.
+#     # Background: todas as 5 bandas são zero.
+#     mask = np.any(image != 0, axis=-1)
+
+#     # Máscara em float para utilização no filtro.
+#     mask_f = mask.astype(np.float64)
+
+#     # Gaussian blur da máscara.
+#     #
+#     # Isso representa, para cada posição, quanto da vizinhança
+#     # considerada pelo filtro pertence ao foreground.
+#     blurred_mask = gaussian_filter(
+#         mask_f,
+#         sigma=sigma
+#     )
+
+#     blurred = np.zeros_like(image_f)
+
+#     for band in range(image.shape[-1]):
+
+#         # Remove explicitamente o background antes do blur.
+#         # Isso é importante porque somente os pixels válidos devem
+#         # contribuir para o resultado.
+#         weighted_band = image_f[..., band] * mask_f
+
+#         # Blur dos valores da banda.
+#         blurred_values = gaussian_filter(
+#             weighted_band,
+#             sigma=sigma
+#         )
+
+#         # Normalização pela quantidade efetiva de foreground
+#         # considerada pelo filtro.
+#         #
+#         # Onde blurred_mask > 0:
+#         #
+#         #     resultado = blur(valores * máscara) / blur(máscara)
+#         #
+#         # Isso impede que o background zero seja contabilizado
+#         # como parte da média.
+#         np.divide(
+#             blurred_values,
+#             blurred_mask,
+#             out=blurred[..., band],
+#             where=blurred_mask > 0
+#         )
+
+#     # Garante que o background original continue exatamente zero.
+#     blurred[~mask] = 0
+
+#     # Retorna aos limites do dtype original.
+#     if np.issubdtype(orig_dtype, np.integer):
+#         info = np.iinfo(orig_dtype)
+#         blurred = np.clip(
+#             blurred,
+#             info.min,
+#             info.max
+#         )
+
+#     return blurred.astype(orig_dtype)
+
+
 def suppress_texture_mask_aware(
     image: np.ndarray,
     sigma: float = 5
@@ -276,18 +401,11 @@ def suppress_texture_mask_aware(
     Aplica supressão de textura via low-pass gaussiano, ignorando o
     background da imagem.
 
-    Um pixel é considerado background somente quando todas as 5 bandas
-    possuem valor zero:
+    Funciona tanto para imagens segmentadas originais quanto para
+    imagens segmentadas normalizadas por Z-score.
 
-        [B, G, R, NIR, RE] == [0, 0, 0, 0, 0]
-
-    O filtro gaussiano é aplicado independentemente em cada banda,
-    considerando apenas pixels pertencentes à imagem (foreground).
-    Pixels de background não contribuem para o cálculo do blur e
-    permanecem com valor zero no resultado.
-
-    Isso evita que valores zero do background reduzam artificialmente
-    os valores dos pixels próximos às bordas do foreground.
+    O background é identificado como os pixels que possuem,
+    simultaneamente, o valor mínimo de cada uma das 5 bandas.
 
     Parameters
     ----------
@@ -297,38 +415,48 @@ def suppress_texture_mask_aware(
 
     sigma : float
         Desvio-padrão do filtro gaussiano, em pixels.
-        Quanto maior, mais forte a supressão de textura.
 
     Returns
     -------
     np.ndarray
         Array de shape (H, W, 5), com o mesmo dtype da entrada.
-        O background permanece zero.
+        O background mantém exatamente seus valores originais.
     """
     if image.ndim != 3 or image.shape[-1] != 5:
         raise ValueError(
             f"Esperado array (H, W, 5), recebido {image.shape}"
         )
 
-    if sigma <= 0:
+    if sigma < 0:
         raise ValueError(
             f"sigma deve ser > 0, recebido {sigma}"
         )
+    elif sigma == 0:
+        return image
 
     orig_dtype = image.dtype
     image_f = image.astype(np.float64)
 
-    # Foreground: pixel em que pelo menos uma das 5 bandas é diferente de zero.
-    # Background: todas as 5 bandas são zero.
-    mask = np.any(image != 0, axis=-1)
+    # Valor correspondente ao background em cada banda.
+    background_values = np.min(image_f, axis=(0, 1))
 
-    # Máscara em float para utilização no filtro.
+    # Background: pixel possui simultaneamente o mínimo das 5 bandas.
+    # isclose evita problemas de precisão em ponto flutuante.
+    background_mask = np.all(
+        np.isclose(
+            image_f,
+            background_values[None, None, :],
+            rtol=1e-5,
+            atol=1e-8
+        ),
+        axis=-1
+    )
+
+    # Foreground é o complemento do background.
+    mask = ~background_mask
     mask_f = mask.astype(np.float64)
 
-    # Gaussian blur da máscara.
-    #
-    # Isso representa, para cada posição, quanto da vizinhança
-    # considerada pelo filtro pertence ao foreground.
+    # Blur da máscara.
     blurred_mask = gaussian_filter(
         mask_f,
         sigma=sigma
@@ -338,26 +466,15 @@ def suppress_texture_mask_aware(
 
     for band in range(image.shape[-1]):
 
-        # Remove explicitamente o background antes do blur.
-        # Isso é importante porque somente os pixels válidos devem
-        # contribuir para o resultado.
+        # Somente foreground contribui para o blur.
         weighted_band = image_f[..., band] * mask_f
 
-        # Blur dos valores da banda.
         blurred_values = gaussian_filter(
             weighted_band,
             sigma=sigma
         )
 
-        # Normalização pela quantidade efetiva de foreground
-        # considerada pelo filtro.
-        #
-        # Onde blurred_mask > 0:
-        #
-        #     resultado = blur(valores * máscara) / blur(máscara)
-        #
-        # Isso impede que o background zero seja contabilizado
-        # como parte da média.
+        # Média gaussiana considerando apenas foreground.
         np.divide(
             blurred_values,
             blurred_mask,
@@ -365,10 +482,9 @@ def suppress_texture_mask_aware(
             where=blurred_mask > 0
         )
 
-    # Garante que o background original continue exatamente zero.
-    blurred[~mask] = 0
+    # Restaura exatamente o background da imagem de entrada.
+    blurred[background_mask] = image_f[background_mask]
 
-    # Retorna aos limites do dtype original.
     if np.issubdtype(orig_dtype, np.integer):
         info = np.iinfo(orig_dtype)
         blurred = np.clip(
@@ -412,8 +528,11 @@ def suppress_shape(image: np.ndarray, patch_size: int = 128, seed: int | None = 
     """
     if image.ndim != 3 or image.shape[-1] != 5:
         raise ValueError(f"Esperado array (H, W, 5), recebido {image.shape}")
-    if patch_size <= 0:
+    if patch_size < 0:
         raise ValueError(f"patch_size deve ser > 0, recebido {patch_size}")
+    elif patch_size == 0:
+        return image
+
 
     H, W, C = image.shape
     orig_dtype = image.dtype
@@ -702,6 +821,741 @@ def suppress_spatial_organization(image: np.ndarray, seed: int | None = None) ->
     result = shuffled_flat.reshape(H, W, C)
 
     return result.astype(orig_dtype)
+
+
+#======================================================================
+
+def suppress_non_visible_spectrum(
+    image: np.ndarray,
+    suppression: float = 1.0
+) -> np.ndarray:
+    """
+    Aplica supressão linear do espectro não visível, reduzindo as
+    bandas NIR e Red Edge.
+
+    A intensidade da supressão é controlada pelo parâmetro `suppression`:
+
+        0.0 = nenhuma supressão (imagem original)
+        1.0 = supressão completa de NIR e Red Edge
+        valores intermediários = supressão linear
+
+    A transformação aplicada é:
+
+        NIR' = (1 - suppression) * NIR
+        RE'  = (1 - suppression) * RE
+
+    As bandas visíveis B, G e R permanecem inalteradas.
+
+    Resultado:
+        [B, G, R, NIR', RE']
+
+    Parameters
+    ----------
+    image : np.ndarray
+        Array de shape (H, W, 5), bandas na ordem
+        [B, G, R, NIR, RE].
+
+    suppression : float, default=1.0
+        Intensidade da supressão do espectro não visível.
+        Deve estar no intervalo [0, 1].
+
+        0 = imagem original.
+        1 = NIR e RE completamente zerados.
+
+    Returns
+    -------
+    np.ndarray
+        Array de shape (H, W, 5), com o mesmo dtype da entrada.
+    """
+    if image.ndim != 3 or image.shape[-1] != 5:
+        raise ValueError(
+            f"Esperado array (H, W, 5), recebido {image.shape}"
+        )
+
+    if not (0.0 <= suppression <= 1.0):
+        raise ValueError(
+            f"suppression deve estar em [0, 1], recebido {suppression}"
+        )
+
+    orig_dtype = image.dtype
+
+    # Trabalha em float para permitir valores intermediários
+    result = image.astype(np.float64).copy()
+
+    # Supressão linear das bandas não visíveis
+    factor = 1.0 - suppression
+
+    result[..., 3] *= factor  # NIR
+    result[..., 4] *= factor  # Red Edge
+
+    # Garante os limites do dtype original
+    if np.issubdtype(orig_dtype, np.integer):
+        info = np.iinfo(orig_dtype)
+        result = np.clip(result, info.min, info.max)
+
+    return result.astype(orig_dtype)
+
+#======================================================================
+import numpy as np
+from scipy.ndimage import gaussian_filter
+
+
+def suppress_local_shape_contour(
+    img: np.ndarray,
+    sigma: float = 10.0
+) -> np.ndarray:
+    """
+    Suprime progressivamente o shape local suavizando o contorno
+    da planta.
+
+    A transformação atua sobre a máscara da planta, suavizando
+    irregularidades locais do contorno (serrilhamentos, pequenas
+    pontas, concavidades etc.), procurando preservar o shape global.
+
+    Funciona com imagens segmentadas normalizadas, pois utiliza
+    mask_from_segmented() para obter a máscara.
+
+    Parameters
+    ----------
+    img : np.ndarray
+        Imagem segmentada de shape (H, W, 5).
+
+    sigma : float, default=10.0
+        Intensidade da suavização do contorno.
+
+        Valores sugeridos para 6 níveis:
+            1  -> muito fraco
+            2  -> fraco
+            4  -> moderado
+            6  -> médio-forte
+            10 -> forte (default)
+            15 -> muito forte
+
+    Returns
+    -------
+    np.ndarray
+        Imagem com o contorno suavizado, mantendo o mesmo shape
+        e dtype da entrada.
+    """
+
+    if img.ndim != 3 or img.shape[-1] != 5:
+        raise ValueError(
+            f"Esperado shape (H, W, 5), recebido {img.shape}"
+        )
+
+    if sigma <= 0:
+        raise ValueError(
+            f"sigma deve ser > 0, recebido {sigma}"
+        )
+
+    orig_dtype = img.dtype
+
+    # ---------------------------------------------------------
+    # 1. Obtém máscara 2D da planta
+    # ---------------------------------------------------------
+    mask = mask_from_segmented(img)[..., 0].astype(np.float64)
+
+    # ---------------------------------------------------------
+    # 2. Suaviza espacialmente a máscara
+    # ---------------------------------------------------------
+    smooth_mask = gaussian_filter(
+        mask,
+        sigma=sigma
+    )
+
+    # ---------------------------------------------------------
+    # 3. Binariza novamente
+    #
+    # O limiar 0.5 produz uma nova fronteira mais suave.
+    # ---------------------------------------------------------
+    new_mask = smooth_mask >= 0.5
+
+    # ---------------------------------------------------------
+    # 4. Background original de cada banda
+    #
+    # Importante para imagens normalizadas:
+    # o fundo NÃO é necessariamente zero.
+    # ---------------------------------------------------------
+    background_values = np.min(
+        img,
+        axis=(0, 1)
+    )
+
+    # ---------------------------------------------------------
+    # 5. Constrói imagem resultante
+    # ---------------------------------------------------------
+    result = img.copy()
+
+    # Pixels removidos pela suavização
+    removed = (mask > 0) & (~new_mask)
+
+    # Coloca nesses pixels o background correspondente
+    # de cada banda.
+    result[removed] = background_values
+
+    # ---------------------------------------------------------
+    # 6. Pixels eventualmente adicionados pela nova máscara
+    #
+    # Não inventamos RGB/NIR/RE para regiões que originalmente
+    # eram background. Portanto eles permanecem background.
+    # ---------------------------------------------------------
+
+    return result.astype(orig_dtype)
+
+
+# sigma_levels = [1, 2, 4, 6, 10, 15]
+
+#======================================================================
+import numpy as np
+from scipy.ndimage import gaussian_filter, map_coordinates
+
+
+def suppress_shape_elastic_deformation(
+    img: np.ndarray,
+    intensity: float = 20.0,
+    smoothness: float = 40.0,
+    seed: int | None = None
+) -> np.ndarray:
+    """
+    Aplica uma deformação espacial não rígida (Elastic Deformation).
+
+    Um campo de deslocamento aleatório e suave deforma espacialmente
+    a planta, fazendo diferentes regiões serem localmente esticadas,
+    comprimidas e deslocadas.
+
+    O mesmo campo é aplicado às 5 bandas, preservando o alinhamento
+    espectral.
+
+    Parameters
+    ----------
+    img : np.ndarray
+        Imagem segmentada de shape (H, W, 5).
+
+    intensity : float, default=20
+        Magnitude da deformação, aproximadamente em pixels.
+
+        Sugestão de 6 níveis:
+             2  -> muito fraco
+             5  -> fraco
+            10  -> moderado
+            15  -> médio
+            20  -> forte
+            30  -> muito forte
+
+    smoothness : float, default=40
+        Controla a suavidade espacial da deformação.
+        Valores maiores produzem deformações mais amplas e suaves.
+
+    seed : int ou None
+        Seed para tornar a transformação reproduzível.
+
+    Returns
+    -------
+    np.ndarray
+        Imagem deformada, com shape e dtype iguais aos da entrada.
+    """
+
+    if img.ndim != 3 or img.shape[-1] != 5:
+        raise ValueError(
+            f"Esperado shape (H, W, 5), recebido {img.shape}"
+        )
+
+    if intensity < 0:
+        raise ValueError("intensity deve ser >= 0.")
+
+    if smoothness <= 0:
+        raise ValueError("smoothness deve ser > 0.")
+
+    if intensity == 0:
+        return img.copy()
+
+    orig_dtype = img.dtype
+    img_f = img.astype(np.float64)
+
+    H, W, _ = img.shape
+
+    rng = np.random.default_rng(seed)
+
+    # ---------------------------------------------------------
+    # 1. Campo de deslocamento aleatório
+    # ---------------------------------------------------------
+    dx = rng.normal(size=(H, W))
+    dy = rng.normal(size=(H, W))
+
+    # ---------------------------------------------------------
+    # 2. Torna o campo espacialmente suave
+    # ---------------------------------------------------------
+    dx = gaussian_filter(dx, sigma=smoothness)
+    dy = gaussian_filter(dy, sigma=smoothness)
+
+    # Normaliza a amplitude dos campos
+    dx /= np.std(dx) + 1e-8
+    dy /= np.std(dy) + 1e-8
+
+    dx *= intensity
+    dy *= intensity
+
+    # ---------------------------------------------------------
+    # 3. Coordenadas deformadas
+    # ---------------------------------------------------------
+    y, x = np.meshgrid(
+        np.arange(H),
+        np.arange(W),
+        indexing="ij"
+    )
+
+    coordinates = [
+        y + dy,
+        x + dx
+    ]
+
+    # ---------------------------------------------------------
+    # 4. Background de cada banda
+    #
+    # Funciona também para imagens normalizadas.
+    # ---------------------------------------------------------
+    background_values = np.min(
+        img_f,
+        axis=(0, 1)
+    )
+
+    result = np.empty_like(img_f)
+
+    # ---------------------------------------------------------
+    # 5. Aplica exatamente a mesma deformação às 5 bandas
+    # ---------------------------------------------------------
+    for band in range(5):
+
+        result[..., band] = map_coordinates(
+            img_f[..., band],
+            coordinates,
+            order=1,
+            mode="constant",
+            cval=float(background_values[band])
+        )
+
+    # ---------------------------------------------------------
+    # 6. Deforma também a máscara
+    # ---------------------------------------------------------
+    mask = mask_from_segmented(img)[..., 0].astype(np.float64)
+
+    deformed_mask = map_coordinates(
+        mask,
+        coordinates,
+        order=0,
+        mode="constant",
+        cval=0
+    )
+
+    deformed_mask = deformed_mask > 0.5
+
+    # ---------------------------------------------------------
+    # 7. Garante background correto
+    # ---------------------------------------------------------
+    result[~deformed_mask] = background_values
+
+    if np.issubdtype(orig_dtype, np.integer):
+        info = np.iinfo(orig_dtype)
+        result = np.clip(result, info.min, info.max)
+
+    return result.astype(orig_dtype)
+
+
+intensity_levels = [2, 5, 10, 15, 20, 30]
+
+#======================================================================
+
+import numpy as np
+from scipy.ndimage import gaussian_filter, map_coordinates
+
+
+def elastic_deformation_local(
+    img: np.ndarray,
+    intensity: float = 10.0,
+    size: float = 20.0,
+    seed: int | None = None
+) -> np.ndarray:
+    """
+    Aplica Elastic Deformation com escala espacial controlável.
+
+    Parameters
+    ----------
+    img : np.ndarray
+        Imagem segmentada (H, W, 5).
+
+    size : float, default=20
+        Escala espacial da deformação, em pixels.
+
+        Sugestões para imagens ~960x1280:
+            100 -> global
+             50 -> regional
+             20 -> local
+             10 -> bem local
+              5 -> micro local
+
+        Quanto MENOR o size, mais localmente o campo varia.
+
+    intensity : float, default=10
+        Magnitude do deslocamento, aproximadamente em pixels.
+
+        6 níveis sugeridos:
+             2 -> muito fraco
+             5 -> fraco
+            10 -> moderado
+            15 -> médio-forte
+            20 -> forte
+            30 -> muito forte
+
+    seed : int ou None
+        Seed para reprodutibilidade.
+
+    Returns
+    -------
+    np.ndarray
+        Imagem deformada com mesmo shape e dtype da entrada.
+    """
+
+    if img.ndim != 3 or img.shape[-1] != 5:
+        raise ValueError(
+            f"Esperado shape (H, W, 5), recebido {img.shape}"
+        )
+
+    if size <= 0:
+        raise ValueError("size deve ser > 0.")
+
+    if intensity < 0:
+        raise ValueError("intensity deve ser >= 0.")
+
+    if intensity == 0:
+        return img.copy()
+
+    orig_dtype = img.dtype
+    img_f = img.astype(np.float64)
+
+    H, W, _ = img.shape
+
+    rng = np.random.default_rng(seed)
+
+    # ---------------------------------------------------------
+    # 1. Gera campo aleatório
+    # ---------------------------------------------------------
+    dx = rng.normal(size=(H, W))
+    dy = rng.normal(size=(H, W))
+
+    # ---------------------------------------------------------
+    # 2. Define a escala espacial da deformação
+    #
+    # size grande  -> variações amplas / globais
+    # size pequeno -> variações locais
+    # ---------------------------------------------------------
+    dx = gaussian_filter(dx, sigma=size)
+    dy = gaussian_filter(dy, sigma=size)
+
+    # Normaliza para separar "escala" de "intensidade"
+    dx /= np.std(dx) + 1e-8
+    dy /= np.std(dy) + 1e-8
+
+    dx *= intensity
+    dy *= intensity
+
+    # ---------------------------------------------------------
+    # 3. Coordenadas originais
+    # ---------------------------------------------------------
+    y, x = np.meshgrid(
+        np.arange(H),
+        np.arange(W),
+        indexing="ij"
+    )
+
+    coordinates = [
+        y + dy,
+        x + dx
+    ]
+
+    # ---------------------------------------------------------
+    # 4. Identifica o background
+    # ---------------------------------------------------------
+    background_values = np.min(
+        img_f,
+        axis=(0, 1)
+    )
+
+    # ---------------------------------------------------------
+    # 5. Aplica o MESMO campo às 5 bandas
+    # ---------------------------------------------------------
+    result = np.empty_like(img_f)
+
+    for band in range(5):
+
+        result[..., band] = map_coordinates(
+            img_f[..., band],
+            coordinates,
+            order=1,
+            mode="constant",
+            cval=float(background_values[band])
+        )
+
+    # ---------------------------------------------------------
+    # 6. Deforma a máscara com o mesmo campo
+    # ---------------------------------------------------------
+    mask = mask_from_segmented(img)[..., 0].astype(np.float64)
+
+    deformed_mask = map_coordinates(
+        mask,
+        coordinates,
+        order=0,
+        mode="constant",
+        cval=0
+    )
+
+    deformed_mask = deformed_mask > 0.5
+
+    # ---------------------------------------------------------
+    # 7. Mantém o background correto
+    # ---------------------------------------------------------
+    result[~deformed_mask] = background_values
+
+    if np.issubdtype(orig_dtype, np.integer):
+        info = np.iinfo(orig_dtype)
+
+        result = np.clip(
+            result,
+            info.min,
+            info.max
+        )
+
+    return result.astype(orig_dtype)
+
+
+# size = 100   # global
+# size = 50    # regional
+# size = 20    # local
+# size = 10    # bem local
+# size = 5     # micro local
+
+# intensity_levels = [2, 5, 10, 15, 20, 30]
+
+#======================================================================
+#======================================================================
+#======================================================================
+#======================================================================
+
+from scipy import ndimage
+
+
+def keep_bigger_components(
+    img: np.ndarray,
+    n_components: int = 1
+) -> np.ndarray:
+    """
+    Mantém apenas as n maiores componentes conexas de uma imagem segmentada.
+
+    Parameters
+    ----------
+    img : np.ndarray
+        Imagem segmentada nos formatos:
+            - (X, Y): imagem de uma banda
+            - (X, Y, N): imagem com N bandas
+
+        Um pixel é considerado background quando todas as suas bandas
+        possuem valor 0.
+
+    n_components : int, default=1
+        Número de maiores componentes conexas a serem mantidas.
+        Deve ser >= 1.
+
+    Returns
+    -------
+    img_bigger_comp : np.ndarray
+        Imagem contendo apenas as n maiores componentes conexas,
+        com o mesmo shape e dtype da imagem de entrada.
+    """
+
+    # Validação
+    if not isinstance(img, np.ndarray):
+        raise TypeError("img deve ser um numpy.ndarray.")
+
+    if img.ndim not in (2, 3):
+        raise ValueError(
+            "img deve possuir dimensão (X, Y) ou (X, Y, N). "
+            f"Recebido: {img.shape}"
+        )
+
+    if not isinstance(n_components, (int, np.integer)) or n_components < 1:
+        raise ValueError("n_components deve ser um inteiro >= 1.")
+
+    # Guarda a dimensionalidade original
+    original_ndim = img.ndim
+
+    # Converte temporariamente (X, Y) -> (X, Y, 1)
+    if original_ndim == 2:
+        img_work = img[..., np.newaxis]
+    else:
+        img_work = img
+
+    # Máscara 2D:
+    # foreground se pelo menos uma banda for diferente de zero
+    mask = np.any(img_work != 0, axis=-1)
+
+    # Conectividade 8
+    structure = np.ones((3, 3), dtype=np.uint8)
+
+    # Identifica componentes conexas
+    labeled, num_components = ndimage.label(
+        mask,
+        structure=structure
+    )
+
+    # Se não houver componentes
+    if num_components == 0:
+        return np.zeros_like(img)
+
+    # Área de cada componente
+    areas = np.bincount(labeled.ravel())
+
+    # Label 0 corresponde ao background
+    areas[0] = 0
+
+    # Número de componentes que serão mantidas
+    n_keep = min(n_components, num_components)
+
+    # Labels das n maiores componentes
+    biggest_labels = np.argpartition(
+        areas,
+        -n_keep
+    )[-n_keep:]
+
+    # Máscara final
+    bigger_components_mask = np.isin(
+        labeled,
+        biggest_labels
+    )
+
+    # Aplica a máscara em todas as bandas
+    img_bigger_comp = np.where(
+        bigger_components_mask[..., np.newaxis],
+        img_work,
+        0
+    )
+
+    # Retorna com a mesma dimensionalidade da entrada
+    if original_ndim == 2:
+        img_bigger_comp = img_bigger_comp[..., 0]
+
+    return img_bigger_comp
+
+
+#======================================================================
+
+from scipy import ndimage
+import numpy as np
+
+
+def count_connected_components(img: np.ndarray) -> int:
+    """
+    Conta o número de componentes conexas de uma imagem segmentada.
+
+    Parameters
+    ----------
+    img : np.ndarray
+        Imagem segmentada nos formatos:
+            - (X, Y): imagem de uma banda
+            - (X, Y, N): imagem com N bandas
+
+        Para imagens multibanda, um pixel é considerado background
+        somente quando todas as suas bandas possuem valor 0.
+
+        Um pixel pertence ao foreground quando pelo menos uma de suas
+        bandas possui valor diferente de 0.
+
+    Returns
+    -------
+    int
+        Número de componentes conexas presentes no foreground da imagem.
+
+    Notes
+    -----
+    É utilizada conectividade 8, ou seja, pixels conectados pelas
+    laterais ou pelas diagonais pertencem à mesma componente.
+    """
+
+    # Validação
+    if not isinstance(img, np.ndarray):
+        raise TypeError("img deve ser um numpy.ndarray.")
+
+    if img.ndim not in (2, 3):
+        raise ValueError(
+            "img deve possuir dimensão (X, Y) ou (X, Y, N). "
+            f"Recebido: {img.shape}"
+        )
+
+    # Cria máscara 2D de foreground
+    if img.ndim == 2:
+        mask = img != 0
+    else:
+        # Foreground se pelo menos uma banda for diferente de zero
+        mask = np.any(img != 0, axis=-1)
+
+    # Conectividade 8
+    structure = np.ones((3, 3), dtype=np.uint8)
+
+    # Identifica e conta as componentes conexas
+    _, num_components = ndimage.label(
+        mask,
+        structure=structure
+    )
+
+    return int(num_components)
+
+
+#======================================================================
+
+import numpy as np
+
+def mask_from_segmented(img_seg):
+    """
+    Retorna uma máscara com o mesmo shape da imagem segmentada.
+
+    Funciona tanto para imagens originais quanto normalizadas.
+
+    O fundo é identificado como os pixels que possuem,
+    simultaneamente, o valor mínimo de cada uma das 5 bandas.
+
+    1 = planta
+    0 = fundo
+    """
+
+    if img_seg.ndim != 3 or img_seg.shape[2] != 5:
+        raise ValueError(
+            f"Esperado shape (H, W, 5), recebido {img_seg.shape}"
+        )
+
+    # Valor do background em cada banda
+    background_values = np.min(img_seg, axis=(0, 1))
+
+    # Background = mínimo simultaneamente nas 5 bandas
+    background = np.all(
+        np.isclose(
+            img_seg,
+            background_values[None, None, :],
+            rtol=1e-5,
+            atol=1e-8
+        ),
+        axis=2
+    )
+
+    # Planta = tudo que não é background
+    mask_2d = ~background
+
+    # Replica a máscara nas 5 bandas
+    mask_5d = np.repeat(
+        mask_2d[:, :, np.newaxis],
+        5,
+        axis=2
+    )
+
+    return mask_5d.astype(np.uint8)
+
 
 #======================================================================
 #======================================================================

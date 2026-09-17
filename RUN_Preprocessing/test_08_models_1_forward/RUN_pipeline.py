@@ -11,10 +11,10 @@ print(f"\n work_dir: {os.getcwd()[-50:]} \n")
 
 
 # NITRO
-# os.chdir("/home/marcelo/Documents/VSCode_python/Agro/SIMIDS/Planta_Daninha_Boa_Vista")
+os.chdir("/home/marcelo/Documents/VSCode_python/Agro/SIMIDS/Planta_Daninha_Boa_Vista")
 
 # HELIOS
-os.chdir("/home/marcelo/Documents/python_projects/USP/Planta_Daninha_Embrapa/Plant-Classification-and-Explainable-AI---Embrapa/")
+# os.chdir("/home/marcelo/Documents/python_projects/USP/Planta_Daninha_Embrapa/Plant-Classification-and-Explainable-AI---Embrapa/")
 
 # # DANTE
 # os.chdir("/home/u14696181/Documents/python_projects/Planta_Daninha_Embrapa")

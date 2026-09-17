@@ -144,7 +144,7 @@ def run_training(config):
     else:
         TRAIN_DATA_DIR = f"Split/{SPLIT_DATE_TYPE}/{SPLIT_DATA_NAME}"
 
-    if 'NEW_DATA_DIR' in config.keys():
+    if 'NEW_DATA_DIR' in config.keys() and config['NEW_DATA_DIR']:
         DATA_DIR = f"/home/marcelo/Documents/Datasets/Embrapa/Experimentos/Datasets/{TRAIN_DATA_DIR}"
     else:
         DATA_DIR = f"{PC_DIR}/Datasets/{TRAIN_DATA_DIR}"
@@ -804,11 +804,17 @@ def run_training(config):
             df_diagnostico.to_csv(df_diagnostico_dir, index=True)
 
             print("\n=== DataFrame de importância por banda, por classe (%) ===")
-            print(df_shap_por_classe.round(2))
+            print(df_shap_por_classe.round(4))
 
-            print(f"\nAcurácia nas imagens explicadas: {df_diagnostico['acertou'].mean():.2%}")
-            print("\n=== Diagnóstico por classe ===")
-            print(df_diagnostico)
+            # print(f"\nAcurácia nas imagens explicadas: {df_diagnostico['acertou'].mean():.2%}")
+            # print("\n=== Diagnóstico por classe ===")
+            # print(df_diagnostico)
+
+
+        else:
+
+            df_shap_por_classe = pd.read_csv(df_shap_por_classe_dir)
+            print(df_shap_por_classe.drop("Unnamed: 0", axis=1).mean(axis=0))
 
 
         #==================================================================================================

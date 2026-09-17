@@ -1,7 +1,7 @@
 
 PC: DANTE
 INTERACTIVE: True
-# CONFIG_NAME: RGB_&_entropy
+# CONFIG_NAME: RGB_entropy_LBP_Zoom
 
 #--------------------------------------------------------
 # Base Data
@@ -31,7 +31,7 @@ SEGMENTATION_METHOD: best_band_otsu_green
 # Multiview
 
 # Dataset Multiview
-MULTIVIEW_DATA_NICKNAME: RGB_entropy
+MULTIVIEW_DATA_NICKNAME: RGB_entropy_LBP_Zoom_1p5
 # MULTIVIEW_DATASET_NAME: Aligned_ecc_affine_interch_45_cen_5__seg_best_band_otsu__Multiview__Texture
 MULTIVIEW_DATA_TYPE: Multiview_Texture
 
@@ -50,18 +50,24 @@ VIEWS:
         which_band: Green
         radius: 1
         levels: 32
+        zoom: 1.5
+
+
     1:
-      funct: entropy
-      param: 
-        which_band: Green
-        radius: 1
-        levels: 16
-    2:
       funct: entropy
       param: 
         which_band: Green
         radius: 2
         levels: 16
+        zoom: 1.5
+    
+    2:
+      funct: LBP
+      param: 
+        which_band: Green
+        radius: 1
+        n_points: 8
+        zoom: 1.5
 
 #--------------------------------------------------------
 # Split

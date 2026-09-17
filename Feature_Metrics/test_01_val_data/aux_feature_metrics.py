@@ -375,6 +375,25 @@ def shape_descriptors_TEST(img_5b: np.ndarray) -> dict:
     data = shape_descriptors(img_5b)
     return data['hu_2']
 
+def shape_descriptors__area(img_5b: np.ndarray) -> dict:
+
+    data = shape_descriptors(img_5b)
+    return data['area']
+
+def shape_descriptors__perimeter(img_5b: np.ndarray) -> dict:
+
+    data = shape_descriptors(img_5b)
+    return data['perimeter']
+
+def shape_descriptors__hu_1(img_5b: np.ndarray) -> dict:
+
+    data = shape_descriptors(img_5b)
+    return data['hu_1']
+
+def shape_descriptors__hu_2(img_5b: np.ndarray) -> dict:
+
+    data = shape_descriptors(img_5b)
+    return data['hu_2']
 
 #----------------------------------------------------------------------
 # Claude
@@ -945,7 +964,32 @@ def glcm_contrast_energy_TEST(
         return data["energy_per_distance"][1]
 
 
-def glcm_contrast_energy_test(
+
+
+
+
+# energy
+# energy_per_distance
+
+def glcm_contrast_energy__energy(
+    img_5b: np.ndarray,
+    channel: str = "luminance",
+    distances: list = (1, 2),
+    angles: list = (0, np.pi / 4, np.pi / 2, 3 * np.pi / 4),
+    n_levels: int = 32,
+    mask_background: bool = True):
+
+        data = glcm_contrast_energy(
+        img_5b,
+        channel,
+        distances,
+        angles,
+        n_levels,
+        mask_background)
+
+        return data["energy"]
+
+def glcm_contrast_energy__energy_per_distance(
     img_5b: np.ndarray,
     channel: str = "luminance",
     distances: list = (1, 2),
@@ -1187,6 +1231,54 @@ def high_low_freq_energy_ratio_TEST(
 
     return data["energy_low"]
 
+def high_low_freq_energy_ratio__energy_low(
+                                img_5b: np.ndarray,
+                                channel: str = "luminance",
+                                cutoff_fraction: float = 0.15,
+                                mask_background: bool = True,
+                                ):
+
+    data = high_low_freq_energy_ratio(
+            img_5b,
+            channel,
+            cutoff_fraction,
+            mask_background,
+            )
+
+    return data["energy_low"]
+
+def high_low_freq_energy_ratio__energy_high(
+                                img_5b: np.ndarray,
+                                channel: str = "luminance",
+                                cutoff_fraction: float = 0.15,
+                                mask_background: bool = True,
+                                ):
+
+    data = high_low_freq_energy_ratio(
+            img_5b,
+            channel,
+            cutoff_fraction,
+            mask_background,
+            )
+
+    return data["energy_high"]
+
+def high_low_freq_energy_ratio__ratio(
+                                img_5b: np.ndarray,
+                                channel: str = "luminance",
+                                cutoff_fraction: float = 0.15,
+                                mask_background: bool = True,
+                                ):
+
+    data = high_low_freq_energy_ratio(
+            img_5b,
+            channel,
+            cutoff_fraction,
+            mask_background,
+            )
+
+    return data["ratio"]
+
 
 # cutoff_fraction = [0.05, 0.15, 0.25]
 # mask_background = [True, False]
@@ -1291,6 +1383,86 @@ def mean_lab_chroma_GPT(img_5b: np.ndarray) -> float:
     return float(np.mean(chroma[mask]))
 
 
+import numpy as np
+
+
+def mean_chroma_zscore(img_5b: np.ndarray) -> float:
+    """
+    Mede a cromaticidade média de uma imagem segmentada
+    e normalizada por Z-score.
+
+    Não calcula CIELAB Chroma, pois os valores RGB originais
+    não podem ser recuperados sem mean/std.
+
+    A métrica mede, para cada pixel, a distância dos canais
+    RGB ao eixo acromático R = G = B.
+
+    Quanto maior o valor:
+        -> maior a diferença entre R, G e B
+        -> maior a informação cromática relativa
+
+    Quanto menor o valor:
+        -> R, G e B mais semelhantes
+        -> imagem mais próxima de grayscale
+
+    Parameters
+    ----------
+    img_5b : np.ndarray
+        Imagem multiespectral (H, W, 5), com bandas:
+        [B, G, R, NIR, RE].
+
+        Assume-se que:
+        - os canais estão normalizados por Z-score;
+        - o fundo segmentado permanece exatamente zero.
+
+    Returns
+    -------
+    float
+        Cromaticidade média da região da planta.
+    """
+
+    if img_5b.ndim != 3 or img_5b.shape[-1] != 5:
+        raise ValueError(
+            f"Esperado array (H, W, 5), recebido {img_5b.shape}"
+        )
+
+    # ---------------------------------------------------------
+    # 1. Máscara da planta
+    # ---------------------------------------------------------
+    # Usa as 5 bandas para identificar fundo.
+    mask = np.any(img_5b != 0, axis=-1)
+
+    if not np.any(mask):
+        return np.nan
+
+    # ---------------------------------------------------------
+    # 2. Extrai RGB normalizado
+    # ---------------------------------------------------------
+    B = img_5b[..., 0].astype(np.float64)
+    G = img_5b[..., 1].astype(np.float64)
+    R = img_5b[..., 2].astype(np.float64)
+
+    # ---------------------------------------------------------
+    # 3. Eixo acromático
+    #
+    # Um pixel grayscale satisfaz aproximadamente:
+    # R = G = B
+    # ---------------------------------------------------------
+    mean_rgb = (R + G + B) / 3.0
+
+    # Distância ao eixo R = G = B
+    chroma = np.sqrt(
+        (R - mean_rgb) ** 2 +
+        (G - mean_rgb) ** 2 +
+        (B - mean_rgb) ** 2
+    )
+
+    # ---------------------------------------------------------
+    # 4. Média somente na planta
+    # ---------------------------------------------------------
+    return float(np.mean(chroma[mask]))
+
+
 #======================================================================
 
 import numpy as np
@@ -1390,6 +1562,19 @@ def mean_chroma__mean_chroma(
     return data["mean_chroma"]
 
 
+def mean_chroma__std_chroma(
+    img_5b: np.ndarray,
+    mask_background: bool = True,
+    input_range: tuple = None,
+):
+    
+    data =  mean_chroma(
+    img_5b,
+    mask_background,
+    input_range)
+
+    return data["std_chroma"]
+
 #======================================================================
 #======================================================================
 # 2. Divergência entre canais RGB (|R-G|, |G-B|, |R-B|)
@@ -1478,7 +1663,7 @@ def rgb_channel_divergence_GPT(img_5b: np.ndarray) -> dict:
     }
 
 
-def rgb_channel_divergence_GPT_test(img_5b: np.ndarray):
+def rgb_channel_divergence_GPT__rgb_divergence(img_5b: np.ndarray):
     data = rgb_channel_divergence_GPT(img_5b)
 
     return data["rgb_divergence"]
@@ -1757,7 +1942,253 @@ def hue_distribution_metrics_GPT(
     }
 
 
-def hue_distribution_metrics_GPT_TEST(
+import numpy as np
+from skimage.color import rgb2hsv
+
+
+def hue_distribution_metrics_GPT(
+    img_5b: np.ndarray,
+    n_bins: int = 36,
+    saturation_threshold: float = 0.05,
+    eps: float = 1e-12,
+    robust_percentiles=(1.0, 99.0)
+) -> dict:
+    """
+    Calcula métricas da distribuição de Hue em uma imagem multiespectral
+    segmentada e normalizada por Z-score.
+
+    Métricas:
+        1. Entropia normalizada do histograma de Hue
+        2. Variância circular do Hue
+        3. Fração de pixels com Hue válido
+
+    A imagem é assumida como:
+        - shape (H, W, 5)
+        - bandas [B, G, R, NIR, RE]
+        - fundo = 0
+        - região da planta com valores possivelmente negativos devido
+          à normalização Z-score.
+
+    Como mean/std originais não estão disponíveis, as bandas RGB são
+    reescaladas separadamente para [0,1], utilizando percentis calculados
+    apenas sobre os pixels da planta.
+
+    IMPORTANTE
+    ----------
+    O Hue obtido não corresponde exatamente ao Hue da imagem RGB original,
+    porque uma normalização Z-score independente por banda altera as
+    relações relativas entre R, G e B.
+
+    Portanto, estas métricas devem ser interpretadas como métricas de
+    distribuição cromática RELATIVA da imagem normalizada.
+
+    Parameters
+    ----------
+    img_5b : np.ndarray
+        Imagem multiespectral (H, W, 5), bandas:
+        [B, G, R, NIR, RE].
+
+    n_bins : int
+        Número de bins do histograma circular de Hue.
+
+    saturation_threshold : float
+        Saturação mínima para considerar Hue válido.
+
+    eps : float
+        Estabilidade numérica.
+
+    robust_percentiles : tuple
+        Percentis inferior e superior utilizados para reescalar
+        cada banda RGB para [0,1].
+
+        Exemplo:
+            (1, 99)
+
+        reduz a influência de valores extremos.
+
+    Returns
+    -------
+    dict
+        {
+            "hue_entropy": float,
+            "hue_circular_variance": float,
+            "valid_hue_fraction": float
+        }
+    """
+
+    # ---------------------------------------------------------
+    # 0. Validação
+    # ---------------------------------------------------------
+    if img_5b.ndim != 3 or img_5b.shape[-1] != 5:
+        raise ValueError(
+            f"Esperado array (H, W, 5), recebido {img_5b.shape}"
+        )
+
+    img = img_5b.astype(np.float64)
+
+    # ---------------------------------------------------------
+    # 1. Máscara da planta
+    #
+    # Importante:
+    # não usamos apenas RGB, pois um pixel da planta poderia,
+    # em princípio, possuir RGB próximo/igual a zero após Z-score.
+    # ---------------------------------------------------------
+    plant_mask = np.any(img != 0, axis=-1)
+
+    n_plant = np.count_nonzero(plant_mask)
+
+    if n_plant == 0:
+        return {
+            "hue_entropy": np.nan,
+            "hue_circular_variance": np.nan,
+            "valid_hue_fraction": 0.0
+        }
+
+    # ---------------------------------------------------------
+    # 2. Extrai RGB
+    # ---------------------------------------------------------
+    B = img[..., 0]
+    G = img[..., 1]
+    R = img[..., 2]
+
+    rgb_z = np.stack([R, G, B], axis=-1)
+
+    # ---------------------------------------------------------
+    # 3. Reconstrói uma representação RGB relativa [0,1]
+    #
+    # Cada banda é reescalada usando apenas pixels da planta.
+    # ---------------------------------------------------------
+    rgb = np.zeros_like(rgb_z, dtype=np.float64)
+
+    p_low, p_high = robust_percentiles
+
+    for c in range(3):
+
+        channel = rgb_z[..., c]
+
+        values = channel[plant_mask]
+
+        low = np.percentile(values, p_low)
+        high = np.percentile(values, p_high)
+
+        if high - low > eps:
+
+            channel_scaled = (
+                (channel - low) /
+                (high - low)
+            )
+
+            channel_scaled = np.clip(
+                channel_scaled,
+                0.0,
+                1.0
+            )
+
+            # Mantém fundo exatamente zero
+            channel_scaled[~plant_mask] = 0.0
+
+            rgb[..., c] = channel_scaled
+
+        else:
+            # Banda praticamente constante na planta
+            rgb[..., c] = 0.0
+
+    # ---------------------------------------------------------
+    # 4. RGB relativo -> HSV
+    # ---------------------------------------------------------
+    hsv = rgb2hsv(rgb)
+
+    hue = hsv[..., 0]
+    saturation = hsv[..., 1]
+
+    # ---------------------------------------------------------
+    # 5. Pixels com Hue válido
+    # ---------------------------------------------------------
+    valid_mask = (
+        plant_mask &
+        np.isfinite(hue) &
+        np.isfinite(saturation) &
+        (saturation > saturation_threshold)
+    )
+
+    n_valid = np.count_nonzero(valid_mask)
+
+    valid_hue_fraction = (
+        n_valid / n_plant
+    )
+
+    if n_valid == 0:
+        return {
+            "hue_entropy": 0.0,
+            "hue_circular_variance": 0.0,
+            "valid_hue_fraction": 0.0
+        }
+
+    H = hue[valid_mask]
+
+    # =========================================================
+    # 6. ENTROPIA DO HISTOGRAMA DE HUE
+    # =========================================================
+    hist, _ = np.histogram(
+        H,
+        bins=n_bins,
+        range=(0.0, 1.0)
+    )
+
+    p = hist.astype(np.float64)
+
+    p_sum = p.sum()
+
+    if p_sum <= eps:
+        entropy_normalized = 0.0
+
+    else:
+        p /= p_sum
+
+        p_nonzero = p[p > 0]
+
+        entropy = -np.sum(
+            p_nonzero * np.log2(p_nonzero)
+        )
+
+        entropy_normalized = (
+            entropy / np.log2(n_bins)
+        )
+
+    # =========================================================
+    # 7. VARIÂNCIA CIRCULAR
+    # =========================================================
+
+    # Hue [0,1] -> ângulo [0, 2π)
+    theta = 2.0 * np.pi * H
+
+    mean_cos = np.mean(np.cos(theta))
+    mean_sin = np.mean(np.sin(theta))
+
+    R_bar = np.sqrt(
+        mean_cos**2 +
+        mean_sin**2
+    )
+
+    circular_variance = 1.0 - R_bar
+
+    # Pequenas correções numéricas
+    entropy_normalized = np.clip(
+        entropy_normalized, 0.0, 1.0
+    )
+
+    circular_variance = np.clip(
+        circular_variance, 0.0, 1.0
+    )
+
+    return {
+        "hue_entropy": float(entropy_normalized),
+        "hue_circular_variance": float(circular_variance),
+        "valid_hue_fraction": float(valid_hue_fraction)
+    }
+
+
+def hue_distribution_metrics_GPT__valid_hue_fraction(
                     img_5b: np.ndarray,
                     n_bins: int = 36,
                     saturation_threshold: float = 0.05,
@@ -1771,6 +2202,37 @@ def hue_distribution_metrics_GPT_TEST(
     eps)
 
     return data["valid_hue_fraction"]
+
+
+def hue_distribution_metrics_GPT__hue_circular_variance(
+                    img_5b: np.ndarray,
+                    n_bins: int = 36,
+                    saturation_threshold: float = 0.05,
+                    eps: float = 1e-12
+                ):
+
+    data = hue_distribution_metrics_GPT(
+    img_5b,
+    n_bins,
+    saturation_threshold,
+    eps)
+
+    return data["hue_circular_variance"]
+
+def hue_distribution_metrics_GPT__hue_entropy(
+                    img_5b: np.ndarray,
+                    n_bins: int = 36,
+                    saturation_threshold: float = 0.05,
+                    eps: float = 1e-12
+                ):
+
+    data = hue_distribution_metrics_GPT(
+    img_5b,
+    n_bins,
+    saturation_threshold,
+    eps)
+
+    return data["hue_entropy"]
 
 #======================================================================
 

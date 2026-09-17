@@ -125,6 +125,120 @@ def plot_two_imgs(rgb_img, rgb_img_masked):
     plt.tight_layout()
     plt.show()
 
+#======================================================================
+#======================================================================
+# ZOOM
+
+import numpy as np
+from scipy.ndimage import label
+from skimage.transform import resize
+
+
+def zoom_to_plant_centroid(
+    img_1b: np.ndarray,
+    zoom: float = 1.0
+) -> np.ndarray:
+    """
+    Aplica zoom em direção ao centroide da maior componente conexa
+    de uma imagem segmentada de uma banda.
+
+    Parameters
+    ----------
+    img_1b : np.ndarray
+        Imagem segmentada com shape (H, W), dtype float32.
+        O fundo deve possuir valor zero.
+
+    zoom : float, default=1.0
+        Fator de zoom.
+        - zoom = 1.0: imagem inalterada
+        - zoom > 1.0: aproximação em direção ao centroide
+
+    Returns
+    -------
+    np.ndarray
+        Imagem com o mesmo shape e dtype da entrada.
+    """
+
+    if img_1b.ndim != 2:
+        raise ValueError("img_1b deve ser uma imagem 2D.")
+
+    if zoom < 1.0:
+        raise ValueError("zoom deve ser >= 1.0.")
+
+    if zoom == 1.0:
+        return img_1b
+
+    original_dtype = img_1b.dtype
+    H, W = img_1b.shape
+
+    # ------------------------------------------------------------
+    # 1. Máscara da planta
+    # ------------------------------------------------------------
+    mask = img_1b != 0
+
+    if not np.any(mask):
+        return img_1b.copy()
+
+    # ------------------------------------------------------------
+    # 2. Componentes conexas
+    # ------------------------------------------------------------
+    labels, n_components = label(mask)
+
+    if n_components == 0:
+        return img_1b.copy()
+
+    sizes = np.bincount(labels.ravel())
+    sizes[0] = 0  # ignora o fundo
+
+    largest_label = np.argmax(sizes)
+    largest_component = labels == largest_label
+
+    # ------------------------------------------------------------
+    # 3. Centroide da maior componente
+    # ------------------------------------------------------------
+    rows, cols = np.nonzero(largest_component)
+
+    cy = rows.mean()
+    cx = cols.mean()
+
+    # ------------------------------------------------------------
+    # 4. Tamanho do crop correspondente ao zoom
+    # ------------------------------------------------------------
+    crop_h = max(1, int(round(H / zoom)))
+    crop_w = max(1, int(round(W / zoom)))
+
+    # ------------------------------------------------------------
+    # 5. Crop centrado no centroide
+    #
+    # Ajustamos o crop quando o centroide está próximo das bordas,
+    # evitando padding artificial.
+    # ------------------------------------------------------------
+    y0 = int(round(cy - crop_h / 2))
+    x0 = int(round(cx - crop_w / 2))
+
+    y0 = np.clip(y0, 0, H - crop_h)
+    x0 = np.clip(x0, 0, W - crop_w)
+
+    y1 = y0 + crop_h
+    x1 = x0 + crop_w
+
+    cropped = img_1b[y0:y1, x0:x1]
+
+    # ------------------------------------------------------------
+    # 6. Redimensiona novamente para o tamanho original
+    # ------------------------------------------------------------
+    img_zoom = resize(
+        cropped,
+        (H, W),
+        order=1,                # interpolação bilinear
+        mode="constant",
+        cval=0,
+        preserve_range=True,
+        anti_aliasing=True,
+    )
+
+    return img_zoom.astype(original_dtype, copy=False)
+
 
 #======================================================================
 #======================================================================
@@ -132,7 +246,7 @@ def plot_two_imgs(rgb_img, rgb_img_masked):
 
 from skimage.feature import local_binary_pattern
 
-def apply_lbp_1b(img_1b, radius=1, n_points=8):
+def apply_lbp_1b(img_1b, radius=1, n_points=8, zoom=1):
     """
     Aplica Local Binary Pattern (LBP) em uma única banda.
 
@@ -151,6 +265,9 @@ def apply_lbp_1b(img_1b, radius=1, n_points=8):
         Mapa LBP (H, W), dtype float32.
         O fundo permanece com valor zero.
     """
+
+    img_1b = zoom_to_plant_centroid(img_1b, zoom).copy()
+
 
     if img_1b.ndim != 2:
         raise ValueError(
@@ -204,7 +321,7 @@ from skimage.filters.rank import entropy
 from skimage.morphology import disk
 
 
-def apply_local_entropy(img_1b, mask=None, bg_value=0.0, radius=5, levels=32):
+def apply_local_entropy(img_1b, mask=None, bg_value=0.0, radius=5, levels=32, zoom=1):
     """
     Calcula a entropia local de uma banda única — mede a desordem/
     complexidade da distribuição de tons dentro de cada janela,
@@ -235,6 +352,8 @@ def apply_local_entropy(img_1b, mask=None, bg_value=0.0, radius=5, levels=32):
         da folha.
     """
     img = img_1b.astype(np.float64)
+
+    img = zoom_to_plant_centroid(img_1b, zoom)
 
     if mask is None:
         mask = img != bg_value

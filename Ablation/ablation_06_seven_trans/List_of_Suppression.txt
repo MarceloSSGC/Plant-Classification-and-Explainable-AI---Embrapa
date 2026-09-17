@@ -53,3 +53,9 @@ mirando — cada view corresponderia a um desses eixos, e
 o experimento de suficiência (seção 4) mais as supressões 
 (seção 5) dariam evidência empírica para justificar cada 
 view separadamente.
+
+
+Local Shape
+1. **Contour Smoothing** — suaviza o contorno da planta, removendo progressivamente serrilhamentos, pontas e pequenas irregularidades.
+2. **** — usa operações morfológicas para remover pequenas protuberâncias e preencher pequenas concavidades do contorno.
+3. **Fourier Contour Suppression** — remove progressivamente as altas frequências do contorno, preservando principalmente a geometria global.

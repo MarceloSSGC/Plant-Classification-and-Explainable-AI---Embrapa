@@ -1,0 +1,62 @@
+Claro. As principais estratégias que discutimos foram estas:
+
+1. **Meaningful Perturbations**
+   Perturba deliberadamente regiões da imagem — por exemplo, com blur, ruído ou substituição por valor constante — e observa quanto o *score* da classe diminui. A ideia é encontrar a menor perturbação/região capaz de afetar significativamente a decisão. É essencialmente **diagnóstico/explicabilidade**, não prescrição.
+
+2. **RISE — Randomized Input Sampling for Explanation**
+   Aplica muitas máscaras aleatórias à imagem e observa o *score* do modelo em cada imagem perturbada. A partir dessas respostas, estima um **mapa de importância das regiões**. É *black-box*: não precisa de gradientes nem de acesso à arquitetura interna do modelo. Discutimos também as métricas **Deletion** e **Insertion** para avaliar mapas de explicação.
+
+3. **Necessidade e suficiência / FANS**
+   Usa perturbações para investigar se uma *feature* ou região é **necessária** para uma decisão e/ou **suficiente** para sustentá-la. A ideia é mais próxima de uma interpretação contrafactual/causal do que simplesmente medir a queda do *score*. Também é fundamentalmente uma estratégia de explicabilidade.
+
+4. **GANalyze**
+   Parte de uma GAN pré-treinada e de uma função \(g(x)\) que mede alguma propriedade da imagem. Aprende uma **direção no espaço latente** tal que caminhar nessa direção aumenta ou diminui \(g\). No artigo, um exemplo importante é a memorizabilidade. A direção original é essencialmente linear.
+
+5. **AttGAN**
+   Edição condicionada por atributos. A rede recebe uma imagem e o atributo desejado e aprende a **alterar esse atributo preservando os demais aspectos da imagem**, usando conjuntamente perdas de classificação, reconstrução e adversarial.
+
+6. **StyleFlow**
+   Trabalha no espaço latente de uma StyleGAN e procura realizar **edições semânticas controladas**, reduzindo o problema de atributos emaranhados. É particularmente relacionado à ideia de “alterar \(g_1\) preservando outras propriedades”, embora trabalhe com atributos modelados, e não diretamente com funções \(g_i\) arbitrárias.
+
+7. **Latent-to-Latent / mapeamento no espaço latente**
+   Em vez de encontrar uma direção fixa como no GANalyze, aprende-se um *mapper*
+
+   $$
+   T:z\mapsto z'
+   $$
+
+   que transforma uma representação latente em outra. A função objetivo pode impor que determinada propriedade mude enquanto outras sejam preservadas. Discutimos isso como inspiração para aprender uma **transformação geral** \(g_1\downarrow\), \(g_2,g_3\approx\) constantes.
+
+8. **Otimização direta por instância**
+   Esta foi uma das alternativas mais próximas do problema que formulamos. Para cada imagem \(x\), em vez de treinar uma nova rede, procuramos diretamente \(x'\):
+
+   $$
+   \min_{x'}\; g_1(x')
+   +\lambda_2|g_2(x')-g_2(x)|
+   +\lambda_3|g_3(x')-g_3(x)|
+   +\lambda_x D(x',x).
+   $$
+
+   Se as funções forem diferenciáveis, podemos fazer *gradient descent* diretamente nos pixels ou, preferencialmente em alguns cenários, em uma representação latente. **Não exige pares \((x,x')\)**.
+
+9. **Relaxações diferenciáveis das métricas**
+   Como algumas propriedades de imagem não são naturalmente diferenciáveis — área após threshold, número de componentes conexas etc. — discutimos substituir operações discretas por **aproximações suaves** (*soft masks*, *surrogates* diferenciáveis). Autocorrelação espacial, por exemplo, pode ser formulada diretamente de maneira diferenciável em muitos casos.
+
+10. **Fluxo restrito / variedades de nível**
+    Foi a generalização mais matemática que discutimos. Se queremos mudar \(g_1\) preservando exatamente
+
+    $$
+    g_2(x)=c_2,\qquad g_3(x)=c_3,
+    $$
+
+    podemos interpretar as restrições como definindo uma **variedade de nível**
+
+    $$
+    \mathcal M=\{x:g_2(x)=c_2,\;g_3(x)=c_3\}.
+    $$
+
+    Em vez de fazer *gradient descent* irrestrito em \(g_1\), projetamos \(-\nabla g_1\) no espaço tangente \(T_x\mathcal M\). Assim, **andamos na direção que reduz \(g_1\), mas tangencialmente às superfícies que conservam \(g_2\) e \(g_3\)**.
+
+Por fim, conectamos o item 10 a **Hamiltonian Neural Networks, Lagrangian Neural Networks e dinâmicas com leis de conservação**. Essas arquiteturas não são necessárias para resolver o problema, mas oferecem uma inspiração interessante: construir a dinâmica de transformação de modo que certas quantidades sejam **conservadas por construção**, em vez de apenas penalizar suas mudanças na *loss*.
+
+Dos caminhos que discutimos, há uma progressão conceitual interessante: **otimização direta por imagem → fluxo restrito às variedades de nível → aprender posteriormente uma transformação geral que reproduza esse fluxo**.

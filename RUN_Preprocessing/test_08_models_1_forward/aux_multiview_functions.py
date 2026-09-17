@@ -8,7 +8,7 @@ from copy import deepcopy
 try:
     from temp_transformation import *
 except ImportError:
-    from RUN_Preprocessing.test_06_texture_bands.temp_transformation import *
+    from RUN_Preprocessing.test_08_models_1_forward.temp_transformation import *
 
 
 #======================================================================
