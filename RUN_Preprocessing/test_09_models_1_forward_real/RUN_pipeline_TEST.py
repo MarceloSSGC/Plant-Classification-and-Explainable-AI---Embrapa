@@ -7,24 +7,23 @@ from itertools import product
 print(f"\n work_dir: {os.getcwd()[-50:]} \n")
 
 # GPU
-os.environ["CUDA_VISIBLE_DEVICES"] = "1"
+# os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 
 
 # NITRO
 # os.chdir("/home/marcelo/Documents/VSCode_python/Agro/SIMIDS/Planta_Daninha_Boa_Vista")
 
 # HELIOS
-# os.chdir("/home/marcelo/Documents/python_projects/USP/Planta_Daninha_Embrapa/Plant-Classification-and-Explainable-AI---Embrapa/")
+os.chdir("/home/marcelo/Documents/python_projects/USP/Planta_Daninha_Embrapa/Plant-Classification-and-Explainable-AI---Embrapa/")
 
 # # DANTE
-os.chdir("/home/u14696181/Documents/python_projects/Planta_Daninha_Embrapa")
+# os.chdir("/home/u14696181/Documents/python_projects/Planta_Daninha_Embrapa")
 
 from RUN_Preprocessing.test_08_models_1_forward.main_preprocessing import run_preprocessing
 from RUN_Preprocessing.test_08_models_1_forward.main_run import run_training
 from RUN_Preprocessing.test_08_models_1_forward.aux_config_param import config_function
 
 test_number = "test_08_models_1_forward"
-# temp_transformation
 
 #======================================================================
 
@@ -38,10 +37,10 @@ def load_config(path):
 
 print("\n\n GRID: \n")
 
-# multiview_data_nickname_list = ["RGB_NIR_RE.yaml", "RGB_entropy.yaml", "RGB.yaml", "RGB_LBP.yaml", "RGB_entropy_LBP_Zoom"]
-multiview_data_nickname_list = ["RGB_entropy_LBP_Zoom_1p5.yaml"]
+# multiview_data_nickname_list = ["RGB_NIR_RE.yaml", "RGB_entropy.yaml", "RGB.yaml", "RGB_LBP.yaml"]
+multiview_data_nickname_list = ["RGB_NIR_RE.yaml"]
 
-seed_model_list = list(range(10, 60, 10))
+seed_model_list = list(range(30, 60, 10))
 
 epochs_list = [30]
 augmentation_list = [True]
@@ -60,9 +59,9 @@ print(model_name_list)
 
 print(f"\n Combinations: \033[96;96m{len(list(product(multiview_data_nickname_list, seed_model_list, epochs_list, augmentation_list, dropout_list, pretrained_list, model_name_list)))}\033[0m")
 
-seed_model = 10
+seed_model = 15
 multiview_data_nickname = multiview_data_nickname_list[0]
-epochs = 1
+epochs = 30
 aug_bool = True
 dropout = 0.2
 batch_size = 8
@@ -135,10 +134,10 @@ for multiview_data_nickname in multiview_data_nickname_list:          # model_na
 
                                     #-----------------------------------------------------------------------
 
-                                    run_preprocessing(config)
+                                    # run_preprocessing(config)
 
                                     config_function(config)
-                                    config['NEW_DATA_DIR'] = False
+                                    config['NEW_DATA_DIR'] = True
 
                                     run_training(config)
 

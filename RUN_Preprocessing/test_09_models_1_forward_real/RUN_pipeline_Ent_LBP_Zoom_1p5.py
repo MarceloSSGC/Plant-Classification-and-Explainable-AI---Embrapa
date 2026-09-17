@@ -7,7 +7,7 @@ from itertools import product
 print(f"\n work_dir: {os.getcwd()[-50:]} \n")
 
 # GPU
-os.environ["CUDA_VISIBLE_DEVICES"] = "1"
+# os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 
 
 # NITRO
@@ -19,11 +19,11 @@ os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 # # DANTE
 os.chdir("/home/u14696181/Documents/python_projects/Planta_Daninha_Embrapa")
 
-from RUN_Preprocessing.test_08_models_1_forward.main_preprocessing import run_preprocessing
-from RUN_Preprocessing.test_08_models_1_forward.main_run import run_training
-from RUN_Preprocessing.test_08_models_1_forward.aux_config_param import config_function
+from RUN_Preprocessing.test_09_models_1_forward_real.main_preprocessing import run_preprocessing
+from RUN_Preprocessing.test_09_models_1_forward_real.main_run import run_training
+from RUN_Preprocessing.test_09_models_1_forward_real.aux_config_param import config_function
 
-test_number = "test_08_models_1_forward"
+test_number = "test_09_models_1_forward_real"
 # temp_transformation
 
 #======================================================================
@@ -49,7 +49,7 @@ dropout_list = [0.2]
 batch_size_list = [8]
 lr_list = [1e-4]
 pretrained_list = [True]
-model_name_list = ['MobileNetV3Small', 'SmallCNN', 'ConvNeXtTiny', 'ViTTiny']
+model_name_list = ['SmallCNN', 'MobileNetV3Small', 'ResNet18', 'ConvNeXtTiny', 'ViTTiny']
 
 # model_name_list = ['SmallCNN', 'MobileNetV3Small', 'MobileNetV3Large',
 #                     'EfficientNetB0', 'ResNet18', 'ResNet50',
@@ -60,15 +60,15 @@ print(model_name_list)
 
 print(f"\n Combinations: \033[96;96m{len(list(product(multiview_data_nickname_list, seed_model_list, epochs_list, augmentation_list, dropout_list, pretrained_list, model_name_list)))}\033[0m")
 
-seed_model = 10
+seed_model = 30
 multiview_data_nickname = multiview_data_nickname_list[0]
-epochs = 1
+epochs = 30
 aug_bool = True
 dropout = 0.2
-batch_size = 8
+batch_size = 12
 lr = 1e-4
 pretrained = True
-model_name = "MobileNetV3Small"
+model_name = "SmallCNN"
 
 
 for multiview_data_nickname in multiview_data_nickname_list:          # model_name = "SmallCNN"
@@ -135,10 +135,12 @@ for multiview_data_nickname in multiview_data_nickname_list:          # model_na
 
                                     #-----------------------------------------------------------------------
 
-                                    run_preprocessing(config)
+                                    # run_preprocessing(config)
 
                                     config_function(config)
                                     config['NEW_DATA_DIR'] = False
+                                    config["warm_up_data"] = False
+
 
                                     run_training(config)
 
@@ -193,3 +195,13 @@ RGB
 """
 
 #======================================================================
+
+# 1. Reduzir 3 varreduras/época para 2 (treino calcula métricas na própria passagem; validação continua separada) — sem mudar o modelo final treinado
+# 2. Print do tempo de duração de cada época
+# 3. Checkpoint do "melhor modelo" por `val_loss` (menor), não por acurácia
+# 4. Padronizar `_print_device_report` (relatório de GPU/device)
+# 5. Padronizar `verbose` com níveis 0/1/2 + progresso por batch (nível 2)
+
+#======================================================================
+
+

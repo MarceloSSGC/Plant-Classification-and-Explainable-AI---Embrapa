@@ -7,24 +7,22 @@ from itertools import product
 print(f"\n work_dir: {os.getcwd()[-50:]} \n")
 
 # GPU
-os.environ["CUDA_VISIBLE_DEVICES"] = "1"
+# os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 
 
 # NITRO
-# os.chdir("/home/marcelo/Documents/VSCode_python/Agro/SIMIDS/Planta_Daninha_Boa_Vista")
+os.chdir("/home/marcelo/Documents/VSCode_python/Agro/SIMIDS/Planta_Daninha_Boa_Vista")
 
 # HELIOS
 # os.chdir("/home/marcelo/Documents/python_projects/USP/Planta_Daninha_Embrapa/Plant-Classification-and-Explainable-AI---Embrapa/")
 
 # # DANTE
-os.chdir("/home/u14696181/Documents/python_projects/Planta_Daninha_Embrapa")
+# os.chdir("/home/u14696181/Documents/python_projects/Planta_Daninha_Embrapa")
 
 from RUN_Preprocessing.test_08_models_1_forward.main_preprocessing import run_preprocessing
 from RUN_Preprocessing.test_08_models_1_forward.main_run import run_training
-from RUN_Preprocessing.test_08_models_1_forward.aux_config_param import config_function
 
 test_number = "test_08_models_1_forward"
-# temp_transformation
 
 #======================================================================
 
@@ -38,8 +36,9 @@ def load_config(path):
 
 print("\n\n GRID: \n")
 
-# multiview_data_nickname_list = ["RGB_NIR_RE.yaml", "RGB_entropy.yaml", "RGB.yaml", "RGB_LBP.yaml", "RGB_entropy_LBP_Zoom"]
-multiview_data_nickname_list = ["RGB_entropy_LBP_Zoom_1p5.yaml"]
+# multiview_data_nickname_list = ["RGB_NIR_RE.yaml", "RGB.yaml", "RGB_entropy.yaml"]
+# multiview_data_nickname_list = ["RGB_NIR_RE.yaml", "RGB_entropy.yaml", "RGB.yaml", "RGB_LBP.yaml"]
+multiview_data_nickname_list = ["RGB_NIR_RE.yaml"]
 
 seed_model_list = list(range(10, 60, 10))
 
@@ -49,26 +48,29 @@ dropout_list = [0.2]
 batch_size_list = [8]
 lr_list = [1e-4]
 pretrained_list = [True]
-model_name_list = ['MobileNetV3Small', 'SmallCNN', 'ConvNeXtTiny', 'ViTTiny']
+model_name_list = ['ResNet18', 'ConvNeXtTiny', 'ViTTiny']
+# model_name_list = ["MobileNetV3Small", 'SmallCNN', 'ResNet18', 'ConvNeXtTiny', 'ViTTiny']
+# model_name_list = ['MobileNetV3Large', 'EfficientNetB0', 'ResNet50', 'ViTSmall', 'ViTBase']
 
 # model_name_list = ['SmallCNN', 'MobileNetV3Small', 'MobileNetV3Large',
 #                     'EfficientNetB0', 'ResNet18', 'ResNet50',
 #                     'ConvNeXtTiny', 'ViTTiny', 'ViTSmall', 'ViTBase']
 
+#  ["SmallCNN", "MobileNetV3Small", "ResNet18", "ConvNeXtTiny", "ViTTiny"]
 
 print(model_name_list)
 
 print(f"\n Combinations: \033[96;96m{len(list(product(multiview_data_nickname_list, seed_model_list, epochs_list, augmentation_list, dropout_list, pretrained_list, model_name_list)))}\033[0m")
 
-seed_model = 10
+seed_model = 16
 multiview_data_nickname = multiview_data_nickname_list[0]
-epochs = 1
+epochs = 30
 aug_bool = True
 dropout = 0.2
 batch_size = 8
 lr = 1e-4
 pretrained = True
-model_name = "MobileNetV3Small"
+model_name = "ViTTiny"
 
 
 for multiview_data_nickname in multiview_data_nickname_list:          # model_name = "SmallCNN"
@@ -134,11 +136,10 @@ for multiview_data_nickname in multiview_data_nickname_list:          # model_na
                                             print(f"{X}: \033[96;93m{config['VIEWS'][X][y]}\033[0m")
 
                                     #-----------------------------------------------------------------------
-
+                                    
                                     run_preprocessing(config)
 
-                                    config_function(config)
-                                    config['NEW_DATA_DIR'] = False
+                                    # aquecer_cache(TRAIN_DIR)
 
                                     run_training(config)
 
