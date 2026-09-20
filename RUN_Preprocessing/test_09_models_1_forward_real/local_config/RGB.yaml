@@ -1,5 +1,5 @@
 
-PC: DANTE
+PC: EUROPA
 INTERACTIVE: True
 # CONFIG_NAME: RGB_&_entropy
 
@@ -92,5 +92,5 @@ MODEL:
 #--------------------------------------------------------
 # SHAP
 
-APPLY_SHAP: False
+APPLY_SHAP: True
 

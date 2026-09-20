@@ -16,8 +16,11 @@ print(f"\n work_dir: {os.getcwd()[-50:]} \n")
 # HELIOS
 # os.chdir("/home/marcelo/Documents/python_projects/USP/Planta_Daninha_Embrapa/Plant-Classification-and-Explainable-AI---Embrapa/")
 
-# # DANTE
-os.chdir("/home/u14696181/Documents/python_projects/Planta_Daninha_Embrapa")
+# DANTE
+# os.chdir("/home/u14696181/Documents/python_projects/Planta_Daninha_Embrapa")
+
+# EUROPA
+os.chdir("/home/u1469618/Documentos/python_projects/Planta_Daninha_Boa_Vista")
 
 from RUN_Preprocessing.test_09_models_1_forward_real.main_preprocessing import run_preprocessing
 from RUN_Preprocessing.test_09_models_1_forward_real.main_run import run_training
@@ -60,9 +63,9 @@ print(model_name_list)
 
 print(f"\n Combinations: \033[96;96m{len(list(product(multiview_data_nickname_list, seed_model_list, epochs_list, augmentation_list, dropout_list, pretrained_list, model_name_list)))}\033[0m")
 
-seed_model = 30
+seed_model = 7
 multiview_data_nickname = multiview_data_nickname_list[0]
-epochs = 30
+epochs = 1
 aug_bool = True
 dropout = 0.2
 batch_size = 12
@@ -135,7 +138,7 @@ for multiview_data_nickname in multiview_data_nickname_list:          # model_na
 
                                     #-----------------------------------------------------------------------
 
-                                    # run_preprocessing(config)
+                                    run_preprocessing(config)
 
                                     config_function(config)
                                     config['NEW_DATA_DIR'] = False

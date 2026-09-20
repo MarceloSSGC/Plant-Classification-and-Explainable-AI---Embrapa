@@ -1,5 +1,5 @@
 
-PC: HELIOS
+PC: EUROPA
 INTERACTIVE: True
 # CONFIG_NAME: RGB_&_entropy
 
@@ -111,5 +111,5 @@ MODEL:
 #--------------------------------------------------------
 # SHAP
 
-APPLY_SHAP: True
+APPLY_SHAP: False
 

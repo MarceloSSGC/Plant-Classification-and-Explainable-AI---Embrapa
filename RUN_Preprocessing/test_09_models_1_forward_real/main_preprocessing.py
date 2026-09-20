@@ -18,33 +18,6 @@ except ImportError:
 
 #======================================================================
 #======================================================================
-
-# import yaml
-
-# def load_config(path):
-#     with open(path, "r") as f:
-#         return yaml.safe_load(f)
-    
-# yaml_test_name = "MTV_model_01.yaml"
-# #Helios
-# # path = f"/home/marcelo/Documents/python_projects/USP/Planta_Daninha_Embrapa/Plant-Classification-and-Explainable-AI---Embrapa/config/{yaml_test_name}"
-
-# # Nitro
-# path = f"/home/marcelo/Documents/VSCode_python/Agro/SIMIDS/Planta_Daninha_Boa_Vista/config/{yaml_test_name}"
-# config = load_config(path)
-
-# for x in config:
-#     print(f"{x}: \033[96;96m{config[x]}\033[0m")
-
-
-# raw_data 
-# → alinhamento 
-# → segmentação 
-# → multiview
-# → split 
-# → normalização
-
-#======================================================================
 #======================================================================
 
 # src/preprocessing.py
@@ -62,7 +35,7 @@ def run_preprocessing(config):
     print(f"\t  SEED: \033[96;95m{SEED} \033[0m\n")
     print(f"\t  MULTIVIEW_DATA_NICKNAME: \033[96;95m{MULTIVIEW_DATA_NICKNAME} \033[0m\n")
 
-    if PC not in ["NITRO", "HELIOS", "DANTE"]:
+    if PC not in ["NITRO", "HELIOS", "DANTE", "EUROPA"]:
         raise ValueError("PC not indentified")
 
     #======================================================================
@@ -72,6 +45,8 @@ def run_preprocessing(config):
         PC_DIR = f"/media/marcelo/HD_8t/Marcelo__Seagate_8tb/Embrapa/Embrapa_Experimentos"
     elif PC == "HELIOS":
         PC_DIR = f"/run/media/marcelo/HD_8t/Marcelo__Seagate_8tb/Embrapa/Embrapa_Experimentos"
+    elif PC == "EUROPA":
+        PC_DIR = f"/home/u1469618/Documentos/Datasets/Embrapa_Experimentos"
     else:
         PC_DIR = f"/home/u14696181/Documents/Datasets/Embrapa_Experimentos"
 
