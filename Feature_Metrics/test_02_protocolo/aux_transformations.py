@@ -66,11 +66,10 @@ def suppress_patch_shuffle(
             f"Esperado array (H, W, C), recebido {image.shape}"
         )
 
-    if grid_size < 2:
-        raise ValueError(
-            f"grid_size deve ser >= 2, recebido {grid_size}"
-        )
 
+    if grid_size == 0:
+        return image
+    
     H, W, C = image.shape
     orig_dtype = image.dtype
 
@@ -240,10 +239,9 @@ def suppress_patch_rotation(
             f"Esperado array (H, W, C), recebido {image.shape}"
         )
 
-    if grid_size < 2:
-        raise ValueError(
-            f"grid_size deve ser >= 2, recebido {grid_size}"
-        )
+
+    if grid_size == 0:
+        return image
 
     H, W, C = image.shape
     orig_dtype = image.dtype
@@ -451,10 +449,10 @@ def suppress_gaussian_blur_mask_aware(
             f"Esperado array (H, W, 5), recebido {image.shape}"
         )
 
-    if sigma <= 0:
-        raise ValueError(
-            f"sigma deve ser > 0, recebido {sigma}"
-        )
+    if sigma == 0:
+        return image
+
+
 
     orig_dtype = image.dtype
     image_f = image.astype(np.float64)
@@ -589,10 +587,8 @@ def suppress_bilateral_filter_mask_aware(
             f"Esperado array (H, W, 5), recebido {image.shape}"
         )
 
-    if intensity <= 0:
-        raise ValueError(
-            f"intensity deve ser > 0, recebido {intensity}"
-        )
+    if intensity == 0:
+        return image
 
     orig_dtype = image.dtype
     img = image.astype(np.float32)
@@ -759,6 +755,79 @@ def step_suppress_bilateral_filter_mask_aware(image: np.ndarray = None, sigma_li
 #======================================================================
 #======================================================================
 # Color
+
+def suppress_rgb_color(image: np.ndarray, discolor: float = 1.0) -> np.ndarray:
+    """
+    Aplica a transformação de supressão de cor RGB (item 5.3).
+
+    Recebe uma imagem multiespectral com 5 bandas na ordem:
+    [Blue, Green, Red, NIR, RedEdge]
+
+    Converte as bandas B, G, R em uma única banda grayscale e interpola
+    entre a imagem original (discolor=0) e a versão totalmente
+    dessaturada (discolor=1), preservando NIR e Red Edge inalterados
+    em qualquer caso.
+
+    Resultado: [B', G', R', NIR, RE], onde
+        canal' = (1 - discolor) * canal_original + discolor * grayscale
+
+    Parameters
+    ----------
+    image : np.ndarray
+        Array de shape (H, W, 5), dtype float ou uint, bandas na ordem
+        [B, G, R, NIR, RE].
+    discolor : float
+        Intensidade da dessaturação, entre 0 e 1.
+        0 = imagem original (RGB intacto).
+        1 = imagem totalmente grayscale (equivalente à função original).
+        Valores intermediários = interpolação linear entre as duas.
+
+    Returns
+    -------
+    np.ndarray
+        Array de shape (H, W, 5) com mesmo dtype de entrada.
+    """
+    if image.ndim != 3 or image.shape[-1] != 5:
+        raise ValueError(f"Esperado array (H, W, 5), recebido {image.shape}")
+
+    if not (0.0 <= discolor <= 1.0):
+        raise ValueError(f"discolor deve estar em [0, 1], recebido {discolor}")
+
+    orig_dtype = image.dtype
+
+    blue  = image[..., 0].astype(np.float64)
+    green = image[..., 1].astype(np.float64)
+    red   = image[..., 2].astype(np.float64)
+    nir   = image[..., 3]
+    red_edge = image[..., 4]
+
+    # Pesos de luminosidade padrão (Rec. 601)
+    # grayscale = 0.299 * red + 0.587 * green + 0.114 * blue
+    grayscale = (1/3) * red + (1/3) * green + (1/3) * blue
+
+    # Interpolação linear entre canal original e grayscale
+    blue_out  = (1 - discolor) * blue  + discolor * grayscale
+    green_out = (1 - discolor) * green + discolor * grayscale
+    red_out   = (1 - discolor) * red   + discolor * grayscale
+
+    # Ajusta dtype de volta ao original (evita overflow/truncamento indevido)
+    if np.issubdtype(orig_dtype, np.integer):
+        info = np.iinfo(orig_dtype)
+        blue_out  = np.clip(blue_out, info.min, info.max)
+        green_out = np.clip(green_out, info.min, info.max)
+        red_out   = np.clip(red_out, info.min, info.max)
+
+    blue_out  = blue_out.astype(orig_dtype)
+    green_out = green_out.astype(orig_dtype)
+    red_out   = red_out.astype(orig_dtype)
+
+    result = np.stack(
+        [blue_out, green_out, red_out, nir, red_edge],
+        axis=-1
+    )
+
+    return result
+
 
 def suppress_colors(
     image: np.ndarray,
