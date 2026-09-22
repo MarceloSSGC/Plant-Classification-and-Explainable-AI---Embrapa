@@ -138,7 +138,7 @@ for multiview_data_nickname in multiview_data_nickname_list:          # model_na
 
                                     #-----------------------------------------------------------------------
 
-                                    run_preprocessing(config)
+                                    # run_preprocessing(config)
 
                                     config_function(config)
                                     config['NEW_DATA_DIR'] = False
