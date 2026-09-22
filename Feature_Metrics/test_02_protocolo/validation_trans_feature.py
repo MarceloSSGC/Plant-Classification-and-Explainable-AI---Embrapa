@@ -89,13 +89,24 @@ plot_rgb(img_5b)
 #======================================================================
 # Color
 
-# Gaussian_blur_mask_aware
+# suppress_colors
 
 img_5b_trans = suppress_colors(img_5b, 1)
 
 plot_rgb(img_5b_trans)
 plot_rgb(img_5b_trans, bands_ch=(4, 3, 2))
 
+
+#----------------------------------------------------------------------
+# suppress_rgb_color
+
+img_5b_trans = suppress_rgb_color(img_5b, 1)
+
+plot_rgb(img_5b_trans)
+plot_rgb(img_5b_trans, bands_ch=(4, 3, 2))
+plot_rgb(img_5b, bands_ch=(4, 3, 2))
+
+plot_rgb(img_5b)
 
 #----------------------------------------------------------------------
 # Channel Shuffle
@@ -107,13 +118,24 @@ plot_rgb(img_5b_trans, bands_ch=(4, 3, 2))
 
 plot_rgb(img_5b)
 
+#----------------------------------------------------------------------
+# RGB Shuffle
+
+img_5b_trans = suppress_rgb_channel_shuffle(img_5b, 1)
+
+plot_rgb(img_5b_trans)
+plot_rgb(img_5b_trans, bands_ch=(4, 3, 3))
+
+plot_rgb(img_5b, bands_ch=(4, 3, 3))
+plot_rgb(img_5b)
+
 #======================================================================
 #======================================================================
 # Espectral
 
 # suppress_nir_re
 
-img_5b_trans = suppress_nir_re_to_mean(img_5b, 0.5)
+img_5b_trans = suppress_nir_re_to_mean(img_5b, 1)
 
 plot_rgb(img_5b_trans)
 plot_rgb(img_5b_trans, bands_ch=(4, 3, 2))
@@ -191,7 +213,14 @@ spectral_wasserstein_distance(img_5b, img_5b_trans)
 
 
 spectral_wasserstein_distance(img_5b, suppress_nir_re_to_green(img_5b, 1))
+
 spectral_angle_distance(img_5b, suppress_nir_re_to_green(img_5b, 1))
+
+spectral_angle_similarity(img_5b, suppress_nir_re_to_green(img_5b, 1))
+
+
+spectral_rgb_residual(img_5b)
+spectral_rgb_residual(suppress_nir_re_to_green(img_5b, 1))
 
 
 

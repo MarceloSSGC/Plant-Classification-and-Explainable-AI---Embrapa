@@ -5365,4 +5365,149 @@ def spectral_angle_similarity(
 
 
 #======================================================================
+#======================================================================
 
+
+import numpy as np
+
+
+def spectral_rgb_residual(img_5b: np.ndarray) -> float:
+    """
+    Mede a informação espectral de NIR e Red Edge que não pode ser
+    explicada linearmente pelas bandas RGB.
+
+    Para cada pixel válido da planta, são considerados:
+
+        X = [B, G, R]
+
+    São ajustados dois modelos de regressão linear:
+
+        NIR = b0 + b1*B + b2*G + b3*R
+        RE  = c0 + c1*B + c2*G + c3*R
+
+    A medida final é:
+
+        M = MSE_NIR + MSE_RE
+
+    onde os erros são calculados nos mesmos pixels utilizados para
+    ajustar as regressões.
+
+    Parameters
+    ----------
+    img_5b : np.ndarray
+        Imagem multiespectral de shape (H, W, 5), com bandas na ordem:
+        [B, G, R, NIR, RE].
+
+        Assume-se que a imagem está segmentada e que o fundo corresponde
+        ao valor mínimo de cada banda, como ocorre nas imagens
+        segmentadas após normalização Z-score.
+
+    Returns
+    -------
+    float
+        Soma dos erros quadráticos médios:
+
+            MSE_NIR + MSE_RE
+
+        Valores próximos de zero indicam que NIR e RE são altamente
+        explicáveis por RGB através de relações lineares.
+
+        Valores maiores indicam maior quantidade de informação espectral
+        não explicável linearmente pelo RGB.
+    """
+
+    img_5b = np.asarray(img_5b, dtype=np.float64)
+
+    if img_5b.ndim != 3 or img_5b.shape[-1] != 5:
+        raise ValueError(
+            f"Esperado array com shape (H, W, 5), recebido {img_5b.shape}"
+        )
+
+    # ------------------------------------------------------------
+    # Máscara da planta
+    #
+    # Nas imagens segmentadas + normalizadas, o fundo corresponde
+    # ao mínimo de cada banda.
+    # ------------------------------------------------------------
+
+    band_min = np.min(img_5b, axis=(0, 1))
+
+    background = np.all(
+        np.isclose(img_5b, band_min[None, None, :]),
+        axis=-1
+    )
+
+    mask = ~background
+
+    if np.sum(mask) < 4:
+        raise ValueError(
+            "Número insuficiente de pixels da planta para ajustar "
+            "a regressão linear."
+        )
+
+    # ------------------------------------------------------------
+    # Extrai os pixels da planta
+    # ------------------------------------------------------------
+
+    pixels = img_5b[mask]
+
+    # Primeiras três bandas: B, G, R
+    X = pixels[:, :3]
+
+    nir = pixels[:, 3]
+    re = pixels[:, 4]
+
+    # ------------------------------------------------------------
+    # Adiciona intercepto:
+    #
+    # [1, B, G, R]
+    # ------------------------------------------------------------
+
+    X_design = np.column_stack([
+        np.ones(X.shape[0]),
+        X
+    ])
+
+    # ------------------------------------------------------------
+    # Regressão linear para NIR
+    # ------------------------------------------------------------
+
+    beta_nir, _, _, _ = np.linalg.lstsq(
+        X_design,
+        nir,
+        rcond=None
+    )
+
+    nir_pred = X_design @ beta_nir
+
+    error_nir = np.mean(
+        (nir - nir_pred) ** 2
+    )
+
+    # ------------------------------------------------------------
+    # Regressão linear para Red Edge
+    # ------------------------------------------------------------
+
+    beta_re, _, _, _ = np.linalg.lstsq(
+        X_design,
+        re,
+        rcond=None
+    )
+
+    re_pred = X_design @ beta_re
+
+    error_re = np.mean(
+        (re - re_pred) ** 2
+    )
+
+    # ------------------------------------------------------------
+    # Medida espectral
+    # ------------------------------------------------------------
+
+    return float(error_nir + error_re)
+
+
+#======================================================================
+#======================================================================
+#======================================================================
+#======================================================================

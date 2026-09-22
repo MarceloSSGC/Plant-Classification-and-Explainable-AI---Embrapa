@@ -1075,6 +1075,153 @@ def step_suppress_channel_shuffle(image: np.ndarray = None, intensity_list: list
     return imgs_list
 
 #======================================================================
+import numpy as np
+
+
+def suppress_rgb_channel_shuffle(
+    image: np.ndarray,
+    intensity: float = 1.0,
+    seed: int = 42
+) -> np.ndarray:
+    """
+    Aplica Channel Shuffle somente às bandas RGB.
+
+    Ordem esperada:
+        [B, G, R, NIR, RE]
+
+    As bandas B, G e R são permutadas de forma que NENHUMA
+    permaneça em sua posição original.
+
+    As bandas NIR e RE permanecem exatamente inalteradas.
+
+    A intensidade controla:
+
+        output_RGB =
+            (1 - intensity) * RGB_original
+            + intensity * RGB_shuffled
+
+    intensity = 0.0
+        -> imagem original.
+
+    intensity = 1.0
+        -> shuffle completo de B, G e R.
+
+    O background permanece exatamente inalterado.
+
+    Compatível com:
+        - imagens segmentadas originais;
+        - imagens segmentadas normalizadas por Z-score.
+
+    Parameters
+    ----------
+    image : np.ndarray
+        Imagem (H, W, 5) com bandas:
+        [B, G, R, NIR, RE].
+
+    intensity : float
+        Intensidade em [0, 1].
+
+    seed : int
+        Seed para escolha da permutação RGB.
+
+    Returns
+    -------
+    np.ndarray
+        Imagem transformada com mesmo shape e dtype.
+    """
+
+    if image.ndim != 3 or image.shape[-1] != 5:
+        raise ValueError(
+            f"Esperado array (H, W, 5), recebido {image.shape}"
+        )
+
+    if not 0.0 <= intensity <= 1.0:
+        raise ValueError(
+            f"intensity deve estar em [0, 1], recebido {intensity}"
+        )
+
+    orig_dtype = image.dtype
+    img = image.astype(np.float64)
+
+    # =========================================================
+    # 1. Background
+    # =========================================================
+
+    background_values = np.min(
+        img,
+        axis=(0, 1)
+    )
+
+    background_mask = np.all(
+        np.isclose(
+            img,
+            background_values[None, None, :],
+            rtol=1e-5,
+            atol=1e-8
+        ),
+        axis=-1
+    )
+
+    # =========================================================
+    # 2. Derangement somente de B, G e R
+    # =========================================================
+    #
+    # As únicas duas permutações de 3 elementos nas quais
+    # nenhum elemento permanece na posição original são:
+    #
+    # [1, 2, 0]
+    # [2, 0, 1]
+    #
+
+    rng = np.random.default_rng(seed)
+
+    permutations = np.array([
+        [1, 2, 0],
+        [2, 0, 1]
+    ])
+
+    permutation = permutations[
+        rng.integers(0, 2)
+    ]
+
+    shuffled_rgb = img[..., permutation]
+
+    # =========================================================
+    # 3. Combinação linear somente no RGB
+    # =========================================================
+
+    result = img.copy()
+
+    result[..., :3] = (
+        (1.0 - intensity) * img[..., :3]
+        + intensity * shuffled_rgb
+    )
+
+    # NIR e RE nunca são modificados:
+    # result[..., 3] = img[..., 3]
+    # result[..., 4] = img[..., 4]
+
+    # Background exatamente igual
+    result[background_mask] = img[background_mask]
+
+    # =========================================================
+    # 4. Restaura dtype
+    # =========================================================
+
+    if np.issubdtype(orig_dtype, np.integer):
+
+        info = np.iinfo(orig_dtype)
+
+        result = np.clip(
+            np.rint(result),
+            info.min,
+            info.max
+        )
+
+    return result.astype(orig_dtype)
+
+
+#======================================================================
 #======================================================================
 # Espectral
 

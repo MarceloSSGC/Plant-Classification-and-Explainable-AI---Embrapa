@@ -138,8 +138,9 @@ def eval_feature_metrics(
 
 #======================================================================
 
+# best_col = ['suppress_patch_shuffle', 'suppress_gaussian_blur_mask_aware', 'suppress_rgb_color', 'suppress_nir_re_to_green']
 
-# metric = laplacian_variance_mask_aware
+# metric = spectral_rgb_residual
 
 # result = eval_feature_metrics(
 #                     DATA_DIR,
@@ -151,6 +152,7 @@ def eval_feature_metrics(
 
 # result
 # result.plot(title=metric.__name__, figsize=(12, 9))
+# result[best_col].plot(title=metric.__name__, figsize=(12, 9))
 
 
 #======================================================================
@@ -165,10 +167,13 @@ TRANS_DICT = {
     suppress_bilateral_filter_mask_aware: [0, 1, 2, 3, 4, 5, 6],
     suppress_rgb_color: [0, 0.17, 0.33, 0.5, 0.67, 0.83, 1],
     # suppress_colors: [0, 0.17, 0.33, 0.5, 0.67, 0.83, 1],
-    suppress_channel_shuffle: [0, 0.17, 0.33, 0.5, 0.67, 0.83, 1],
+    # suppress_channel_shuffle: [0, 0.17, 0.33, 0.5, 0.67, 0.83, 1],
+    suppress_rgb_channel_shuffle: [0, 0.17, 0.33, 0.5, 0.67, 0.83, 1],
     suppress_nir_re_to_mean: [0, 0.17, 0.33, 0.5, 0.67, 0.83, 1],
     suppress_nir_re_to_green: [0, 0.17, 0.33, 0.5, 0.67, 0.83, 1],
 }
+
+#======================================================================
 
 # SHAPE
 shape_metric_list = [
@@ -184,6 +189,21 @@ shape_metric_list = [
     (coarse_ssim_mask_aware, True),
 ]
 
+shape_metric_list = [
+    (edge_ssim_ESSIM, True),
+    (gradient_correlation_GC, True),
+    (long_range_spatial_organization, False),
+    # (shape_descriptors__area, False),
+    # (shape_descriptors__perimeter, False),
+    # (shape_descriptors__compactness, False),
+    # (shape_descriptors__solidity, False),
+    # (shape_descriptors__hu_1, False),
+    # (shape_descriptors__hu_2, False),
+    # (coarse_ssim_mask_aware, True),
+]
+
+#----------------------------------------------------------------------
+
 # TEXTURE
 texture_metric_list = [
     (local_variance_LV, False),
@@ -196,30 +216,61 @@ texture_metric_list = [
     (high_low_freq_energy_ratio_new__ratio, False),
     (high_low_freq_energy_ratio_new__energy_high, False),
     (high_low_freq_energy_ratio_new__energy_low, False),
-
 ]
 
+texture_metric_list = [
+    (local_variance_LV, False),
+    (high_frequency_energy_HFE, False),
+
+    (laplacian_variance_mask_aware, False),
+    # (glcm_contrast_energy__New__energy, False),
+    # (glcm_contrast_energy__New__contrast, False),
+
+    (high_low_freq_energy_ratio_new__ratio, False),
+    (high_low_freq_energy_ratio_new__energy_high, False),
+    (high_low_freq_energy_ratio_new__energy_low, False),
+]
+
+#----------------------------------------------------------------------
 # COLOR
+
 color_metric_list = [
     (mean_chroma_new__mean_chroma, False),
     (mean_chroma_new__std_chroma, False),
 ]
 
+#----------------------------------------------------------------------
 # ESPECTRAL
+
 espectral_metric_list = [
     (spectral_intraband_variance__mean_variance, False),
     (spectral_correlation_with_green__mean_correlation, False),
     (spectral_wasserstein_distance__mean, True),
     (spectral_angle_distance, True),
+    (spectral_angle_similarity, True),
+    (spectral_rgb_residual, True),
 ]
 
+espectral_metric_list = [
+    # (spectral_intraband_variance__mean_variance, False),
+    # (spectral_correlation_with_green__mean_correlation, False),
+    # (spectral_wasserstein_distance__mean, True),
+    # (spectral_angle_distance, True),
+    (spectral_angle_similarity, True),
+    (spectral_rgb_residual, False),
+]
+
+
+#----------------------------------------------------------------------
+
+measure_name = "Measures_02"
 
 for n in [1, 5, -1]:
 
     for metric, comparative  in shape_metric_list:
 
         print(f"\n\t\033[100;40m -- \033[100;40m{metric.__name__} - {n}  \033[100;0m")
-        result_dir = os.path.join(results_dir, f"Especies_{n}/Shape")
+        result_dir = os.path.join(results_dir, measure_name, f"Especies_{n}/Shape")
         os.makedirs(result_dir, exist_ok=True)
         df_dir = os.path.join(result_dir, f"df_{metric.__name__}__n_{n}.csv")
         if not os.path.isfile(df_dir):
@@ -234,7 +285,7 @@ for n in [1, 5, -1]:
     for metric, comparative  in texture_metric_list:
 
         print(f"\n\t\033[100;40m -- \033[100;40m{metric.__name__} - {n}  \033[100;0m")
-        result_dir = os.path.join(results_dir, f"Especies_{n}/Texture")
+        result_dir = os.path.join(results_dir, measure_name, f"Especies_{n}/Texture")
         os.makedirs(result_dir, exist_ok=True)
         df_dir = os.path.join(result_dir, f"df_{metric.__name__}__n_{n}.csv")
         if not os.path.isfile(df_dir):
@@ -249,7 +300,7 @@ for n in [1, 5, -1]:
     for metric, comparative  in color_metric_list:
 
         print(f"\n\t\033[100;40m -- \033[100;40m{metric.__name__} - {n}  \033[100;0m")
-        result_dir = os.path.join(results_dir, f"Especies_{n}/Color")
+        result_dir = os.path.join(results_dir, measure_name, f"Especies_{n}/Color")
         os.makedirs(result_dir, exist_ok=True)
         df_dir = os.path.join(result_dir, f"df_{metric.__name__}__n_{n}.csv")
         if not os.path.isfile(df_dir):
@@ -265,7 +316,7 @@ for n in [1, 5, -1]:
     for metric, comparative  in espectral_metric_list:
 
         print(f"\n\t\033[100;40m -- \033[100;40m{metric.__name__} - {n}  \033[100;0m")
-        result_dir = os.path.join(results_dir, f"Especies_{n}/Espectral")
+        result_dir = os.path.join(results_dir, measure_name, f"Especies_{n}/Espectral")
         os.makedirs(result_dir, exist_ok=True)
         df_dir = os.path.join(result_dir, f"df_{metric.__name__}__n_{n}.csv")
         if not os.path.isfile(df_dir):
