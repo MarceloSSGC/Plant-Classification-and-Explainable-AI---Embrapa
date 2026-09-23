@@ -6,6 +6,7 @@ import pandas as pd
 from aux_plot import *
 from aux_transformations import *
 from aux_feature_metrics import *
+from aux_texture import *
 
 #======================================================================
 #======================================================================
@@ -21,9 +22,6 @@ else:
     PC_DIR = "/media/marcelo/HD_8t/Marcelo__Seagate_8tb/Embrapa/Embrapa_Experimentos"
 
 #======================================================================
-# DATA_DIR
-
-DATA_DIR = f"{PC_DIR}/Datasets/Augmentation/Multiview_Texture__AUG/align_bands_ecc_affine_with_retry__best_band_otsu_green__RGB_NIR_RE__SEED_20__T_0.75_V_0.15__AUG/Val_Norm"
 
 # TRANS_DICT = {
 #     suppress_patch_shuffle: [0, 2, 4, 6, 8, 12, 16],
@@ -52,6 +50,276 @@ DATA_DIR = f"{PC_DIR}/Datasets/Augmentation/Multiview_Texture__AUG/align_bands_e
 
 # metric = local_variance_LV
 
+
+#======================================================================
+# DATA_DIR
+
+VAL_DIR = f"{PC_DIR}/Datasets/Augmentation/Multiview_Texture__AUG/align_bands_ecc_affine_with_retry__best_band_otsu_green__RGB_NIR_RE__SEED_20__T_0.75_V_0.15__AUG/Val_Norm"
+
+
+#======================================================================
+
+
+especies = sorted(os.listdir(VAL_DIR))
+especie = "36_Unha_de_gato_Serra_da_Prata_06"
+files = sorted(os.listdir(os.path.join(VAL_DIR, especie)))
+file_name = files[5]
+file_fir = os.path.join(VAL_DIR, especie, file_name)
+
+img_5b = np.load(file_fir).astype("float32")
+
+plot_rgb(img_5b)
+
+local_variance_LV(img_5b)
+
+#======================================================================
+# Texture
+
+# Local Entropy, LBP, GLCM, Gabor Filters, Local Variance, Laplacian response, Wavelet Energy, High-Frequency Energy, Gradient Magnitude                           |
+# Texture: Entropy, LBP, GLCM, Gabor, Wavelet/HFE.
+
+
+img_1b = img_5b[:,:, 2]
+
+img_1b_filt = apply_local_entropy(img_1b)
+img_1b_filt = apply_local_entropy(img_1b, radius=1, levels=32)
+
+plot_band(img_1b)
+plot_band(img_1b_filt)
+
+
+img = img_1b[:, :, None]
+filter = apply_local_entropy
+filter_grid = {
+"radius": [1, 2, 3],
+"levels": [8, 16, 32, 64, 128]}
+
+trans = suppress_gaussian_blur_mask_aware
+trans_param = [0, 1, 2, 3, 4, 5, 6]
+measure = local_variance_LV
+
+def eval_img_descriptor(img, trans, trans_param, measure, filter, filter_grid=None, order_GPT=False):
+
+    original_values = []
+
+    for param in trans_param:   # param = trans_param[4]
+        img_trans = trans(img, param)
+
+        # plot_band(img[:, :, 0])
+        # plot_band(img_trans[:, :, 0])
+
+        img_msr = measure(img_trans)
+
+        original_values.append(img_msr)
+
+    np_origin = np.array([x / (original_values[0] + 1e-16) for x in original_values])
+
+    df_comp = pd.DataFrame()
+    df_comp["Origin"] = np_origin
+
+
+    if filter_grid is None:
+
+        filt_values = []
+
+        for param in trans_param:   # param = trans_param[4]
+            if not order_GPT:
+                img_filt = filter(img)
+                img_trans = trans(img_filt, param)
+                img_msr = measure(img_trans)
+
+                # plot_band(img_filt)
+                # plot_band(img_trans)
+            else:
+                img_trans = trans(img, param)
+                img_filt = filter(img_trans)
+                img_msr = measure(img_filt)
+
+                # plot_band(img)
+                # plot_band(img_trans)
+                # plot_band(img_filt)
+
+            filt_values.append(img_msr)
+
+        np_filt = np.array([x / (filt_values[0] + 1e-16) for x in filt_values])
+        df_comp[filter.__name__] = np_filt
+
+    elif len(filter_grid) == 2:
+        params_name = list(filter_grid.keys())
+        param_1 = params_name[0]
+        param_2 = params_name[1]
+
+        for x_1 in filter_grid[param_1]:        # x_1 = filter_grid[param_1][0]
+            for x_2 in filter_grid[param_2]:    # x_2 = filter_grid[param_2][0]
+
+                nick_params = f"{param_1}_{x_1}_{param_2}_{x_2}"
+                filt_values = []
+
+                for param in trans_param:   # param = trans_param[4]
+
+                    if not order_GPT:
+                        img_filt = filter(img, **{param_1: x_1, param_2: x_2})
+                        img_trans = trans(img_filt, param)
+                        img_msr = measure(img_trans)
+
+                    else:
+                        img_trans = trans(img, param)
+                        img_filt = filter(img_trans, **{param_1: x_1, param_2: x_2})
+                        img_msr = measure(img_filt)
+
+                        # plot_band(img_trans)
+                        # plot_band(img_filt)
+        
+                    filt_values.append(img_msr)
+                np_filt = np.array([x / (filt_values[0] + 1e-16) for x in filt_values])
+                df_comp[nick_params] = np_filt
+
+    return df_comp
+
+
+
+    cols = [x for x in df_comp.columns if "radius_2" in x]
+    df_comp[["Origin"] + cols].plot()
+
+df_comp_ = df_comp.copy()
+
+
+df_comp.plot(figsize=(12, 9))
+
+
+
+df_comp_.plot()
+cols = [x for x in df_comp.columns if "radius_15" in x]
+df_comp_[["Origin"] + cols].plot()
+
+
+
+
+
+import numpy as np
+import pandas as pd
+
+
+def rank_curves_by_auc(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Calcula a AUC de cada coluna do DataFrame e retorna
+    os resultados ordenados do menor para o maior AUC.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Cada coluna representa uma curva.
+        As linhas representam os níveis ordenados de intensidade.
+
+    Returns
+    -------
+    pd.DataFrame
+        DataFrame com as colunas:
+        - Parameters
+        - AUC
+    """
+
+    x = np.linspace(0, 1, len(df))
+
+    results = []
+
+    for column in df.columns:
+        y = df[column].to_numpy(dtype=float)
+
+        auc = np.trapz(y, x)
+
+        results.append({
+            "Parameters": column,
+            "AUC": auc
+        })
+
+    result_df = pd.DataFrame(results)
+
+    return result_df.sort_values(
+        by="AUC",
+        ascending=True
+    ).reset_index(drop=True)
+
+
+
+df_comp.iloc[:, ].plot(figsize=(12, 9))
+
+rank_curves_by_auc(df_comp)
+
+
+#======================================================================
+#======================================================================
+#======================================================================
+
+img_list = []
+
+
+especies = sorted(os.listdir(VAL_DIR))
+especie = "20_Guanxuma_Paludo_02"
+files = sorted(os.listdir(os.path.join(VAL_DIR, especie)))
+file_name = files[1]
+file_fir = os.path.join(VAL_DIR, especie, file_name)
+
+img_5b = np.load(file_fir).astype("float32")
+
+plot_rgb(img_5b)
+
+
+for i in range(5):
+    print(i)
+    img = img_5b[:, :, [i]]
+
+    df_comp = eval_img_descriptor(img, trans, trans_param, measure, filter, filter_grid, order_GPT=False)
+
+    img_list.append(df_comp)
+
+
+for i in range(5):
+    print(i)
+    # print(rank_curves_by_auc(img_list[i]))
+    print(img_list[i].iloc[:, :11].plot())
+    print("\n")
+
+
+
+
+
+
+
+def mean_dataframes(img_list):
+    """
+    Calcula a média elemento a elemento de uma lista de DataFrames
+    com mesma estrutura.
+
+    Retorna um DataFrame com as mesmas linhas e colunas.
+    """
+
+    if len(img_list) == 0:
+        raise ValueError("img_list está vazia.")
+
+    df_mean = (
+        pd.concat(img_list, keys=range(len(img_list)))
+        .groupby(level=1)
+        .mean()
+    )
+
+    return df_mean
+
+
+df_mean = mean_dataframes(img_list)
+
+rank_curves_by_auc(df_mean)
+
+
+
+df_mean_1 = df_mean.copy()
+
+
+
+
+#======================================================================
+#======================================================================
+#======================================================================
 #======================================================================
 
 

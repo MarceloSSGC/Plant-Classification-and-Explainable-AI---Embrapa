@@ -61,12 +61,7 @@ def suppress_patch_shuffle(
         Imagem com shape (H, W, C), com os patches embaralhados.
     """
 
-    if image.ndim != 3:
-        raise ValueError(
-            f"Esperado array (H, W, C), recebido {image.shape}"
-        )
-
-
+ 
     if grid_size == 0:
         return image
     
@@ -145,6 +140,8 @@ def suppress_patch_shuffle(
     shuffled = shuffled[:H, :W, :]
 
     return shuffled.astype(orig_dtype)
+
+
 
 
 # Tamanhos de referência para gerar a curva
@@ -415,25 +412,126 @@ def step_suppress_texture(image: np.ndarray = None, sigma_list: list = [0, 1, 2,
 #----------------------------------------------------------------------
 #----------------------------------------------------------------------
 
+# def suppress_gaussian_blur_mask_aware(
+#     image: np.ndarray,
+#     sigma: float = 5
+# ) -> np.ndarray:
+#     """
+#     Aplica supressão de textura via low-pass gaussiano, ignorando o
+#     background da imagem.
+
+#     Funciona tanto para imagens segmentadas originais quanto para
+#     imagens segmentadas normalizadas por Z-score.
+
+#     O background é identificado como os pixels que possuem,
+#     simultaneamente, o valor mínimo de cada uma das 5 bandas.
+
+#     Parameters
+#     ----------
+#     image : np.ndarray
+#         Array de shape (H, W, 5), bandas na ordem
+#         [B, G, R, NIR, RE].
+
+#     sigma : float
+#         Desvio-padrão do filtro gaussiano, em pixels.
+
+#     Returns
+#     -------
+#     np.ndarray
+#         Array de shape (H, W, 5), com o mesmo dtype da entrada.
+#         O background mantém exatamente seus valores originais.
+#     """
+#     if image.ndim != 3 or image.shape[-1] != 5:
+#         raise ValueError(
+#             f"Esperado array (H, W, 5), recebido {image.shape}"
+#         )
+
+#     if sigma == 0:
+#         return image
+
+
+
+#     orig_dtype = image.dtype
+#     image_f = image.astype(np.float64)
+
+#     # Valor correspondente ao background em cada banda.
+#     background_values = np.min(image_f, axis=(0, 1))
+
+#     # Background: pixel possui simultaneamente o mínimo das 5 bandas.
+#     # isclose evita problemas de precisão em ponto flutuante.
+#     background_mask = np.all(
+#         np.isclose(
+#             image_f,
+#             background_values[None, None, :],
+#             rtol=1e-5,
+#             atol=1e-8
+#         ),
+#         axis=-1
+#     )
+
+#     # Foreground é o complemento do background.
+#     mask = ~background_mask
+#     mask_f = mask.astype(np.float64)
+
+#     # Blur da máscara.
+#     blurred_mask = gaussian_filter(
+#         mask_f,
+#         sigma=sigma
+#     )
+
+#     blurred = np.zeros_like(image_f)
+
+#     for band in range(image.shape[-1]):
+
+#         # Somente foreground contribui para o blur.
+#         weighted_band = image_f[..., band] * mask_f
+
+#         blurred_values = gaussian_filter(
+#             weighted_band,
+#             sigma=sigma
+#         )
+
+#         # Média gaussiana considerando apenas foreground.
+#         np.divide(
+#             blurred_values,
+#             blurred_mask,
+#             out=blurred[..., band],
+#             where=blurred_mask > 0
+#         )
+
+#     # Restaura exatamente o background da imagem de entrada.
+#     blurred[background_mask] = image_f[background_mask]
+
+#     if np.issubdtype(orig_dtype, np.integer):
+#         info = np.iinfo(orig_dtype)
+#         blurred = np.clip(
+#             blurred,
+#             info.min,
+#             info.max
+#         )
+
+#     return blurred.astype(orig_dtype)
+
+import numpy as np
+from scipy.ndimage import gaussian_filter
+
+
 def suppress_gaussian_blur_mask_aware(
     image: np.ndarray,
     sigma: float = 5
 ) -> np.ndarray:
     """
-    Aplica supressão de textura via low-pass gaussiano, ignorando o
-    background da imagem.
-
-    Funciona tanto para imagens segmentadas originais quanto para
-    imagens segmentadas normalizadas por Z-score.
+    Aplica supressão de textura via Gaussian Blur mask-aware
+    em uma imagem com qualquer número de bandas.
 
     O background é identificado como os pixels que possuem,
-    simultaneamente, o valor mínimo de cada uma das 5 bandas.
+    simultaneamente, o valor mínimo de cada banda.
 
     Parameters
     ----------
     image : np.ndarray
-        Array de shape (H, W, 5), bandas na ordem
-        [B, G, R, NIR, RE].
+        Array de shape (H, W, C), onde C pode ser qualquer
+        número de bandas.
 
     sigma : float
         Desvio-padrão do filtro gaussiano, em pixels.
@@ -441,27 +539,33 @@ def suppress_gaussian_blur_mask_aware(
     Returns
     -------
     np.ndarray
-        Array de shape (H, W, 5), com o mesmo dtype da entrada.
+        Array de shape (H, W, C), com o mesmo dtype da entrada.
         O background mantém exatamente seus valores originais.
     """
-    if image.ndim != 3 or image.shape[-1] != 5:
+
+    if image.ndim != 3:
         raise ValueError(
-            f"Esperado array (H, W, 5), recebido {image.shape}"
+            f"Esperado array (H, W, C), recebido {image.shape}"
         )
 
+    if sigma < 0:
+        raise ValueError("sigma deve ser >= 0")
+
     if sigma == 0:
-        return image
-
-
+        return image.copy()
 
     orig_dtype = image.dtype
     image_f = image.astype(np.float64)
 
-    # Valor correspondente ao background em cada banda.
-    background_values = np.min(image_f, axis=(0, 1))
+    # =========================================================
+    # 1. Detecta o background
+    # =========================================================
 
-    # Background: pixel possui simultaneamente o mínimo das 5 bandas.
-    # isclose evita problemas de precisão em ponto flutuante.
+    background_values = np.min(
+        image_f,
+        axis=(0, 1)
+    )
+
     background_mask = np.all(
         np.isclose(
             image_f,
@@ -472,11 +576,13 @@ def suppress_gaussian_blur_mask_aware(
         axis=-1
     )
 
-    # Foreground é o complemento do background.
     mask = ~background_mask
     mask_f = mask.astype(np.float64)
 
-    # Blur da máscara.
+    # =========================================================
+    # 2. Blur da máscara
+    # =========================================================
+
     blurred_mask = gaussian_filter(
         mask_f,
         sigma=sigma
@@ -484,17 +590,21 @@ def suppress_gaussian_blur_mask_aware(
 
     blurred = np.zeros_like(image_f)
 
+    # =========================================================
+    # 3. Gaussian Blur banda a banda
+    # =========================================================
+
     for band in range(image.shape[-1]):
 
-        # Somente foreground contribui para o blur.
-        weighted_band = image_f[..., band] * mask_f
+        weighted_band = (
+            image_f[..., band] * mask_f
+        )
 
         blurred_values = gaussian_filter(
             weighted_band,
             sigma=sigma
         )
 
-        # Média gaussiana considerando apenas foreground.
         np.divide(
             blurred_values,
             blurred_mask,
@@ -502,11 +612,15 @@ def suppress_gaussian_blur_mask_aware(
             where=blurred_mask > 0
         )
 
-    # Restaura exatamente o background da imagem de entrada.
+    # =========================================================
+    # 4. Restaura exatamente o background
+    # =========================================================
+
     blurred[background_mask] = image_f[background_mask]
 
     if np.issubdtype(orig_dtype, np.integer):
         info = np.iinfo(orig_dtype)
+
         blurred = np.clip(
             blurred,
             info.min,

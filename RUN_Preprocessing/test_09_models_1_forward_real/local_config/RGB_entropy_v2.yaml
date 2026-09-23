@@ -1,5 +1,5 @@
 
-PC: DANTE
+PC: EUROPA
 INTERACTIVE: True
 # CONFIG_NAME: RGB_&_entropy
 
@@ -31,7 +31,7 @@ SEGMENTATION_METHOD: best_band_otsu_green
 # Multiview
 
 # Dataset Multiview
-MULTIVIEW_DATA_NICKNAME: RGB_entropy
+MULTIVIEW_DATA_NICKNAME: RGB_entropy_v2
 # MULTIVIEW_DATASET_NAME: Aligned_ecc_affine_interch_45_cen_5__seg_best_band_otsu__Multiview__Texture
 MULTIVIEW_DATA_TYPE: Multiview_Texture
 
@@ -47,9 +47,9 @@ VIEWS:
     0:
       funct: entropy
       param: 
-        which_band: Green
+        which_band: Red
         radius: 1
-        levels: 32
+        levels: 16
     1:
       funct: entropy
       param: 
@@ -59,9 +59,29 @@ VIEWS:
     2:
       funct: entropy
       param: 
-        which_band: Green
-        radius: 2
+        which_band: Blue
+        radius: 1
         levels: 16
+
+  # TEXTURE:
+  #   0:
+  #     funct: entropy
+  #     param: 
+  #       which_band: Green
+  #       radius: 1
+  #       levels: 32
+  #   1:
+  #     funct: entropy
+  #     param: 
+  #       which_band: Green
+  #       radius: 1
+  #       levels: 16
+  #   2:
+  #     funct: entropy
+  #     param: 
+  #       which_band: Green
+  #       radius: 2
+  #       levels: 16
 
 #--------------------------------------------------------
 # Split
@@ -111,5 +131,5 @@ MODEL:
 #--------------------------------------------------------
 # SHAP
 
-APPLY_SHAP: True
+APPLY_SHAP: False
 

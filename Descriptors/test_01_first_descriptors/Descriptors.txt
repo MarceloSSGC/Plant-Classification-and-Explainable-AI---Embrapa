@@ -1,0 +1,10 @@
+| Família      | Descritores candidatos                                                                                                                                           |
+| ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Shape**    | Distance Transform, Skeleton/Medial Axis, Contour Curvature, Fourier Descriptors, Hu Moments, Zernike Moments, Compactness, Eccentricity, Solidity, Aspect Ratio |
+| **Texture**  | Local Entropy, LBP, GLCM, Gabor Filters, Local Variance, Laplacian response, Wavelet Energy, High-Frequency Energy, Gradient Magnitude                           |
+| **Color**    | HSV Saturation, Hue, Lab \(a^*,b^*\), Lab Chroma, RGB Channel Differences \((R-G,R-B,G-B)\), normalized RGB, Excess Green/Excess Red, opponent-color channels    |
+| **Spectral** | NDVI, NDRE, GNDVI, NIR/Red ratio, RE/Red ratio, \(NIR-G\), \(RE-G\), spectral slopes, PCA spectral components, RGB→NIR/RE residuals                              |
+
+
+
+

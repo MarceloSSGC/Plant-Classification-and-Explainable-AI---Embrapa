@@ -12,6 +12,37 @@ print(f"\n\033[100;40m\t     --- Auxiliar PLOT ---     \t\t\033[0m\n")
 
 #======================================================================
 #======================================================================
+# PLOT
+
+# 1 band
+
+def plot_band(img_1, title="One Band", figsize=(15, 9)):
+    """
+    Plota uma imagem de uma única banda.
+
+    Parameters
+    ----------
+    img : np.ndarray
+        Array 2D de dimensão (H, W).
+    title : str
+        Título da imagem.
+    """
+    if len(img_1.shape) == 3 and img_1.shape[-1] == 1:
+        img = img_1[:, :, 0].copy()
+    else:
+        img = img_1.copy()
+
+    if img.ndim != 2:
+        raise ValueError(f"Esperado array 2D (H, W), recebido {img.shape}")
+
+    plt.figure(figsize=figsize)
+    plt.imshow(img, cmap="gray")
+    plt.colorbar(label="Pixel value")
+    plt.title(title)
+    plt.axis("off")
+    plt.show()
+
+#======================================================================
 # 5 bands
 
 def load_5b_from_dir(image_dir: str, base_name: str):
@@ -119,6 +150,46 @@ def plot_two_imgs(rgb_img, rgb_img_masked):
 
     plt.tight_layout()
     plt.show()
+
+
+#======================================================================
+# plot_5bands
+
+
+def plot_5bands(img_5b, fontsize=18):
+    """
+    Plota lado a lado as 5 bandas de uma imagem multiespectral.
+
+    Parameters
+    ----------
+    img_5b : np.ndarray
+        Array de dimensão (H, W, 5).
+    fontsize : int or float, optional
+        Tamanho da fonte dos títulos das bandas. Padrão: 14.
+    """
+    band_mapping = {
+        0: "Blue",
+        1: "Green",
+        2: "Red",
+        3: "NIR",
+        4: "Red Edge",
+    }
+
+    if img_5b.ndim != 3 or img_5b.shape[2] != 5:
+        raise ValueError(
+            f"Esperado array (H, W, 5), recebido {img_5b.shape}"
+        )
+
+    fig, axes = plt.subplots(1, 5, figsize=(20, 5))
+
+    for i, ax in enumerate(axes):
+        ax.imshow(img_5b[:, :, i], cmap="gray")
+        ax.set_title(band_mapping[i], fontsize=fontsize)
+        ax.axis("off")
+
+    plt.tight_layout()
+    plt.show()
+
 
 #======================================================================
 

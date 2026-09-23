@@ -9,47 +9,200 @@ print(f"\n\033[100;40m\t     --- Auxiliar Feature Metrics ---     \t\t\033[0m\n"
 #======================================================================
 # Paper
 
+# def local_variance_LV(
+#     img_5b: np.ndarray,
+#     window_size: int = 11,
+#     min_valid_pixels: int = 2
+# ) -> dict:
+#     """
+#     Calcula LV — Local Variance — nas 5 bandas separadamente.
+
+#     Bandas:
+#         [B, G, R, NIR, RE]
+
+#     A métrica é mask-aware e funciona tanto para:
+
+#         1. imagens segmentadas originais:
+#            background = 0;
+
+#         2. imagens segmentadas normalizadas por Z-score:
+#            background = mínimo simultâneo das 5 bandas.
+
+#     Para cada banda:
+#         1. divide a imagem em janelas não sobrepostas;
+#         2. calcula a variância somente sobre pixels da planta;
+#         3. calcula a média das variâncias locais.
+
+#     Returns
+#     -------
+#     dict
+#         {
+#             "B": ...,
+#             "G": ...,
+#             "R": ...,
+#             "NIR": ...,
+#             "RE": ...,
+#             "mean_LV": ...
+#         }
+#     """
+
+#     if img_5b.ndim != 3 or img_5b.shape[-1] != 5:
+#         raise ValueError(
+#             f"Esperado array (H, W, 5), recebido {img_5b.shape}"
+#         )
+
+#     if window_size <= 0:
+#         raise ValueError("window_size deve ser > 0")
+
+#     if min_valid_pixels < 2:
+#         raise ValueError("min_valid_pixels deve ser >= 2")
+
+#     img = img_5b.astype(np.float64)
+
+#     H, W, C = img.shape
+
+#     # =========================================================
+#     # 1. Máscara da planta
+#     # =========================================================
+
+#     background_values = np.min(
+#         img,
+#         axis=(0, 1)
+#     )
+
+#     background_mask = np.all(
+#         np.isclose(
+#             img,
+#             background_values[None, None, :],
+#             rtol=1e-5,
+#             atol=1e-8
+#         ),
+#         axis=-1
+#     )
+
+#     plant_mask = ~background_mask
+
+#     if not np.any(plant_mask):
+#         return {
+#             "B": 0.0,
+#             "G": 0.0,
+#             "R": 0.0,
+#             "NIR": 0.0,
+#             "RE": 0.0,
+#             "mean_LV": 0.0
+#         }
+
+#     band_names = ["B", "G", "R", "NIR", "RE"]
+
+#     results = {}
+
+#     # =========================================================
+#     # 2. Calcula LV para cada banda
+#     # =========================================================
+
+#     for band in range(C):
+
+#         image_1b = img[..., band]
+
+#         local_variances = []
+
+#         for y0 in range(0, H, window_size):
+
+#             y1 = min(
+#                 y0 + window_size,
+#                 H
+#             )
+
+#             for x0 in range(0, W, window_size):
+
+#                 x1 = min(
+#                     x0 + window_size,
+#                     W
+#                 )
+
+#                 window = image_1b[
+#                     y0:y1,
+#                     x0:x1
+#                 ]
+
+#                 mask_window = plant_mask[
+#                     y0:y1,
+#                     x0:x1
+#                 ]
+
+#                 values = window[
+#                     mask_window
+#                 ]
+
+#                 if values.size >= min_valid_pixels:
+
+#                     local_variances.append(
+#                         np.var(values)
+#                     )
+
+#         if len(local_variances) == 0:
+#             lv = 0.0
+#         else:
+#             lv = float(
+#                 np.mean(local_variances)
+#             )
+
+#         results[band_names[band]] = lv
+
+#     # =========================================================
+#     # 3. LV multiespectral agregada
+#     # =========================================================
+
+#     results["mean_LV"] = float(
+#         np.mean([
+#             results["B"],
+#             results["G"],
+#             results["R"],
+#             results["NIR"],
+#             results["RE"]
+#         ])
+#     )
+
+#     return results['mean_LV']
+
+
+import numpy as np
+
 
 def local_variance_LV(
-    img_5b: np.ndarray,
+    img: np.ndarray,
     window_size: int = 11,
     min_valid_pixels: int = 2
-) -> dict:
+) -> float:
     """
-    Calcula LV — Local Variance — nas 5 bandas separadamente.
+    Calcula LV — Local Variance — para uma imagem com qualquer número de bandas.
 
-    Bandas:
-        [B, G, R, NIR, RE]
+    Parameters
+    ----------
+    img : np.ndarray
+        Imagem com shape (H, W, C), onde C é qualquer número de bandas.
 
-    A métrica é mask-aware e funciona tanto para:
+        Assume imagem segmentada, podendo ser:
+        1. original: fundo = 0;
+        2. normalizada por Z-score: fundo corresponde ao mínimo
+           simultâneo das bandas.
 
-        1. imagens segmentadas originais:
-           background = 0;
+    window_size : int
+        Tamanho das janelas não sobrepostas.
 
-        2. imagens segmentadas normalizadas por Z-score:
-           background = mínimo simultâneo das 5 bandas.
-
-    Para cada banda:
-        1. divide a imagem em janelas não sobrepostas;
-        2. calcula a variância somente sobre pixels da planta;
-        3. calcula a média das variâncias locais.
+    min_valid_pixels : int
+        Número mínimo de pixels da planta necessário para calcular
+        a variância de uma janela.
 
     Returns
     -------
-    dict
-        {
-            "B": ...,
-            "G": ...,
-            "R": ...,
-            "NIR": ...,
-            "RE": ...,
-            "mean_LV": ...
-        }
+    float
+        Média da Local Variance entre todas as bandas.
     """
 
-    if img_5b.ndim != 3 or img_5b.shape[-1] != 5:
+    if img.ndim != 3:
         raise ValueError(
-            f"Esperado array (H, W, 5), recebido {img_5b.shape}"
+            f"Esperado array (H, W, C), recebido {img.shape}"
         )
 
     if window_size <= 0:
@@ -58,7 +211,7 @@ def local_variance_LV(
     if min_valid_pixels < 2:
         raise ValueError("min_valid_pixels deve ser >= 2")
 
-    img = img_5b.astype(np.float64)
+    img = img.astype(np.float64)
 
     H, W, C = img.shape
 
@@ -84,22 +237,13 @@ def local_variance_LV(
     plant_mask = ~background_mask
 
     if not np.any(plant_mask):
-        return {
-            "B": 0.0,
-            "G": 0.0,
-            "R": 0.0,
-            "NIR": 0.0,
-            "RE": 0.0,
-            "mean_LV": 0.0
-        }
-
-    band_names = ["B", "G", "R", "NIR", "RE"]
-
-    results = {}
+        return 0.0
 
     # =========================================================
-    # 2. Calcula LV para cada banda
+    # 2. LV de cada banda
     # =========================================================
+
+    band_lvs = []
 
     for band in range(C):
 
@@ -109,62 +253,35 @@ def local_variance_LV(
 
         for y0 in range(0, H, window_size):
 
-            y1 = min(
-                y0 + window_size,
-                H
-            )
+            y1 = min(y0 + window_size, H)
 
             for x0 in range(0, W, window_size):
 
-                x1 = min(
-                    x0 + window_size,
-                    W
-                )
+                x1 = min(x0 + window_size, W)
 
-                window = image_1b[
-                    y0:y1,
-                    x0:x1
-                ]
+                window = image_1b[y0:y1, x0:x1]
 
-                mask_window = plant_mask[
-                    y0:y1,
-                    x0:x1
-                ]
+                mask_window = plant_mask[y0:y1, x0:x1]
 
-                values = window[
-                    mask_window
-                ]
+                values = window[mask_window]
 
                 if values.size >= min_valid_pixels:
-
                     local_variances.append(
                         np.var(values)
                     )
 
-        if len(local_variances) == 0:
-            lv = 0.0
+        if local_variances:
+            lv = float(np.mean(local_variances))
         else:
-            lv = float(
-                np.mean(local_variances)
-            )
+            lv = 0.0
 
-        results[band_names[band]] = lv
+        band_lvs.append(lv)
 
     # =========================================================
-    # 3. LV multiespectral agregada
+    # 3. LV agregada
     # =========================================================
 
-    results["mean_LV"] = float(
-        np.mean([
-            results["B"],
-            results["G"],
-            results["R"],
-            results["NIR"],
-            results["RE"]
-        ])
-    )
-
-    return results['mean_LV']
+    return float(np.mean(band_lvs))
 
 #======================================================================
 import numpy as np
