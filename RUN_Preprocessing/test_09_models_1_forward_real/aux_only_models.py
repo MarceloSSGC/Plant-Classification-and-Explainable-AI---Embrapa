@@ -3597,17 +3597,369 @@ import time  # necessário para medir a duração de cada época
 import timm
 
 
+# class MulticlassViTTiny(nn.Module):
+#     MODEL_NAME = "ViTTiny"
+
+#     def __init__(self, in_channels=5, num_classes=31, pretrained=False, dropout=0.2, seed_model=None, img_size=224):
+#         super().__init__()
+
+#         # ---- reprodutibilidade: fixa a seed antes de instanciar as camadas ----
+#         self.seed_model = seed_model
+#         self.set_seed(seed_model)
+
+#         # ---- guarda os argumentos de construção para permitir carregamento genérico ----
+#         self.config = {
+#             "in_channels": in_channels,
+#             "num_classes": num_classes,
+#             "pretrained": pretrained,
+#             "dropout": dropout,
+#             "seed_model": seed_model,
+#             "img_size": img_size,
+#         }
+#         self.img_size = img_size
+
+#         # ---- cria o backbone ViT-Tiny (patch 16) já com a cabeça ajustada para num_classes ----
+#         backbone = timm.create_model(
+#             "vit_tiny_patch16_224",
+#             pretrained=pretrained,
+#             num_classes=num_classes,
+#             img_size=img_size,
+#         )
+
+#         # ---- adapta o patch embedding para aceitar 5 bandas em vez de 3 (RGB) ----
+#         old_conv = backbone.patch_embed.proj  # Conv2d(3, 192, kernel=16, stride=16)
+#         new_conv = nn.Conv2d(
+#             in_channels,
+#             old_conv.out_channels,
+#             kernel_size=old_conv.kernel_size,
+#             stride=old_conv.stride,
+#             padding=old_conv.padding,
+#             bias=(old_conv.bias is not None),
+#         )
+
+#         if pretrained:
+#             with torch.no_grad():
+#                 # copia os pesos RGB originais para os 3 primeiros canais (Blue, Green, Red)
+#                 new_conv.weight[:, :3, :, :] = old_conv.weight
+#                 if old_conv.bias is not None:
+#                     new_conv.bias[:] = old_conv.bias
+#                 # canais extras (NIR, Red Edge) recebem a média dos pesos RGB como inicialização
+#                 if in_channels > 3:
+#                     mean_w = old_conv.weight.mean(dim=1, keepdim=True)
+#                     new_conv.weight[:, 3:, :, :] = mean_w.repeat(1, in_channels - 3, 1, 1)
+
+#         backbone.patch_embed.proj = new_conv
+
+#         # ---- dropout opcional antes da cabeça de classificação ----
+#         if dropout is not None and hasattr(backbone, "head_drop"):
+#             backbone.head_drop = nn.Dropout(p=dropout)
+
+#         self.backbone = backbone
+
+#     # ------------------------------------------------------------------
+#     # Reprodutibilidade
+
+#     @staticmethod
+#     def set_seed(seed=None):
+#         if seed is None:
+#             return
+#         random.seed(seed)
+#         np.random.seed(seed)
+#         torch.manual_seed(seed)
+#         torch.cuda.manual_seed_all(seed)
+
+#     def forward(self, x):
+#         # ---- garante entrada no tamanho fixo esperado pelo ViT (abordagem padrão na literatura) ----
+#         if x.shape[-2] != self.img_size or x.shape[-1] != self.img_size:
+#             x = F.interpolate(
+#                 x,
+#                 size=(self.img_size, self.img_size),
+#                 mode="bilinear",
+#                 align_corners=False,
+#             )
+#         return self.backbone(x)  # logits, sem softmax -> CrossEntropyLoss
+
+#     # ------------------------------------------------------------------
+#     # Helper para reportar os devices em uso
+
+#     def _print_device_report(self, device):
+#         print("\n\t Device report:")
+#         print(f"\t  - torch.cuda.is_available(): {torch.cuda.is_available()}")
+#         if torch.cuda.is_available():
+#             print(f"\t  - GPU(s) visível(is): {torch.cuda.device_count()}")
+#             print(f"\t  - GPU atual: {torch.cuda.current_device()} "
+#                   f"({torch.cuda.get_device_name(torch.cuda.current_device())})")
+#         print(f"\t  - device solicitado para treino: {device}")
+#         print(f"\t  - device dos parâmetros do modelo: {next(self.parameters()).device}\n")
+
+#     # ------------------------------------------------------------------
+#     # Cálculo de métricas a partir de preds/true já acumulados
+#     # (compartilhado entre a acumulação de treino e a avaliação de validação,
+#     #  garante que a definição das métricas seja idêntica nos dois casos)
+
+#     @staticmethod
+#     def _compute_metrics_from_preds(avg_loss, preds, true):
+#         return {
+#             "loss": avg_loss,
+#             "acc": float(np.mean(preds == true)),
+#             "balanced_acc": balanced_accuracy_score(true, preds),
+#             "f1_macro": f1_score(true, preds, average="macro", zero_division=0),
+#             "f1_micro": f1_score(true, preds, average="micro", zero_division=0),
+#             "precision_macro": precision_score(true, preds, average="macro", zero_division=0),
+#             "recall_macro": recall_score(true, preds, average="macro", zero_division=0),
+#             "kappa": cohen_kappa_score(true, preds),
+#         }
+
+#     # ------------------------------------------------------------------
+#     # Treino
+
+#     def fit(
+#         self,
+#         train_loader,
+#         val_loader,
+#         epochs=30,
+#         lr=1e-3,
+#         weight_decay=1e-4,
+#         device="cuda",
+#         checkpoint_path="best_model.pt",
+#         patience=None,
+#         verbose=1,
+#     ):
+#         # ---- verbose: 0 = silencioso | 1 = resumo por época (default) | 2 = também progresso por batch ----
+#         self.to(device)
+
+#         # ---- reporta os devices disponíveis/utilizados antes de começar o treino ----
+#         self._print_device_report(device)
+
+#         optimizer = optim.Adam(self.parameters(), lr=lr, weight_decay=weight_decay)
+#         criterion = nn.CrossEntropyLoss()
+
+#         if verbose >= 1:
+#             print(f'\n\t Trainning...   epochs: \033[96;96m{epochs}\033[0m \n')
+
+#         metric_names = [
+#             "loss", "acc", "balanced_acc",
+#             "f1_macro", "f1_micro",
+#             "precision_macro", "recall_macro",
+#             "kappa",
+#         ]
+#         history = {}
+#         for m in metric_names:
+#             history[f"train_{m}"] = []
+#             history[f"val_{m}"] = []
+
+#         best_val_loss = float("inf")
+#         best_state = None
+#         epochs_no_improve = 0
+
+#         n_batches = len(train_loader)
+
+#         for epoch in range(1, epochs + 1):
+#             epoch_start_time = time.time()  # ---- marca o início da época (antes do primeiro passo) ----
+
+#             # ---- passo de otimização (treino) + acumulação de métricas de treino ----
+#             self.train()
+
+#             running_train_loss = 0.0
+#             n_train_samples = 0
+#             train_preds_list, train_true_list = [], []
+
+#             for batch_idx, (imgs, y_is, c_is, n_is) in enumerate(train_loader, start=1):
+#                 imgs, y_is = imgs.to(device), y_is.to(device)
+
+#                 optimizer.zero_grad()
+#                 logits = self(imgs)
+#                 loss = criterion(logits, y_is)
+#                 loss.backward()
+#                 optimizer.step()
+
+#                 # ---- acumula loss/preds/true reaproveitando os logits já calculados ----
+#                 # (sob no_grad, não afeta zero_grad/forward/loss/backward/step acima)
+#                 with torch.no_grad():
+#                     batch_size = imgs.size(0)
+#                     running_train_loss += loss.item() * batch_size
+#                     n_train_samples += batch_size
+#                     train_preds_list.append(torch.argmax(logits, dim=1).detach().cpu())
+#                     train_true_list.append(y_is.detach().cpu())
+
+#                 # ---- progresso por batch (só aparece com verbose=2) ----
+#                 if verbose >= 2:
+#                     print(
+#                         f"\r    [Epoch {epoch:03d}/{epochs}] "
+#                         f"batch {batch_idx:04d}/{n_batches} - loss={loss.item():.4f}",
+#                         end="", flush=True,
+#                     )
+
+#             if verbose >= 2:
+#                 print()  # quebra de linha após a barra de progresso da última batch
+
+#             # ---- métricas de treino calculadas a partir do que foi acumulado durante a própria varredura ----
+#             train_avg_loss = running_train_loss / n_train_samples
+#             train_preds = torch.cat(train_preds_list).numpy()
+#             train_true = torch.cat(train_true_list).numpy()
+#             train_metrics = self._compute_metrics_from_preds(train_avg_loss, train_preds, train_true)
+
+#             # ---- avaliação em validação: única varredura separada, sem atualização de pesos ----
+#             val_metrics = self._evaluate(val_loader, criterion, device)
+
+#             for m in metric_names:
+#                 history[f"train_{m}"].append(train_metrics[m])
+#                 history[f"val_{m}"].append(val_metrics[m])
+
+#             if verbose >= 1:
+#                 print(
+#                     f"\n[Epoch {epoch:03d}/{epochs}] "
+#                     f"train_loss={train_metrics['loss']:.4f} | val_loss={val_metrics['loss']:.4f} | "
+#                     f"train_acc={train_metrics['acc']:.4f} | val_acc={val_metrics['acc']:.4f} | "
+#                     f"train_f1_macro={train_metrics['f1_macro']:.4f} | val_f1_macro={val_metrics['f1_macro']:.4f}"
+#                 )
+
+#             # ---- checkpoint do melhor modelo (critério: loss na validação, não acurácia) ----
+#             if val_metrics["loss"] < best_val_loss:
+#                 best_val_loss = val_metrics["loss"]
+#                 best_state = deepcopy(self.state_dict())
+
+#                 # ---- salva estado + config, para permitir carregamento genérico ----
+#                 torch.save(
+#                     {
+#                         "model_class": self.MODEL_NAME,
+#                         "config": self.config,
+#                         "state_dict": best_state,
+#                     },
+#                     checkpoint_path,
+#                 )
+
+#                 epochs_no_improve = 0
+#                 if verbose >= 1:
+#                     print(f"  -> novo melhor modelo salvo em '{checkpoint_path}' (val_loss={best_val_loss:.4f})")
+#             else:
+#                 epochs_no_improve += 1
+
+#             # ---- duração total da época (do primeiro passo até o fim de todo o processamento, incl. checkpoint) ----
+#             epoch_duration = time.time() - epoch_start_time
+
+#             if verbose >= 1:
+#                 print(f"\n \033[96;92m time={epoch_duration:.2f}s \033[0m")
+
+#             if patience is not None and epochs_no_improve >= patience:
+#                 if verbose >= 1:
+#                     print(f"  -> early stopping na época {epoch} (sem melhora por {patience} épocas)")
+#                 break
+
+#         if best_state is not None:
+#             self.load_state_dict(best_state)
+
+#         return history
+
+#     # ------------------------------------------------------------------
+#     # Avaliação interna (usada no fit apenas para validação)
+
+#     @torch.no_grad()
+#     def _evaluate(self, loader, criterion, device):
+#         self.eval()
+#         running_loss = 0.0
+#         n_samples = 0
+#         all_preds, all_true = [], []
+
+#         for imgs, y_is, c_is, n_is in loader:
+#             imgs, y_is = imgs.to(device), y_is.to(device)
+
+#             logits = self(imgs)
+#             loss = criterion(logits, y_is)
+#             running_loss += loss.item() * imgs.size(0)
+#             n_samples += imgs.size(0)
+
+#             preds = torch.argmax(logits, dim=1)
+
+#             all_preds.append(preds.cpu())
+#             all_true.append(y_is.cpu())
+
+#         avg_loss = running_loss / n_samples
+#         preds = torch.cat(all_preds).numpy()
+#         true = torch.cat(all_true).numpy()
+
+#         return self._compute_metrics_from_preds(avg_loss, preds, true)
+
+#     # ------------------------------------------------------------------
+#     # Predição
+
+#     @torch.no_grad()
+#     def predict(self, loader, device="cuda"):
+#         self.to(device)
+#         self.eval()
+
+#         all_probs, all_preds, all_true = [], [], []
+#         all_species, all_names = [], []
+
+#         for imgs, y_is, c_is, n_is in loader:
+#             imgs = imgs.to(device)
+#             logits = self(imgs)
+#             probs = torch.softmax(logits, dim=1)
+#             preds = torch.argmax(probs, dim=1)
+
+#             all_probs.append(probs.cpu())
+#             all_preds.append(preds.cpu())
+#             all_true.append(y_is)
+#             all_species.extend(c_is)
+#             all_names.extend(n_is)
+
+#         return {
+#             "probs": torch.cat(all_probs).numpy(),
+#             "preds": torch.cat(all_preds).numpy(),
+#             "true": torch.cat(all_true).numpy(),
+#             "species": all_species,
+#             "filenames": all_names,
+#         }
+
+#     # ------------------------------------------------------------------
+#     # Carregamento genérico (o checkpoint carrega sua própria config)
+
+#     @classmethod
+#     def load(cls, checkpoint_path, device="cuda"):
+#         checkpoint = torch.load(checkpoint_path, map_location=device)
+#         model = cls(**checkpoint["config"])
+#         model.load_state_dict(checkpoint["state_dict"])
+#         model.to(device)
+#         model.eval()
+#         return model
+
+
+
 class MulticlassViTTiny(nn.Module):
+
     MODEL_NAME = "ViTTiny"
 
-    def __init__(self, in_channels=5, num_classes=31, pretrained=False, dropout=0.2, seed_model=None, img_size=224):
+    # Modelo correspondente exatamente ao checkpoint baixado
+    TIMM_MODEL_NAME = "vit_tiny_patch16_224.augreg_in21k_ft_in1k"
+
+    # Pesos pretrained locais
+    PRETRAINED_WEIGHTS_PATH = (
+        r"D:\Marcelo\models\vit_tiny_patch16_224\model.safetensors"
+    )
+
+    def __init__(
+        self,
+        in_channels=5,
+        num_classes=31,
+        pretrained=False,
+        dropout=0.2,
+        seed_model=None,
+        img_size=224,
+    ):
+
         super().__init__()
 
-        # ---- reprodutibilidade: fixa a seed antes de instanciar as camadas ----
+        # --------------------------------------------------------------
+        # Reprodutibilidade
+        # --------------------------------------------------------------
+
         self.seed_model = seed_model
         self.set_seed(seed_model)
 
-        # ---- guarda os argumentos de construção para permitir carregamento genérico ----
+        # --------------------------------------------------------------
+        # Configuração
+        # --------------------------------------------------------------
+
         self.config = {
             "in_channels": in_channels,
             "num_classes": num_classes,
@@ -3616,18 +3968,55 @@ class MulticlassViTTiny(nn.Module):
             "seed_model": seed_model,
             "img_size": img_size,
         }
+
         self.img_size = img_size
 
-        # ---- cria o backbone ViT-Tiny (patch 16) já com a cabeça ajustada para num_classes ----
-        backbone = timm.create_model(
-            "vit_tiny_patch16_224",
-            pretrained=pretrained,
-            num_classes=num_classes,
-            img_size=img_size,
-        )
+        # --------------------------------------------------------------
+        # Backbone ViT-Tiny
+        # --------------------------------------------------------------
 
-        # ---- adapta o patch embedding para aceitar 5 bandas em vez de 3 (RGB) ----
-        old_conv = backbone.patch_embed.proj  # Conv2d(3, 192, kernel=16, stride=16)
+        if pretrained:
+
+            print(
+                f"\nLoading pretrained ViT-Tiny weights from:\n"
+                f"{self.PRETRAINED_WEIGHTS_PATH}\n"
+            )
+
+            # O checkpoint baixado foi fine-tuned em ImageNet-1k,
+            # portanto possui originalmente 1000 classes.
+            #
+            # pretrained=False é proposital:
+            # NÃO queremos que o timm tente baixar nada da internet.
+            #
+            # checkpoint_path carrega o arquivo safetensors local.
+
+            backbone = timm.create_model(
+                self.TIMM_MODEL_NAME,
+                pretrained=False,
+                num_classes=1000,
+                img_size=img_size,
+                checkpoint_path=self.PRETRAINED_WEIGHTS_PATH,
+            )
+
+            # Remove a cabeça ImageNet-1k e cria a cabeça
+            # correspondente ao nosso problema.
+            backbone.reset_classifier(num_classes)
+
+        else:
+
+            backbone = timm.create_model(
+                self.TIMM_MODEL_NAME,
+                pretrained=False,
+                num_classes=num_classes,
+                img_size=img_size,
+            )
+
+        # --------------------------------------------------------------
+        # Adaptação do patch embedding: RGB -> multiespectral
+        # --------------------------------------------------------------
+
+        old_conv = backbone.patch_embed.proj
+
         new_conv = nn.Conv2d(
             in_channels,
             old_conv.out_channels,
@@ -3638,80 +4027,189 @@ class MulticlassViTTiny(nn.Module):
         )
 
         if pretrained:
+
             with torch.no_grad():
-                # copia os pesos RGB originais para os 3 primeiros canais (Blue, Green, Red)
+
+                # ------------------------------------------------------
+                # Copia pesos pretrained das 3 bandas RGB
+                # ------------------------------------------------------
+
                 new_conv.weight[:, :3, :, :] = old_conv.weight
+
                 if old_conv.bias is not None:
                     new_conv.bias[:] = old_conv.bias
-                # canais extras (NIR, Red Edge) recebem a média dos pesos RGB como inicialização
+
+                # ------------------------------------------------------
+                # Bandas extras
+                #
+                # NIR e Red Edge recebem a média dos pesos RGB
+                # ------------------------------------------------------
+
                 if in_channels > 3:
-                    mean_w = old_conv.weight.mean(dim=1, keepdim=True)
-                    new_conv.weight[:, 3:, :, :] = mean_w.repeat(1, in_channels - 3, 1, 1)
+
+                    mean_w = old_conv.weight.mean(
+                        dim=1,
+                        keepdim=True,
+                    )
+
+                    new_conv.weight[:, 3:, :, :] = mean_w.repeat(
+                        1,
+                        in_channels - 3,
+                        1,
+                        1,
+                    )
 
         backbone.patch_embed.proj = new_conv
 
-        # ---- dropout opcional antes da cabeça de classificação ----
+        # --------------------------------------------------------------
+        # Dropout
+        # --------------------------------------------------------------
+
         if dropout is not None and hasattr(backbone, "head_drop"):
             backbone.head_drop = nn.Dropout(p=dropout)
 
         self.backbone = backbone
 
-    # ------------------------------------------------------------------
+    # ================================================================
     # Reprodutibilidade
+    # ================================================================
 
     @staticmethod
     def set_seed(seed=None):
+
         if seed is None:
             return
+
         random.seed(seed)
         np.random.seed(seed)
         torch.manual_seed(seed)
         torch.cuda.manual_seed_all(seed)
 
+    # ================================================================
+    # Forward
+    # ================================================================
+
     def forward(self, x):
-        # ---- garante entrada no tamanho fixo esperado pelo ViT (abordagem padrão na literatura) ----
-        if x.shape[-2] != self.img_size or x.shape[-1] != self.img_size:
+
+        # Garante entrada no tamanho esperado pelo ViT
+        if (
+            x.shape[-2] != self.img_size
+            or x.shape[-1] != self.img_size
+        ):
+
             x = F.interpolate(
                 x,
                 size=(self.img_size, self.img_size),
                 mode="bilinear",
                 align_corners=False,
             )
-        return self.backbone(x)  # logits, sem softmax -> CrossEntropyLoss
 
-    # ------------------------------------------------------------------
-    # Helper para reportar os devices em uso
+        # logits, sem softmax
+        return self.backbone(x)
+
+    # ================================================================
+    # Device report
+    # ================================================================
 
     def _print_device_report(self, device):
-        print("\n\t Device report:")
-        print(f"\t  - torch.cuda.is_available(): {torch.cuda.is_available()}")
-        if torch.cuda.is_available():
-            print(f"\t  - GPU(s) visível(is): {torch.cuda.device_count()}")
-            print(f"\t  - GPU atual: {torch.cuda.current_device()} "
-                  f"({torch.cuda.get_device_name(torch.cuda.current_device())})")
-        print(f"\t  - device solicitado para treino: {device}")
-        print(f"\t  - device dos parâmetros do modelo: {next(self.parameters()).device}\n")
 
-    # ------------------------------------------------------------------
-    # Cálculo de métricas a partir de preds/true já acumulados
-    # (compartilhado entre a acumulação de treino e a avaliação de validação,
-    #  garante que a definição das métricas seja idêntica nos dois casos)
+        print("\n\t Device report:")
+
+        print(
+            f"\t  - torch.cuda.is_available(): "
+            f"{torch.cuda.is_available()}"
+        )
+
+        if torch.cuda.is_available():
+
+            print(
+                f"\t  - GPU(s) visível(is): "
+                f"{torch.cuda.device_count()}"
+            )
+
+            print(
+                f"\t  - GPU atual: "
+                f"{torch.cuda.current_device()} "
+                f"({torch.cuda.get_device_name(torch.cuda.current_device())})"
+            )
+
+        print(
+            f"\t  - device solicitado para treino: "
+            f"{device}"
+        )
+
+        print(
+            f"\t  - device dos parâmetros do modelo: "
+            f"{next(self.parameters()).device}\n"
+        )
+
+    # ================================================================
+    # Métricas
+    # ================================================================
 
     @staticmethod
-    def _compute_metrics_from_preds(avg_loss, preds, true):
+    def _compute_metrics_from_preds(
+        avg_loss,
+        preds,
+        true,
+    ):
+
         return {
-            "loss": avg_loss,
-            "acc": float(np.mean(preds == true)),
-            "balanced_acc": balanced_accuracy_score(true, preds),
-            "f1_macro": f1_score(true, preds, average="macro", zero_division=0),
-            "f1_micro": f1_score(true, preds, average="micro", zero_division=0),
-            "precision_macro": precision_score(true, preds, average="macro", zero_division=0),
-            "recall_macro": recall_score(true, preds, average="macro", zero_division=0),
-            "kappa": cohen_kappa_score(true, preds),
+
+            "loss":
+                avg_loss,
+
+            "acc":
+                float(np.mean(preds == true)),
+
+            "balanced_acc":
+                balanced_accuracy_score(
+                    true,
+                    preds,
+                ),
+
+            "f1_macro":
+                f1_score(
+                    true,
+                    preds,
+                    average="macro",
+                    zero_division=0,
+                ),
+
+            "f1_micro":
+                f1_score(
+                    true,
+                    preds,
+                    average="micro",
+                    zero_division=0,
+                ),
+
+            "precision_macro":
+                precision_score(
+                    true,
+                    preds,
+                    average="macro",
+                    zero_division=0,
+                ),
+
+            "recall_macro":
+                recall_score(
+                    true,
+                    preds,
+                    average="macro",
+                    zero_division=0,
+                ),
+
+            "kappa":
+                cohen_kappa_score(
+                    true,
+                    preds,
+                ),
         }
 
-    # ------------------------------------------------------------------
-    # Treino
+    # ================================================================
+    # Treinamento
+    # ================================================================
 
     def fit(
         self,
@@ -3725,28 +4223,59 @@ class MulticlassViTTiny(nn.Module):
         patience=None,
         verbose=1,
     ):
-        # ---- verbose: 0 = silencioso | 1 = resumo por época (default) | 2 = também progresso por batch ----
+
         self.to(device)
 
-        # ---- reporta os devices disponíveis/utilizados antes de começar o treino ----
+        # --------------------------------------------------------------
+        # Device
+        # --------------------------------------------------------------
+
         self._print_device_report(device)
 
-        optimizer = optim.Adam(self.parameters(), lr=lr, weight_decay=weight_decay)
+        # --------------------------------------------------------------
+        # Optimizer / Loss
+        # --------------------------------------------------------------
+
+        optimizer = optim.Adam(
+            self.parameters(),
+            lr=lr,
+            weight_decay=weight_decay,
+        )
+
         criterion = nn.CrossEntropyLoss()
 
         if verbose >= 1:
-            print(f'\n\t Trainning...   epochs: \033[96;96m{epochs}\033[0m \n')
+
+            print(
+                f"\n\t Trainning...   "
+                f"epochs: \033[96;96m{epochs}\033[0m \n"
+            )
+
+        # --------------------------------------------------------------
+        # Histórico
+        # --------------------------------------------------------------
 
         metric_names = [
-            "loss", "acc", "balanced_acc",
-            "f1_macro", "f1_micro",
-            "precision_macro", "recall_macro",
+            "loss",
+            "acc",
+            "balanced_acc",
+            "f1_macro",
+            "f1_micro",
+            "precision_macro",
+            "recall_macro",
             "kappa",
         ]
+
         history = {}
+
         for m in metric_names:
+
             history[f"train_{m}"] = []
             history[f"val_{m}"] = []
+
+        # --------------------------------------------------------------
+        # Melhor modelo
+        # --------------------------------------------------------------
 
         best_val_loss = float("inf")
         best_state = None
@@ -3754,176 +4283,471 @@ class MulticlassViTTiny(nn.Module):
 
         n_batches = len(train_loader)
 
-        for epoch in range(1, epochs + 1):
-            epoch_start_time = time.time()  # ---- marca o início da época (antes do primeiro passo) ----
+        # ==============================================================
+        # Épocas
+        # ==============================================================
 
-            # ---- passo de otimização (treino) + acumulação de métricas de treino ----
+        for epoch in range(1, epochs + 1):
+
+            epoch_start_time = time.time()
+
+            # ----------------------------------------------------------
+            # TRAIN
+            # ----------------------------------------------------------
+
             self.train()
 
             running_train_loss = 0.0
             n_train_samples = 0
-            train_preds_list, train_true_list = [], []
 
-            for batch_idx, (imgs, y_is, c_is, n_is) in enumerate(train_loader, start=1):
-                imgs, y_is = imgs.to(device), y_is.to(device)
+            train_preds_list = []
+            train_true_list = []
+
+            for batch_idx, (
+                imgs,
+                y_is,
+                c_is,
+                n_is,
+            ) in enumerate(
+                train_loader,
+                start=1,
+            ):
+
+                imgs = imgs.to(device)
+                y_is = y_is.to(device)
 
                 optimizer.zero_grad()
+
                 logits = self(imgs)
-                loss = criterion(logits, y_is)
+
+                loss = criterion(
+                    logits,
+                    y_is,
+                )
+
                 loss.backward()
                 optimizer.step()
 
-                # ---- acumula loss/preds/true reaproveitando os logits já calculados ----
-                # (sob no_grad, não afeta zero_grad/forward/loss/backward/step acima)
-                with torch.no_grad():
-                    batch_size = imgs.size(0)
-                    running_train_loss += loss.item() * batch_size
-                    n_train_samples += batch_size
-                    train_preds_list.append(torch.argmax(logits, dim=1).detach().cpu())
-                    train_true_list.append(y_is.detach().cpu())
+                # ------------------------------------------------------
+                # Acumulação das métricas
+                # ------------------------------------------------------
 
-                # ---- progresso por batch (só aparece com verbose=2) ----
+                with torch.no_grad():
+
+                    batch_size = imgs.size(0)
+
+                    running_train_loss += (
+                        loss.item() * batch_size
+                    )
+
+                    n_train_samples += batch_size
+
+                    train_preds_list.append(
+                        torch.argmax(
+                            logits,
+                            dim=1,
+                        )
+                        .detach()
+                        .cpu()
+                    )
+
+                    train_true_list.append(
+                        y_is
+                        .detach()
+                        .cpu()
+                    )
+
+                # ------------------------------------------------------
+                # Progresso por batch
+                # ------------------------------------------------------
+
                 if verbose >= 2:
+
                     print(
-                        f"\r    [Epoch {epoch:03d}/{epochs}] "
-                        f"batch {batch_idx:04d}/{n_batches} - loss={loss.item():.4f}",
-                        end="", flush=True,
+                        f"\r    "
+                        f"[Epoch {epoch:03d}/{epochs}] "
+                        f"batch "
+                        f"{batch_idx:04d}/{n_batches} "
+                        f"- loss={loss.item():.4f}",
+                        end="",
+                        flush=True,
                     )
 
             if verbose >= 2:
-                print()  # quebra de linha após a barra de progresso da última batch
+                print()
 
-            # ---- métricas de treino calculadas a partir do que foi acumulado durante a própria varredura ----
-            train_avg_loss = running_train_loss / n_train_samples
-            train_preds = torch.cat(train_preds_list).numpy()
-            train_true = torch.cat(train_true_list).numpy()
-            train_metrics = self._compute_metrics_from_preds(train_avg_loss, train_preds, train_true)
+            # ----------------------------------------------------------
+            # Métricas de treino
+            # ----------------------------------------------------------
 
-            # ---- avaliação em validação: única varredura separada, sem atualização de pesos ----
-            val_metrics = self._evaluate(val_loader, criterion, device)
+            train_avg_loss = (
+                running_train_loss
+                / n_train_samples
+            )
+
+            train_preds = torch.cat(
+                train_preds_list
+            ).numpy()
+
+            train_true = torch.cat(
+                train_true_list
+            ).numpy()
+
+            train_metrics = (
+                self._compute_metrics_from_preds(
+                    train_avg_loss,
+                    train_preds,
+                    train_true,
+                )
+            )
+
+            # ----------------------------------------------------------
+            # VALIDATION
+            # ----------------------------------------------------------
+
+            val_metrics = self._evaluate(
+                val_loader,
+                criterion,
+                device,
+            )
+
+            # ----------------------------------------------------------
+            # Histórico
+            # ----------------------------------------------------------
 
             for m in metric_names:
-                history[f"train_{m}"].append(train_metrics[m])
-                history[f"val_{m}"].append(val_metrics[m])
 
-            if verbose >= 1:
-                print(
-                    f"\n[Epoch {epoch:03d}/{epochs}] "
-                    f"train_loss={train_metrics['loss']:.4f} | val_loss={val_metrics['loss']:.4f} | "
-                    f"train_acc={train_metrics['acc']:.4f} | val_acc={val_metrics['acc']:.4f} | "
-                    f"train_f1_macro={train_metrics['f1_macro']:.4f} | val_f1_macro={val_metrics['f1_macro']:.4f}"
+                history[
+                    f"train_{m}"
+                ].append(
+                    train_metrics[m]
                 )
 
-            # ---- checkpoint do melhor modelo (critério: loss na validação, não acurácia) ----
-            if val_metrics["loss"] < best_val_loss:
-                best_val_loss = val_metrics["loss"]
-                best_state = deepcopy(self.state_dict())
+                history[
+                    f"val_{m}"
+                ].append(
+                    val_metrics[m]
+                )
 
-                # ---- salva estado + config, para permitir carregamento genérico ----
+            # ----------------------------------------------------------
+            # Print
+            # ----------------------------------------------------------
+
+            if verbose >= 1:
+
+                print(
+
+                    f"\n[Epoch "
+                    f"{epoch:03d}/{epochs}] "
+
+                    f"train_loss="
+                    f"{train_metrics['loss']:.4f} | "
+
+                    f"val_loss="
+                    f"{val_metrics['loss']:.4f} | "
+
+                    f"train_acc="
+                    f"{train_metrics['acc']:.4f} | "
+
+                    f"val_acc="
+                    f"{val_metrics['acc']:.4f} | "
+
+                    f"train_f1_macro="
+                    f"{train_metrics['f1_macro']:.4f} | "
+
+                    f"val_f1_macro="
+                    f"{val_metrics['f1_macro']:.4f}"
+                )
+
+            # ----------------------------------------------------------
+            # Checkpoint
+            # ----------------------------------------------------------
+
+            if val_metrics["loss"] < best_val_loss:
+
+                best_val_loss = (
+                    val_metrics["loss"]
+                )
+
+                best_state = deepcopy(
+                    self.state_dict()
+                )
+
                 torch.save(
                     {
-                        "model_class": self.MODEL_NAME,
-                        "config": self.config,
-                        "state_dict": best_state,
+                        "model_class":
+                            self.MODEL_NAME,
+
+                        "config":
+                            self.config,
+
+                        "state_dict":
+                            best_state,
                     },
                     checkpoint_path,
                 )
 
                 epochs_no_improve = 0
+
                 if verbose >= 1:
-                    print(f"  -> novo melhor modelo salvo em '{checkpoint_path}' (val_loss={best_val_loss:.4f})")
+
+                    print(
+                        f"  -> novo melhor modelo "
+                        f"salvo em "
+                        f"'{checkpoint_path}' "
+                        f"(val_loss="
+                        f"{best_val_loss:.4f})"
+                    )
+
             else:
+
                 epochs_no_improve += 1
 
-            # ---- duração total da época (do primeiro passo até o fim de todo o processamento, incl. checkpoint) ----
-            epoch_duration = time.time() - epoch_start_time
+            # ----------------------------------------------------------
+            # Tempo da época
+            # ----------------------------------------------------------
+
+            epoch_duration = (
+                time.time()
+                - epoch_start_time
+            )
 
             if verbose >= 1:
-                print(f"\n \033[96;92m time={epoch_duration:.2f}s \033[0m")
 
-            if patience is not None and epochs_no_improve >= patience:
+                print(
+                    f"\n \033[96;92m "
+                    f"time="
+                    f"{epoch_duration:.2f}s "
+                    f"\033[0m"
+                )
+
+            # ----------------------------------------------------------
+            # Early stopping
+            # ----------------------------------------------------------
+
+            if (
+                patience is not None
+                and epochs_no_improve >= patience
+            ):
+
                 if verbose >= 1:
-                    print(f"  -> early stopping na época {epoch} (sem melhora por {patience} épocas)")
+
+                    print(
+                        f"  -> early stopping "
+                        f"na época {epoch} "
+                        f"(sem melhora por "
+                        f"{patience} épocas)"
+                    )
+
                 break
 
+        # --------------------------------------------------------------
+        # Recuperar melhor modelo
+        # --------------------------------------------------------------
+
         if best_state is not None:
-            self.load_state_dict(best_state)
+
+            self.load_state_dict(
+                best_state
+            )
 
         return history
 
-    # ------------------------------------------------------------------
-    # Avaliação interna (usada no fit apenas para validação)
+    # ================================================================
+    # Avaliação
+    # ================================================================
 
     @torch.no_grad()
-    def _evaluate(self, loader, criterion, device):
+    def _evaluate(
+        self,
+        loader,
+        criterion,
+        device,
+    ):
+
         self.eval()
+
         running_loss = 0.0
         n_samples = 0
-        all_preds, all_true = [], []
 
-        for imgs, y_is, c_is, n_is in loader:
-            imgs, y_is = imgs.to(device), y_is.to(device)
+        all_preds = []
+        all_true = []
+
+        for (
+            imgs,
+            y_is,
+            c_is,
+            n_is,
+        ) in loader:
+
+            imgs = imgs.to(device)
+            y_is = y_is.to(device)
 
             logits = self(imgs)
-            loss = criterion(logits, y_is)
-            running_loss += loss.item() * imgs.size(0)
-            n_samples += imgs.size(0)
 
-            preds = torch.argmax(logits, dim=1)
+            loss = criterion(
+                logits,
+                y_is,
+            )
 
-            all_preds.append(preds.cpu())
-            all_true.append(y_is.cpu())
+            running_loss += (
+                loss.item()
+                * imgs.size(0)
+            )
 
-        avg_loss = running_loss / n_samples
-        preds = torch.cat(all_preds).numpy()
-        true = torch.cat(all_true).numpy()
+            n_samples += (
+                imgs.size(0)
+            )
 
-        return self._compute_metrics_from_preds(avg_loss, preds, true)
+            preds = torch.argmax(
+                logits,
+                dim=1,
+            )
 
-    # ------------------------------------------------------------------
+            all_preds.append(
+                preds.cpu()
+            )
+
+            all_true.append(
+                y_is.cpu()
+            )
+
+        avg_loss = (
+            running_loss
+            / n_samples
+        )
+
+        preds = torch.cat(
+            all_preds
+        ).numpy()
+
+        true = torch.cat(
+            all_true
+        ).numpy()
+
+        return (
+            self._compute_metrics_from_preds(
+                avg_loss,
+                preds,
+                true,
+            )
+        )
+
+    # ================================================================
     # Predição
+    # ================================================================
 
     @torch.no_grad()
-    def predict(self, loader, device="cuda"):
+    def predict(
+        self,
+        loader,
+        device="cuda",
+    ):
+
         self.to(device)
         self.eval()
 
-        all_probs, all_preds, all_true = [], [], []
-        all_species, all_names = [], []
+        all_probs = []
+        all_preds = []
+        all_true = []
 
-        for imgs, y_is, c_is, n_is in loader:
+        all_species = []
+        all_names = []
+
+        for (
+            imgs,
+            y_is,
+            c_is,
+            n_is,
+        ) in loader:
+
             imgs = imgs.to(device)
-            logits = self(imgs)
-            probs = torch.softmax(logits, dim=1)
-            preds = torch.argmax(probs, dim=1)
 
-            all_probs.append(probs.cpu())
-            all_preds.append(preds.cpu())
-            all_true.append(y_is)
-            all_species.extend(c_is)
-            all_names.extend(n_is)
+            logits = self(imgs)
+
+            probs = torch.softmax(
+                logits,
+                dim=1,
+            )
+
+            preds = torch.argmax(
+                probs,
+                dim=1,
+            )
+
+            all_probs.append(
+                probs.cpu()
+            )
+
+            all_preds.append(
+                preds.cpu()
+            )
+
+            all_true.append(
+                y_is
+            )
+
+            all_species.extend(
+                c_is
+            )
+
+            all_names.extend(
+                n_is
+            )
 
         return {
-            "probs": torch.cat(all_probs).numpy(),
-            "preds": torch.cat(all_preds).numpy(),
-            "true": torch.cat(all_true).numpy(),
-            "species": all_species,
-            "filenames": all_names,
+
+            "probs":
+                torch.cat(
+                    all_probs
+                ).numpy(),
+
+            "preds":
+                torch.cat(
+                    all_preds
+                ).numpy(),
+
+            "true":
+                torch.cat(
+                    all_true
+                ).numpy(),
+
+            "species":
+                all_species,
+
+            "filenames":
+                all_names,
         }
 
-    # ------------------------------------------------------------------
-    # Carregamento genérico (o checkpoint carrega sua própria config)
+    # ================================================================
+    # Load
+    # ================================================================
 
     @classmethod
-    def load(cls, checkpoint_path, device="cuda"):
-        checkpoint = torch.load(checkpoint_path, map_location=device)
-        model = cls(**checkpoint["config"])
-        model.load_state_dict(checkpoint["state_dict"])
+    def load(
+        cls,
+        checkpoint_path,
+        device="cuda",
+    ):
+
+        checkpoint = torch.load(
+            checkpoint_path,
+            map_location=device,
+        )
+
+        model = cls(
+            **checkpoint["config"]
+        )
+
+        model.load_state_dict(
+            checkpoint["state_dict"]
+        )
+
         model.to(device)
         model.eval()
-        return model
 
-    
+        return model
+        
 
 #======================================================================
 #======================================================================

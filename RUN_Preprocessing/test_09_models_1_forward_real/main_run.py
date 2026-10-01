@@ -86,7 +86,7 @@ def run_training(config):
 
     # print(os.getcwd())
 
-    if PC not in ["NITRO", "HELIOS", "DANTE", "EUROPA"]:
+    if PC not in ["NITRO", "HELIOS", "DANTE", "EUROPA", "EMBRAPA"]:
         raise ValueError(f"PC: {PC} not correct")
 
     #======================================================================
@@ -98,6 +98,8 @@ def run_training(config):
         PC_DIR = f"/run/media/marcelo/HD_8t/Marcelo__Seagate_8tb/Embrapa/Embrapa_Experimentos"
     elif PC == "EUROPA":
         PC_DIR = f"/home/u1469618/Documentos/Datasets/Embrapa_Experimentos"
+    elif PC == "EMBRAPA":
+        PC_DIR = f"D:/Marcelo/Datasets/Planta_Daninha"
     else:
         PC_DIR = f"/home/u14696181/Documents/Datasets/Embrapa_Experimentos"
 

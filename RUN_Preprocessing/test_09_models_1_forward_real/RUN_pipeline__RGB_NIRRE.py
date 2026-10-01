@@ -3,7 +3,7 @@ import yaml
 from time import sleep
 from itertools import product
 
-print(f"\n work_dir: {os.getcwd()[-50:]} \n")
+print(f"\n work_dir: \n{os.getcwd()} \n")
 
 # GPU
 # os.environ["CUDA_VISIBLE_DEVICES"] = "0"
@@ -17,9 +17,11 @@ print(f"\n work_dir: {os.getcwd()[-50:]} \n")
 # DANTE
 # os.chdir("/home/u14696181/Documents/python_projects/Planta_Daninha_Embrapa")
 
-# EUROPA
-os.chdir("/home/u1469618/Documentos/python_projects/Planta_Daninha_Boa_Vista")
+# # EUROPA
+# os.chdir("/home/u1469618/Documentos/python_projects/Planta_Daninha_Boa_Vista")
 
+# EMBRAPA
+os.chdir("D:/Marcelo/python_projects/Planta_Daninha")
 
 from RUN_Preprocessing.test_09_models_1_forward_real.main_preprocessing import run_preprocessing
 from RUN_Preprocessing.test_09_models_1_forward_real.main_run import run_training
@@ -44,7 +46,7 @@ print("\n\n GRID: \n")
 # multiview_data_nickname_list = ["RGB_NIR_RE.yaml", "RGB_entropy.yaml", "RGB.yaml", "RGB_LBP.yaml", "RGB_entropy_LBP_Zoom"]
 multiview_data_nickname_list = ["RGB_NIR_RE.yaml"]
 
-seed_model_list = list(range(10, 60, 10))
+seed_model_list = list(range(9, 100, 10))
 
 epochs_list = [30]
 augmentation_list = [True]
@@ -68,7 +70,7 @@ multiview_data_nickname = multiview_data_nickname_list[0]
 epochs = 2
 aug_bool = True
 dropout = 0.2
-batch_size = 12
+batch_size = 8
 lr = 1e-4
 pretrained = True
 model_name = "SmallCNN"
@@ -129,6 +131,7 @@ for multiview_data_nickname in multiview_data_nickname_list:          # model_na
                                             print(f"{x}: \033[96;96m{config['MODEL'][x]}\033[0m")
 
                                         print(f"\n MULTIVIEW_DATA_NICKNAME: \033[96;95m {config['MULTIVIEW_DATA_NICKNAME']} \033[0m")
+                                        print(f" PC: \033[96;95m {config['PC']} \033[0m")
 
                                         print(f"\n VIEWS:")
                                         for X in config['VIEWS']:
@@ -137,11 +140,11 @@ for multiview_data_nickname in multiview_data_nickname_list:          # model_na
 
                                         #-----------------------------------------------------------------------
 
-                                        # run_preprocessing(config)
+                                        run_preprocessing(config)  # preprocessa os dados
 
-                                        config_function(config)
+                                        # config_function(config)
 
-                                        run_training(config)
+                                        run_training(config)    # Dataset, Dataloader, trainning
 
                                         print("\n\033[96;91m\t === PIPELINE FINALIZADO === \t\033[0m \n\n")
 

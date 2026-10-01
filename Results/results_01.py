@@ -16,7 +16,11 @@ def p(data):
 #======================================================================
 
 
-results_dir = "/home/u14696181/Documents/Datasets/Embrapa_Experimentos/Results/MTV_5_BANDS"
+results_dir = "D:\Marcelo\Datasets\Planta_Daninha\Results\Multiview_Texture\RGB"
+results_dir = "D:\Marcelo\Datasets\Planta_Daninha\Results\Multiview_Texture__AUG\RGB"
+results_dir = "D:\Marcelo\Datasets\Planta_Daninha\Results\Multiview_Texture__AUG\RGB_entropy_v2"
+
+
 
 results_list = os.listdir(results_dir)
 
@@ -40,13 +44,125 @@ for ith, ith_rst_name in enumerate(results_list):   # ith, ith_rst_name = 0, res
 
 df
 
-inter_cols = ['period', 'MODEL_NAME', 'SEED_MODEL', 'PRETRAINED', 'BATCH_SIZE', \
+inter_cols = ['NICKNAME', 'MODEL_NAME', 'SEED_MODEL', 'PRETRAINED', 'BATCH_SIZE', \
               'EPOCHS', 'DROPOUT', 'N_BANDS', 'AUGMENTATION', 'TIME_TRAIN', 'BEST_EPOCH', \
               'N_PARAMS', 'acuracia', 'acuracia_balanceada', 'precision_macro', 
               'recall_macro', 'f1_macro', 'cohen_kappa', 'matthews_corrcoef']
 
+df[inter_cols]
+
+df[inter_cols].groupby("MODEL_NAME")["acuracia"].mean()
+
+
+df_[inter_cols].groupby("MODEL_NAME")["acuracia"].mean()
+
 p(df[df['EPOCHS'] > 1].sort_values(["MODEL_NAME", "AUGMENTATION"]).drop(["NUM_WORKERS", "PIN_MEMORY", "PERSISTENT_WORKERS"], axis=1))
 p(df[(df['EPOCHS'] > 1) & (df['AUGMENTATION'])].sort_values(["acuracia"], ascending=False).drop(["DROPOUT", "NUM_WORKERS", "PIN_MEMORY", "PERSISTENT_WORKERS"], axis=1))
+
+
+
+
+
+import os
+import pandas as pd
+
+
+results_dir = r"D:\Marcelo\Datasets\Planta_Daninha\Results"
+
+# ============================================================
+# 1. Procurar todos os df_metric_test.csv recursivamente
+# ============================================================
+
+dfs = []
+
+for root, dirs, files in os.walk(results_dir):
+
+    if "df_metric_test.csv" in files:
+
+        file_path = os.path.join(root, "df_metric_test.csv")
+
+        try:
+            df_i = pd.read_csv(file_path)
+
+            # opcional: guardar origem para inspeção/debug
+            df_i["SOURCE"] = file_path
+
+            dfs.append(df_i)
+
+        except Exception as e:
+            print(f"Erro ao ler:\n{file_path}")
+            print(e)
+
+
+# ============================================================
+# 2. Concatenar todos os resultados
+# ============================================================
+
+df = pd.concat(dfs, ignore_index=True)
+
+print(f"Arquivos encontrados: {len(dfs)}")
+print(f"Resultados individuais: {len(df)}")
+
+# df=df[df["AUGMENTATION"] == False]
+
+# ============================================================
+# 3. Agrupar
+# ============================================================
+
+df_grouped = (
+    df
+    .groupby(
+        ["NICKNAME", "AUGMENTATION", "MODEL_NAME"],
+        dropna=False
+    )
+    .agg(
+        acuracia=("acuracia", "mean"),
+        N=("acuracia", "size")
+    )
+    .reset_index()
+)
+
+
+# ============================================================
+# 4. Ordenar
+# ============================================================
+
+df_grouped = df_grouped.sort_values(
+    ["NICKNAME", "AUGMENTATION", "MODEL_NAME"]
+).reset_index(drop=True)
+
+print(df_grouped)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 #======================================================================
 # Best Model
