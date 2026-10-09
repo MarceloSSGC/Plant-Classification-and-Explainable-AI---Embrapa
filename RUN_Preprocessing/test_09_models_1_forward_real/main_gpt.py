@@ -8,6 +8,15 @@ from time import sleep
 from itertools import product
 from math import prod
 
+# python -m RUN_Preprocessing.test_09_models_1_forward_real.main_gpt
+
+
+# Start-Process -FilePath python `
+#     -ArgumentList "-m RUN_Preprocessing.test_09_models_1_forward_real.main_gpt" `
+#     -WorkingDirectory "D:\Marcelo\python_projects\Planta_Daninha" `
+#     -RedirectStandardOutput "D:\Marcelo\train_out.log" `
+#     -RedirectStandardError "D:\Marcelo\train_err.log" `
+#     -WindowStyle Hidden
 
 # ============================================================
 # Configurações gerais
@@ -16,6 +25,36 @@ from math import prod
 TEST_NUMBER = "test_09_models_1_forward_real"
 
 SLEEP_BETWEEN_RUNS = 5
+
+
+# ============================================================
+# PC
+# ============================================================
+
+pcs_dir_list = [
+    # NITRO
+    "/media/marcelo/HD_8t/Marcelo__Seagate_8tb/Embrapa/Embrapa_Experimentos",
+    # HELIOS
+    "/run/media/marcelo/HD_8t/Marcelo__Seagate_8tb/Embrapa/Embrapa_Experimentos",
+    # EUROPA
+    "/home/u1469618/Documentos/Datasets/Embrapa_Experimentos",
+    # EMBRAPA
+    "D:/Marcelo/Datasets/Planta_Daninha",
+    # DANTE
+    "/home/u14696181/Documents/Datasets/Embrapa_Experimentos"
+]
+
+for ith_PC_DIR in pcs_dir_list:
+
+    try:
+        PC = Path(os.path.join(ith_PC_DIR, "machine_name.txt")).read_text(encoding="utf-8").strip()
+        PC_DIR = ith_PC_DIR
+    except Exception as e:
+        # print(f"Erro: {e}")
+        A=7
+
+print(f"\n PC: \033[96;94m{PC}\033[0m")
+print(f" PC_DIR: \033[96;94m{PC_DIR}\033[0m \n")
 
 
 # ============================================================
@@ -68,13 +107,13 @@ def build_grid():
     return {
 
         "multiview_data_nickname": [
-            # "RGB_NIR_RE.yaml"
-            # "RGB.yaml.yaml"
-            # "RGB_entropy_v2.yaml"
-            "RGB_NIR_RE_entropy_v2.yaml"
+            "RGB_NIR_RE.yaml",
+            # "RGB.yaml",
+            # "RGB_entropy_v2.yaml",
+            "RGB_NIR_RE_entropy_v2.yaml",
         ],
 
-        "seed_model": list(range(6, 100, 10)),
+        "seed_model": list(range(9, 60, 10)),
 
         "epochs": [
             30
@@ -89,7 +128,7 @@ def build_grid():
         ],
 
         "batch_size": [
-            8
+            4
         ],
 
         "lr": [
@@ -101,10 +140,14 @@ def build_grid():
         ],
 
         "model_name": [
+            "RegNetY400MF",
+            "ShuffleNetV2x1_0",
+            "EfficientNetB0",
+
             "SmallCNN",
             "MobileNetV3Small",
             "ResNet18",
-            "ConvNeXtTiny",
+            # "ConvNeXtTiny",
             "ViTTiny",
         ],
     }
@@ -176,7 +219,8 @@ def main():
 
     combinations = product(*grid_values)
 
-    # experiment_idx, combination = 1, next(iter(combinations))
+    experiment_idx, combination = 1, next(iter(combinations))
+
     for experiment_idx, combination in enumerate(combinations, start=1):
 
         params = dict(zip(grid_names, combination))
@@ -217,6 +261,13 @@ def main():
                 f"{expected_nickname} != "
                 f"{config['MULTIVIEW_DATA_NICKNAME']}"
             )
+
+
+        # ----------------------------------------------------
+        # PC 
+
+        config['PC'] = PC
+        config['PC_DIR'] = PC_DIR
 
         # ----------------------------------------------------
         # Experiment Name
@@ -311,7 +362,7 @@ def main():
 
         run_preprocessing(config)
 
-        config_function(config)
+        # config_function(config)
 
         run_training(config)
 

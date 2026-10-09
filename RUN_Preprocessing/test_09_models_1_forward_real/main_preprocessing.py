@@ -26,36 +26,38 @@ def run_preprocessing(config):
 
 
     PC = config["PC"]
+    PC_DIR = config["PC_DIR"]
     INTERACTIVE = config["INTERACTIVE"]
     SEED = config["SEED"]
     MULTIVIEW_DATA_NICKNAME = config["MULTIVIEW_DATA_NICKNAME"]
 
-    print(f"\t  PC: \033[96;95m{PC} \033[0m\n")
-    print(f"\t  Interactive: \033[96;95m{INTERACTIVE} \033[0m\n")
-    print(f"\t  SEED: \033[96;95m{SEED} \033[0m\n")
+    print(f"\t  PC: \033[96;95m{PC} \033[0m")
+    print(f"\t  PC_DIR: \033[96;95m{PC_DIR} \033[0m")
+    print(f"\t  Interactive: \033[96;95m{INTERACTIVE} \033[0m")
+    print(f"\t  SEED: \033[96;95m{SEED} \033[0m")
     print(f"\t  MULTIVIEW_DATA_NICKNAME: \033[96;95m{MULTIVIEW_DATA_NICKNAME} \033[0m\n")
 
     if PC not in ["NITRO", "HELIOS", "DANTE", "EUROPA", "EMBRAPA"]:
         raise ValueError("PC not indentified")
 
-    #======================================================================
-    # PC Directory
+    # #======================================================================
+    # # PC Directory
 
-    if PC == "NITRO":
-        PC_DIR = f"/media/marcelo/HD_8t/Marcelo__Seagate_8tb/Embrapa/Embrapa_Experimentos"
-    elif PC == "HELIOS":
-        PC_DIR = f"/run/media/marcelo/HD_8t/Marcelo__Seagate_8tb/Embrapa/Embrapa_Experimentos"
-    elif PC == "EUROPA":
-        PC_DIR = f"/home/u1469618/Documentos/Datasets/Embrapa_Experimentos"
-    elif PC == "EMBRAPA":
-        PC_DIR = f"D:\Marcelo\Datasets\Planta_Daninha"
-    else:
-        PC_DIR = f"/home/u14696181/Documents/Datasets/Embrapa_Experimentos"
+    # if PC == "NITRO":
+    #     PC_DIR = f"/media/marcelo/HD_8t/Marcelo__Seagate_8tb/Embrapa/Embrapa_Experimentos"
+    # elif PC == "HELIOS":
+    #     PC_DIR = f"/run/media/marcelo/HD_8t/Marcelo__Seagate_8tb/Embrapa/Embrapa_Experimentos"
+    # elif PC == "EUROPA":
+    #     PC_DIR = f"/home/u1469618/Documentos/Datasets/Embrapa_Experimentos"
+    # elif PC == "EMBRAPA":
+    #     PC_DIR = f"D:\Marcelo\Datasets\Planta_Daninha"
+    # else:
+    #     PC_DIR = f"/home/u14696181/Documents/Datasets/Embrapa_Experimentos"
 
     #======================================================================
     # Alignment
 
-    print(f"\n\033[100;01m\t     --- Start Alignment ---     \t\033[0m\n")
+    print(f"\n\033[100;01m\t     --- Start Alignment ---     \t\033[0m")
 
     #======================================================================
     # Base Data
@@ -81,7 +83,7 @@ def run_preprocessing(config):
     align_info_dir = os.path.join(ALIGH_DATA_DIR, "align_info.json")
 
     if os.path.isfile(align_info_dir):
-        print(f"\nDataset Aligned ✅\n")
+        # print(f"\nDataset Aligned ✅\n")
 
         with open(align_info_dir, "r", encoding="utf-8") as file:
             align_info = json.load(file)
@@ -109,7 +111,7 @@ def run_preprocessing(config):
     ####################################################################################
     # Segmentation
 
-    print(f"\n\033[100;01m\t     --- Start Segmentation ---     \t\033[0m\n")
+    print(f"\n\033[100;01m\t     --- Start Segmentation ---     \t\033[0m")
 
     #======================================================================
     # Segmentation Dataset
@@ -130,7 +132,7 @@ def run_preprocessing(config):
     seg_info_dir = os.path.join(SEG_DATA_DIR, "seg_info.json")
 
     if os.path.isfile(seg_info_dir):
-        print(f"\nDataset Segmented ✅\n")
+        # print(f"\nDataset Segmented ✅\n")
 
         with open(seg_info_dir, "r", encoding="utf-8") as file:
             seg_info = json.load(file)
@@ -158,7 +160,7 @@ def run_preprocessing(config):
     # Multiview
 
 
-    print(f"\n\033[100;01m\t     --- Start Multiview ---     \t\033[0m\n")
+    print(f"\n\033[100;01m\t     --- Start Multiview ---     \t\033[0m")
 
     #======================================================================
     # Organizing Views 
@@ -194,7 +196,7 @@ def run_preprocessing(config):
     mtv_info_dir = os.path.join(MTV_DATA_DIR, "mtv_info.json")
 
     if os.path.isfile(mtv_info_dir):
-        print(f"\nDataset Multiview ✅\n")
+        # print(f"\nDataset Multiview ✅\n")
 
         with open(mtv_info_dir, "r", encoding="utf-8") as file:
             mtv_info = json.load(file)
@@ -226,7 +228,7 @@ def run_preprocessing(config):
     ####################################################################################
     # Split
 
-    print(f"\n\033[100;01m\t     --- Start Split ---     \t\033[0m\n")
+    print(f"\n\033[100;01m\t     --- Start Split ---     \t\033[0m")
 
     #======================================================================
     #======================================================================
@@ -245,12 +247,12 @@ def run_preprocessing(config):
     VAL_SIZE = config["VAL_SIZE"]
 
     SPLIT_DATA_NAME = config["MULTIVIEW_DATA_NAME"] + f"__SEED_{SEED}__T_{TRAIN_SIZE}_V_{VAL_SIZE}"
-    SPLIT_DATE_TYPE = config["MULTIVIEW_DATA_TYPE"]
+    SPLIT_DATA_TYPE = config["SPLIT_DATA_TYPE"]
 
     config["SPLIT_DATA_NAME"] = SPLIT_DATA_NAME
-    config["SPLIT_DATE_TYPE"] = SPLIT_DATE_TYPE
+    config["SPLIT_DATE_TYPE"] = SPLIT_DATA_TYPE
 
-    SPLIT_DIR = f"{PC_DIR}/Datasets/Split/{SPLIT_DATE_TYPE}/{SPLIT_DATA_NAME}"
+    SPLIT_DIR = f"{PC_DIR}/Datasets/Split/{SPLIT_DATA_TYPE}/{SPLIT_DATA_NAME}"
 
     if not os.path.isdir(SPLIT_DIR):
         os.makedirs(SPLIT_DIR)
@@ -268,7 +270,7 @@ def run_preprocessing(config):
         split_info = mtv_info.copy()
         split_info["SPLIT"] = {
             "SPLIT_DATA_NAME": SPLIT_DATA_NAME,
-            "SPLIT_DATE_TYPE": SPLIT_DATE_TYPE,
+            "SPLIT_DATA_TYPE": SPLIT_DATA_TYPE,
             "TRAIN_SIZE": TRAIN_SIZE,
             "VAL_SIZE": VAL_SIZE,
         }
@@ -643,7 +645,7 @@ def run_preprocessing(config):
                 f"Nenhum arquivo .npy encontrado em {input_dir}"
             )
 
-        print(f"\nNormalizando {split}: {len(files)} imagens")
+        # print(f"\nNormalizando {split}: {len(files)} imagens")
 
         for i, file_path in enumerate(files):
 
@@ -759,7 +761,7 @@ def run_preprocessing(config):
                     )
 
 
-    print("\nSplit and Normalization ✅\n")
+    # print("\nSplit and Normalization ✅\n")
 
     # print(f"ETAPA 2: \033[96;92m Normalization Finished\033[0m")
 
@@ -769,18 +771,18 @@ def run_preprocessing(config):
     # Data Augmentation
 
 
-    print(f"\n\033[100;01m\t     --- Start Data Augmentation ---     \t\033[0m\n")
+    print(f"\n\033[100;01m\t     --- Start Data Augmentation ---     \t\033[0m")
 
     #======================================================================
     # Directories
 
-    AUG_DATE_NAME = SPLIT_DATA_NAME + "__AUG"
-    AUG_DATE_TYPE = SPLIT_DATE_TYPE + "__AUG"
+    AUG_DATA_NAME = SPLIT_DATA_NAME + "__AUG"
+    AUG_DATA_TYPE = SPLIT_DATA_TYPE + "__AUG"
 
-    config["AUG_DATE_NAME"] = AUG_DATE_NAME
-    config["AUG_DATE_TYPE"] = AUG_DATE_TYPE
+    config["AUG_DATA_NAME"] = AUG_DATA_NAME
+    config["AUG_DATA_TYPE"] = AUG_DATA_TYPE
 
-    AUG_DIR_EXP = f"{PC_DIR}/Datasets/Augmentation/{AUG_DATE_TYPE}/{AUG_DATE_NAME}"
+    AUG_DIR_EXP = f"{PC_DIR}/Datasets/Augmentation/{AUG_DATA_TYPE}/{AUG_DATA_NAME}"
 
     os.makedirs(AUG_DIR_EXP, exist_ok=True)
 
@@ -794,8 +796,8 @@ def run_preprocessing(config):
         aug_infos = split_info.copy()
 
         aug_infos["AUGMENTATION"] = {
-            "AUG_EXPERIMENT_NAME": AUG_DATE_NAME,
-            "AUG_DATE_TYPE": AUG_DATE_TYPE,
+            "AUG_EXPERIMENT_NAME": AUG_DATA_NAME,
+            "AUG_DATE_TYPE": AUG_DATA_TYPE,
             "AUG_DIR_EXP": AUG_DIR_EXP
         }
 
@@ -1207,7 +1209,7 @@ def run_preprocessing(config):
                 f"Nenhum arquivo .npy encontrado em {input_dir}"
             )
 
-        print(f"\nNormalizando {split}: {len(files)} imagens")
+        # print(f"\nNormalizando {split}: {len(files)} imagens")
 
         for i, file_path in enumerate(files):
 
@@ -1345,7 +1347,7 @@ def run_preprocessing(config):
                     )
 
 
-    print("\nAugmentation ✅\n")
+    # print("\nAugmentation ✅\n")
 
 
     # ============================================================

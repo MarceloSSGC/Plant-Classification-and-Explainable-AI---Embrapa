@@ -1,5 +1,5 @@
 
-PC: EMBRAPA
+PC: None
 INTERACTIVE: True
 # CONFIG_NAME: RGB_&_entropy
 
@@ -72,6 +72,7 @@ SEED: 20
 # SPLIT_DATA_NAME: align_bands_ecc_affine_with_retry__best_band_otsu_green__Multiview_5_BANDS__SEED_20
 # SPLIT_NAME_TYPE: Multiview_SPLIT
 # SPLIT_NAME_TYPE: Multiview_5_BANDS
+SPLIT_DATA_TYPE: Multiview_Texture
 
 TRAIN_SIZE: 0.75
 VAL_SIZE: 0.15

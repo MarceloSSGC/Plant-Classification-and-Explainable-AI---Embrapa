@@ -75,14 +75,18 @@ def run_training(config):
     # Params
 
     PC = config["PC"]
+    PC_DIR = config["PC_DIR"]
     INTERACTIVE = config["INTERACTIVE"]
     SEED_MODEL = config["MODEL"]["SEED_MODEL"]
     MULTIVIEW_DATA_NICKNAME = config["MULTIVIEW_DATA_NICKNAME"]
+    VAL_SIZE = config["VAL_SIZE"]
 
     print(f"\t  PC: \033[96;95m{PC} \033[0m")
+    print(f"\t  PC_DIR: \033[96;95m{PC_DIR} \033[0m")
     print(f"\t  Interactive: \033[96;95m{INTERACTIVE} \033[0m")
     print(f"\t  SEED_MODEL: \033[96;95m{SEED_MODEL} \033[0m\n")
     print(f"\t  MULTIVIEW_DATA_NICKNAME: \033[96;95m{MULTIVIEW_DATA_NICKNAME} \033[0m\n")
+    print(f"\t  VAL_SIZE: \033[96;95m{VAL_SIZE} \033[0m\n")
 
     # print(os.getcwd())
 
@@ -92,16 +96,16 @@ def run_training(config):
     #======================================================================
     # PC Directory
 
-    if PC == "NITRO":
-        PC_DIR = f"/media/marcelo/HD_8t/Marcelo__Seagate_8tb/Embrapa/Embrapa_Experimentos"
-    elif PC == "HELIOS":
-        PC_DIR = f"/run/media/marcelo/HD_8t/Marcelo__Seagate_8tb/Embrapa/Embrapa_Experimentos"
-    elif PC == "EUROPA":
-        PC_DIR = f"/home/u1469618/Documentos/Datasets/Embrapa_Experimentos"
-    elif PC == "EMBRAPA":
-        PC_DIR = f"D:/Marcelo/Datasets/Planta_Daninha"
-    else:
-        PC_DIR = f"/home/u14696181/Documents/Datasets/Embrapa_Experimentos"
+    # if PC == "NITRO":
+    #     PC_DIR = f"/media/marcelo/HD_8t/Marcelo__Seagate_8tb/Embrapa/Embrapa_Experimentos"
+    # elif PC == "HELIOS":
+    #     PC_DIR = f"/run/media/marcelo/HD_8t/Marcelo__Seagate_8tb/Embrapa/Embrapa_Experimentos"
+    # elif PC == "EUROPA":
+    #     PC_DIR = f"/home/u1469618/Documentos/Datasets/Embrapa_Experimentos"
+    # elif PC == "EMBRAPA":
+    #     PC_DIR = f"D:/Marcelo/Datasets/Planta_Daninha"
+    # else:
+    #     PC_DIR = f"/home/u14696181/Documents/Datasets/Embrapa_Experimentos"
 
     #======================================================================
     # GPU
@@ -138,15 +142,15 @@ def run_training(config):
     AUGMENTATION = config["AUGMENTATION"]
 
     SPLIT_DATA_NAME = config["SPLIT_DATA_NAME"]
-    SPLIT_DATE_TYPE = config["SPLIT_DATE_TYPE"]
+    SPLIT_DATA_TYPE = config["SPLIT_DATA_TYPE"]
 
-    AUG_DATE_NAME = config["AUG_DATE_NAME"]
-    AUG_DATE_TYPE = config["AUG_DATE_TYPE"]
+    AUG_DATA_NAME = config["AUG_DATA_NAME"]
+    AUG_DATA_TYPE = config["AUG_DATA_TYPE"]
 
     if AUGMENTATION:
-        TRAIN_DATA_DIR = f"Augmentation/{AUG_DATE_TYPE}/{AUG_DATE_NAME}"
+        TRAIN_DATA_DIR = f"Augmentation/{AUG_DATA_TYPE}/{AUG_DATA_NAME}"
     else:
-        TRAIN_DATA_DIR = f"Split/{SPLIT_DATE_TYPE}/{SPLIT_DATA_NAME}"
+        TRAIN_DATA_DIR = f"Split/{SPLIT_DATA_TYPE}/{SPLIT_DATA_NAME}"
 
     if 'NEW_DATA_DIR' in config.keys() and config['NEW_DATA_DIR']:
         DATA_DIR = f"/home/marcelo/Documents/Datasets/Embrapa/Experimentos/Datasets/{TRAIN_DATA_DIR}"
@@ -160,7 +164,7 @@ def run_training(config):
     # Experiment Name and Directory
 
     EXPERIMENT_NAME = config["EXPERIMENT_NAME"]
-    EXPERIMENT_TYPE = AUG_DATE_TYPE if AUGMENTATION else SPLIT_DATE_TYPE
+    EXPERIMENT_TYPE = AUG_DATA_TYPE if AUGMENTATION else SPLIT_DATA_TYPE
 
     config["EXPERIMENT_TYPE"] = EXPERIMENT_TYPE
 
@@ -345,8 +349,9 @@ def run_training(config):
             print("-"*80 + f"\n\t \033[96;01m  Initialize Training  \033[0m\n")
             print(f" EXPERIMENT_NAME: \033[96;93m{EXPERIMENT_NAME}\033[0m\n")
 
-            print(f" AUGMENTATION: \033[96;95m{AUGMENTATION}\033[0m\n")
-            print(f" SEED_MODEL: \033[96;95m{config['MODEL']['SEED_MODEL']}\033[0m\n")
+            print(f" AUGMENTATION: \033[96;95m{AUGMENTATION}\033[0m")
+            print(f" SEED_MODEL: \033[96;95m{config['MODEL']['SEED_MODEL']}\033[0m")
+            print(f" VAL_SIZE: \033[96;95m{config['VAL_SIZE']}\033[0m\n")
 
             for x in config["MODEL"]:
                 if x == 'SEED_MODEL':
@@ -614,6 +619,8 @@ def run_training(config):
         df_metrics_test = df_metrics_test[df_metrics_test_col]
         df_metrics_test.to_csv(df_metric_test_dir, index=False)
 
+        print(f"\n\t ✅✅✅ TEST: \033[96;93m{str(df_metrics_test.loc[0, 'MODEL_NAME'])} - {round(100*float(df_metrics_test.loc[0, 'acuracia']), 4)}\033[0m ✅✅✅")
+
         labels_test_real = [especies[i] for i in y_test_real]
         labels_test_pred = [especies[i] for i in y_test_pred]
         cl_report_test = classification_report(labels_test_real, labels_test_pred)
@@ -624,7 +631,10 @@ def run_training(config):
             file.write(cl_report_test)
 
     else:
-        print("\n Metrics & Infos ✅\n")
+        df_metrics_test = pd.read_csv(df_metric_test_dir)
+        print(f"\n\t ✅✅✅ TEST: \033[96;93m{str(df_metrics_test.loc[0, 'MODEL_NAME'])} - {round(100*float(df_metrics_test.loc[0, 'acuracia']), 4)}\033[0m ✅✅✅")
+
+        # print("\n Metrics & Infos ✅\n")
 
     #======================================================================
     #======================================================================
@@ -828,6 +838,8 @@ def run_training(config):
         #==================================================================================================
         #==================================================================================================
 
+    else:
+        print(f"APPLY_SHAP: {APPLY_SHAP}")
 
 
 

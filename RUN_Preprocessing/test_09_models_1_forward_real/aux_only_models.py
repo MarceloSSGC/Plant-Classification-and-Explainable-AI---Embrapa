@@ -2272,6 +2272,690 @@ class MulticlassMobileNetV3Large(nn.Module):
 
 #======================================================================
 #======================================================================
+# ShuffleNetV2 x1.0
+
+import time  # necessário para medir a duração de cada época
+
+from torchvision.models import (
+    shufflenet_v2_x1_0,
+    ShuffleNet_V2_X1_0_Weights,
+)
+
+
+class MulticlassShuffleNetV2X1_0(nn.Module):
+    MODEL_NAME = "ShuffleNetV2x1_0"
+
+    def __init__(self, in_channels=5, num_classes=31, pretrained=False, dropout=0.2, seed_model=None):
+        super().__init__()
+
+        # ---- reprodutibilidade: fixa a seed antes de instanciar as camadas ----
+        self.seed_model = seed_model
+        self.set_seed(seed_model)
+
+        # ---- guarda os argumentos de construção para permitir carregamento genérico ----
+        self.config = {
+            "in_channels": in_channels,
+            "num_classes": num_classes,
+            "pretrained": pretrained,
+            "dropout": dropout,
+            "seed_model": seed_model,
+        }
+
+        #-----------------------------------------------------------------
+        # Geral
+        # weights = "IMAGENET1K_V1" if pretrained else None
+        # backbone = shufflenet_v2_x1_0(weights=weights)
+
+        if pretrained:
+            # PC da Embrapa: usa o cache local para evitar download
+            torch.hub.set_dir(r"D:\Marcelo\models\torch_cache")
+            weights = ShuffleNet_V2_X1_0_Weights.IMAGENET1K_V1
+        else:
+            weights = None
+
+        backbone = shufflenet_v2_x1_0(weights=weights)
+
+        #-----------------------------------------------------------------
+
+        # ---- adapta a primeira camada para aceitar 5 bandas em vez de 3 (RGB) ----
+        old_conv = backbone.conv1[0]  # Conv2d(3, 24, kernel=3, stride=2, padding=1, bias=False)
+        new_conv = nn.Conv2d(
+            in_channels,
+            old_conv.out_channels,
+            kernel_size=old_conv.kernel_size,
+            stride=old_conv.stride,
+            padding=old_conv.padding,
+            bias=(old_conv.bias is not None),
+        )
+
+        if pretrained:
+            with torch.no_grad():
+                # copia os pesos RGB originais para os 3 primeiros canais (Blue, Green, Red)
+                new_conv.weight[:, :3, :, :] = old_conv.weight
+                # canais extras (NIR, Red Edge) recebem a média dos pesos RGB como inicialização
+                if in_channels > 3:
+                    mean_w = old_conv.weight.mean(dim=1, keepdim=True)
+                    new_conv.weight[:, 3:, :, :] = mean_w.repeat(1, in_channels - 3, 1, 1)
+
+        backbone.conv1[0] = new_conv
+
+        # ---- adapta a cabeça de classificação para num_classes (com dropout opcional) ----
+        in_features = backbone.fc.in_features  # 1024 (x1.0)
+        if dropout is not None:
+            backbone.fc = nn.Sequential(
+                nn.Dropout(p=dropout),
+                nn.Linear(in_features, num_classes),
+            )
+        else:
+            backbone.fc = nn.Linear(in_features, num_classes)
+
+        self.backbone = backbone
+
+    # ------------------------------------------------------------------
+    # Reprodutibilidade
+
+    @staticmethod
+    def set_seed(seed=None):
+        if seed is None:
+            return
+        random.seed(seed)
+        np.random.seed(seed)
+        torch.manual_seed(seed)
+        torch.cuda.manual_seed_all(seed)
+
+    def forward(self, x):
+        return self.backbone(x)  # logits, sem softmax -> CrossEntropyLoss
+
+    # ------------------------------------------------------------------
+    # Helper para reportar os devices em uso
+
+    def _print_device_report(self, device):
+        print("\n\t Device report:")
+        print(f"\t  - torch.cuda.is_available(): {torch.cuda.is_available()}")
+        if torch.cuda.is_available():
+            print(f"\t  - GPU(s) visível(is): {torch.cuda.device_count()}")
+            print(f"\t  - GPU atual: {torch.cuda.current_device()} "
+                  f"({torch.cuda.get_device_name(torch.cuda.current_device())})")
+        print(f"\t  - device solicitado para treino: {device}")
+        print(f"\t  - device dos parâmetros do modelo: {next(self.parameters()).device}\n")
+
+    # ------------------------------------------------------------------
+    # Cálculo de métricas a partir de preds/true já acumulados
+    # (compartilhado entre a acumulação de treino e a avaliação de validação,
+    #  garante que a definição das métricas seja idêntica nos dois casos)
+
+    @staticmethod
+    def _compute_metrics_from_preds(avg_loss, preds, true):
+        return {
+            "loss": avg_loss,
+            "acc": float(np.mean(preds == true)),
+            "balanced_acc": balanced_accuracy_score(true, preds),
+            "f1_macro": f1_score(true, preds, average="macro", zero_division=0),
+            "f1_micro": f1_score(true, preds, average="micro", zero_division=0),
+            "precision_macro": precision_score(true, preds, average="macro", zero_division=0),
+            "recall_macro": recall_score(true, preds, average="macro", zero_division=0),
+            "kappa": cohen_kappa_score(true, preds),
+        }
+
+    # ------------------------------------------------------------------
+    # Treino
+
+    def fit(
+        self,
+        train_loader,
+        val_loader,
+        epochs=30,
+        lr=1e-3,
+        weight_decay=1e-4,
+        device="cuda",
+        checkpoint_path="best_model.pt",
+        patience=None,
+        verbose=1,
+    ):
+        # ---- verbose: 0 = silencioso | 1 = resumo por época (default) | 2 = também progresso por batch ----
+        self.to(device)
+
+        # ---- reporta os devices disponíveis/utilizados antes de começar o treino ----
+        self._print_device_report(device)
+
+        optimizer = optim.Adam(self.parameters(), lr=lr, weight_decay=weight_decay)
+        criterion = nn.CrossEntropyLoss()
+
+        if verbose >= 1:
+            print(f'\n\t Trainning...   epochs: \033[96;96m{epochs}\033[0m \n')
+
+        metric_names = [
+            "loss", "acc", "balanced_acc",
+            "f1_macro", "f1_micro",
+            "precision_macro", "recall_macro",
+            "kappa",
+        ]
+        history = {}
+        for m in metric_names:
+            history[f"train_{m}"] = []
+            history[f"val_{m}"] = []
+
+        best_val_loss = float("inf")
+        best_state = None
+        epochs_no_improve = 0
+
+        n_batches = len(train_loader)
+
+        for epoch in range(1, epochs + 1):
+            epoch_start_time = time.time()  # ---- marca o início da época (antes do primeiro passo) ----
+
+            # ---- passo de otimização (treino) + acumulação de métricas de treino ----
+            self.train()
+
+            running_train_loss = 0.0
+            n_train_samples = 0
+            train_preds_list, train_true_list = [], []
+
+            for batch_idx, (imgs, y_is, c_is, n_is) in enumerate(train_loader, start=1):
+                imgs, y_is = imgs.to(device), y_is.to(device)
+
+                optimizer.zero_grad()
+                logits = self(imgs)
+                loss = criterion(logits, y_is)
+                loss.backward()
+                optimizer.step()
+
+                # ---- acumula loss/preds/true reaproveitando os logits já calculados ----
+                # (sob no_grad, não afeta zero_grad/forward/loss/backward/step acima)
+                with torch.no_grad():
+                    batch_size = imgs.size(0)
+                    running_train_loss += loss.item() * batch_size
+                    n_train_samples += batch_size
+                    train_preds_list.append(torch.argmax(logits, dim=1).detach().cpu())
+                    train_true_list.append(y_is.detach().cpu())
+
+                # ---- progresso por batch (só aparece com verbose=2) ----
+                if verbose >= 2:
+                    print(
+                        f"\r    [Epoch {epoch:03d}/{epochs}] "
+                        f"batch {batch_idx:04d}/{n_batches} - loss={loss.item():.4f}",
+                        end="", flush=True,
+                    )
+
+            if verbose >= 2:
+                print()  # quebra de linha após a barra de progresso da última batch
+
+            # ---- métricas de treino calculadas a partir do que foi acumulado durante a própria varredura ----
+            train_avg_loss = running_train_loss / n_train_samples
+            train_preds = torch.cat(train_preds_list).numpy()
+            train_true = torch.cat(train_true_list).numpy()
+            train_metrics = self._compute_metrics_from_preds(train_avg_loss, train_preds, train_true)
+
+            # ---- avaliação em validação: única varredura separada, sem atualização de pesos ----
+            val_metrics = self._evaluate(val_loader, criterion, device)
+
+            for m in metric_names:
+                history[f"train_{m}"].append(train_metrics[m])
+                history[f"val_{m}"].append(val_metrics[m])
+
+            # ---- checkpoint do melhor modelo (critério: loss na validação, não acurácia) ----
+            if val_metrics["loss"] < best_val_loss:
+                best_val_loss = val_metrics["loss"]
+                best_state = deepcopy(self.state_dict())
+
+                torch.save(
+                    {
+                        "model_class": self.MODEL_NAME,
+                        "config": self.config,
+                        "state_dict": best_state,
+                    },
+                    checkpoint_path,
+                )
+
+                epochs_no_improve = 0
+                if verbose >= 1:
+                    print(f"  -> novo melhor modelo salvo em '{checkpoint_path}' (val_loss={best_val_loss:.4f})")
+            else:
+                epochs_no_improve += 1
+
+            # ---- duração total da época (do primeiro passo até o fim de todo o processamento, incl. checkpoint) ----
+            epoch_duration = time.time() - epoch_start_time
+
+            if verbose >= 1:
+                print(
+                    f"\n[Epoch {epoch:03d}/{epochs}] "
+                    f"train_loss={train_metrics['loss']:.4f} | val_loss={val_metrics['loss']:.4f} | "
+                    f"train_acc={train_metrics['acc']:.4f} | val_acc={val_metrics['acc']:.4f} | "
+                    f"train_f1_macro={train_metrics['f1_macro']:.4f} | val_f1_macro={val_metrics['f1_macro']:.4f}"
+                )
+                print(f"\n \033[96;92m time={epoch_duration:.2f}s \033[0m")
+
+            # ---- early stopping opcional ----
+            if patience is not None and epochs_no_improve >= patience:
+                if verbose >= 1:
+                    print(f"  -> early stopping na época {epoch} (sem melhora por {patience} épocas)")
+                break
+
+        # recarrega os melhores pesos encontrados durante o treino
+        if best_state is not None:
+            self.load_state_dict(best_state)
+
+        return history
+
+    # ------------------------------------------------------------------
+    # Avaliação interna (usada no fit apenas para validação)
+
+    @torch.no_grad()
+    def _evaluate(self, loader, criterion, device):
+        self.eval()
+        running_loss = 0.0
+        n_samples = 0
+        all_preds, all_true = [], []
+
+        for imgs, y_is, c_is, n_is in loader:
+            imgs, y_is = imgs.to(device), y_is.to(device)
+
+            logits = self(imgs)
+            loss = criterion(logits, y_is)
+            running_loss += loss.item() * imgs.size(0)
+            n_samples += imgs.size(0)
+
+            preds = torch.argmax(logits, dim=1)
+
+            all_preds.append(preds.cpu())
+            all_true.append(y_is.cpu())
+
+        avg_loss = running_loss / n_samples
+        preds = torch.cat(all_preds).numpy()
+        true = torch.cat(all_true).numpy()
+
+        return self._compute_metrics_from_preds(avg_loss, preds, true)
+
+    # ------------------------------------------------------------------
+    # Predição
+
+    @torch.no_grad()
+    def predict(self, loader, device="cuda"):
+        self.to(device)
+        self.eval()
+
+        all_probs, all_preds, all_true = [], [], []
+        all_species, all_names = [], []
+
+        for imgs, y_is, c_is, n_is in loader:
+            imgs = imgs.to(device)
+            logits = self(imgs)
+            probs = torch.softmax(logits, dim=1)
+            preds = torch.argmax(probs, dim=1)
+
+            all_probs.append(probs.cpu())
+            all_preds.append(preds.cpu())
+            all_true.append(y_is)
+            all_species.extend(c_is)
+            all_names.extend(n_is)
+
+        return {
+            "probs": torch.cat(all_probs).numpy(),
+            "preds": torch.cat(all_preds).numpy(),
+            "true": torch.cat(all_true).numpy(),
+            "species": all_species,
+            "filenames": all_names,
+        }
+
+    # ------------------------------------------------------------------
+    # Carregamento genérico (o checkpoint carrega sua própria config)
+
+    @classmethod
+    def load(cls, checkpoint_path, device="cuda"):
+        checkpoint = torch.load(checkpoint_path, map_location=device)
+        model = cls(**checkpoint["config"])
+        model.load_state_dict(checkpoint["state_dict"])
+        model.to(device)
+        model.eval()
+        return model
+
+
+
+#======================================================================
+#======================================================================
+# RegNetY-400MF
+
+import time  # necessário para medir a duração de cada época
+
+from torchvision.models import regnet_y_400mf
+
+
+class MulticlassRegNetY400MF(nn.Module):
+    MODEL_NAME = "RegNetY400MF"
+
+    def __init__(self, in_channels=5, num_classes=31, pretrained=False, dropout=0.2, seed_model=None):
+        super().__init__()
+
+        # ---- reprodutibilidade: fixa a seed antes de instanciar as camadas ----
+        self.seed_model = seed_model
+        self.set_seed(seed_model)
+
+        # ---- guarda os argumentos de construção para permitir carregamento genérico ----
+        self.config = {
+            "in_channels": in_channels,
+            "num_classes": num_classes,
+            "pretrained": pretrained,
+            "dropout": dropout,
+            "seed_model": seed_model,
+        }
+
+        #---------------------------------------------------------
+        # Geral
+
+        # weights = "IMAGENET1K_V1" if pretrained else None
+        # backbone = regnet_y_400mf(weights=weights)
+
+        backbone = regnet_y_400mf(weights=None)
+
+        if pretrained:
+            weights_path = r"D:\Marcelo\models\regnet_y_400mf\regnet_y_400mf-e6988f5f.pth"
+
+            state_dict = torch.load(
+                weights_path,
+                map_location="cpu",
+                weights_only=True,
+            )
+
+            backbone.load_state_dict(state_dict)
+
+
+        #---------------------------------------------------------
+
+        # ---- adapta a primeira camada para aceitar 5 bandas em vez de 3 (RGB) ----
+        old_conv = backbone.stem[0]  # Conv2d(3, 32, kernel=3, stride=2, padding=1, bias=False)
+        new_conv = nn.Conv2d(
+            in_channels,
+            old_conv.out_channels,
+            kernel_size=old_conv.kernel_size,
+            stride=old_conv.stride,
+            padding=old_conv.padding,
+            bias=(old_conv.bias is not None),
+        )
+
+        if pretrained:
+            with torch.no_grad():
+                # copia os pesos RGB originais para os 3 primeiros canais (Blue, Green, Red)
+                new_conv.weight[:, :3, :, :] = old_conv.weight
+                # canais extras (NIR, Red Edge) recebem a média dos pesos RGB como inicialização
+                if in_channels > 3:
+                    mean_w = old_conv.weight.mean(dim=1, keepdim=True)
+                    new_conv.weight[:, 3:, :, :] = mean_w.repeat(1, in_channels - 3, 1, 1)
+
+        backbone.stem[0] = new_conv
+
+        # ---- adapta a cabeça de classificação para num_classes (com dropout opcional) ----
+        in_features = backbone.fc.in_features  # 440 (RegNetY-400MF)
+        if dropout is not None:
+            backbone.fc = nn.Sequential(
+                nn.Dropout(p=dropout),
+                nn.Linear(in_features, num_classes),
+            )
+        else:
+            backbone.fc = nn.Linear(in_features, num_classes)
+
+        self.backbone = backbone
+
+    # ------------------------------------------------------------------
+    # Reprodutibilidade
+
+    @staticmethod
+    def set_seed(seed=None):
+        if seed is None:
+            return
+        random.seed(seed)
+        np.random.seed(seed)
+        torch.manual_seed(seed)
+        torch.cuda.manual_seed_all(seed)
+
+    def forward(self, x):
+        return self.backbone(x)  # logits, sem softmax -> CrossEntropyLoss
+
+    # ------------------------------------------------------------------
+    # Helper para reportar os devices em uso
+
+    def _print_device_report(self, device):
+        print("\n\t Device report:")
+        print(f"\t  - torch.cuda.is_available(): {torch.cuda.is_available()}")
+        if torch.cuda.is_available():
+            print(f"\t  - GPU(s) visível(is): {torch.cuda.device_count()}")
+            print(f"\t  - GPU atual: {torch.cuda.current_device()} "
+                  f"({torch.cuda.get_device_name(torch.cuda.current_device())})")
+        print(f"\t  - device solicitado para treino: {device}")
+        print(f"\t  - device dos parâmetros do modelo: {next(self.parameters()).device}\n")
+
+    # ------------------------------------------------------------------
+    # Cálculo de métricas a partir de preds/true já acumulados
+    # (compartilhado entre a acumulação de treino e a avaliação de validação,
+    #  garante que a definição das métricas seja idêntica nos dois casos)
+
+    @staticmethod
+    def _compute_metrics_from_preds(avg_loss, preds, true):
+        return {
+            "loss": avg_loss,
+            "acc": float(np.mean(preds == true)),
+            "balanced_acc": balanced_accuracy_score(true, preds),
+            "f1_macro": f1_score(true, preds, average="macro", zero_division=0),
+            "f1_micro": f1_score(true, preds, average="micro", zero_division=0),
+            "precision_macro": precision_score(true, preds, average="macro", zero_division=0),
+            "recall_macro": recall_score(true, preds, average="macro", zero_division=0),
+            "kappa": cohen_kappa_score(true, preds),
+        }
+
+    # ------------------------------------------------------------------
+    # Treino
+
+    def fit(
+        self,
+        train_loader,
+        val_loader,
+        epochs=30,
+        lr=1e-3,
+        weight_decay=1e-4,
+        device="cuda",
+        checkpoint_path="best_model.pt",
+        patience=None,
+        verbose=1,
+    ):
+        # ---- verbose: 0 = silencioso | 1 = resumo por época (default) | 2 = também progresso por batch ----
+        self.to(device)
+
+        # ---- reporta os devices disponíveis/utilizados antes de começar o treino ----
+        self._print_device_report(device)
+
+        optimizer = optim.Adam(self.parameters(), lr=lr, weight_decay=weight_decay)
+        criterion = nn.CrossEntropyLoss()
+
+        if verbose >= 1:
+            print(f'\n\t Trainning...   epochs: \033[96;96m{epochs}\033[0m \n')
+
+        metric_names = [
+            "loss", "acc", "balanced_acc",
+            "f1_macro", "f1_micro",
+            "precision_macro", "recall_macro",
+            "kappa",
+        ]
+        history = {}
+        for m in metric_names:
+            history[f"train_{m}"] = []
+            history[f"val_{m}"] = []
+
+        best_val_loss = float("inf")
+        best_state = None
+        epochs_no_improve = 0
+
+        n_batches = len(train_loader)
+
+        for epoch in range(1, epochs + 1):
+            epoch_start_time = time.time()  # ---- marca o início da época (antes do primeiro passo) ----
+
+            # ---- passo de otimização (treino) + acumulação de métricas de treino ----
+            self.train()
+
+            running_train_loss = 0.0
+            n_train_samples = 0
+            train_preds_list, train_true_list = [], []
+
+            for batch_idx, (imgs, y_is, c_is, n_is) in enumerate(train_loader, start=1):
+                imgs, y_is = imgs.to(device), y_is.to(device)
+
+                optimizer.zero_grad()
+                logits = self(imgs)
+                loss = criterion(logits, y_is)
+                loss.backward()
+                optimizer.step()
+
+                # ---- acumula loss/preds/true reaproveitando os logits já calculados ----
+                # (sob no_grad, não afeta zero_grad/forward/loss/backward/step acima)
+                with torch.no_grad():
+                    batch_size = imgs.size(0)
+                    running_train_loss += loss.item() * batch_size
+                    n_train_samples += batch_size
+                    train_preds_list.append(torch.argmax(logits, dim=1).detach().cpu())
+                    train_true_list.append(y_is.detach().cpu())
+
+                # ---- progresso por batch (só aparece com verbose=2) ----
+                if verbose >= 2:
+                    print(
+                        f"\r    [Epoch {epoch:03d}/{epochs}] "
+                        f"batch {batch_idx:04d}/{n_batches} - loss={loss.item():.4f}",
+                        end="", flush=True,
+                    )
+
+            if verbose >= 2:
+                print()  # quebra de linha após a barra de progresso da última batch
+
+            # ---- métricas de treino calculadas a partir do que foi acumulado durante a própria varredura ----
+            train_avg_loss = running_train_loss / n_train_samples
+            train_preds = torch.cat(train_preds_list).numpy()
+            train_true = torch.cat(train_true_list).numpy()
+            train_metrics = self._compute_metrics_from_preds(train_avg_loss, train_preds, train_true)
+
+            # ---- avaliação em validação: única varredura separada, sem atualização de pesos ----
+            val_metrics = self._evaluate(val_loader, criterion, device)
+
+            for m in metric_names:
+                history[f"train_{m}"].append(train_metrics[m])
+                history[f"val_{m}"].append(val_metrics[m])
+
+            # ---- checkpoint do melhor modelo (critério: loss na validação, não acurácia) ----
+            if val_metrics["loss"] < best_val_loss:
+                best_val_loss = val_metrics["loss"]
+                best_state = deepcopy(self.state_dict())
+
+                torch.save(
+                    {
+                        "model_class": self.MODEL_NAME,
+                        "config": self.config,
+                        "state_dict": best_state,
+                    },
+                    checkpoint_path,
+                )
+
+                epochs_no_improve = 0
+                if verbose >= 1:
+                    print(f"  -> novo melhor modelo salvo em '{checkpoint_path}' (val_loss={best_val_loss:.4f})")
+            else:
+                epochs_no_improve += 1
+
+            # ---- duração total da época (do primeiro passo até o fim de todo o processamento, incl. checkpoint) ----
+            epoch_duration = time.time() - epoch_start_time
+
+            if verbose >= 1:
+                print(
+                    f"\n[Epoch {epoch:03d}/{epochs}] "
+                    f"train_loss={train_metrics['loss']:.4f} | val_loss={val_metrics['loss']:.4f} | "
+                    f"train_acc={train_metrics['acc']:.4f} | val_acc={val_metrics['acc']:.4f} | "
+                    f"train_f1_macro={train_metrics['f1_macro']:.4f} | val_f1_macro={val_metrics['f1_macro']:.4f}"
+                )
+                print(f"\n \033[96;92m time={epoch_duration:.2f}s \033[0m")
+
+            # ---- early stopping opcional ----
+            if patience is not None and epochs_no_improve >= patience:
+                if verbose >= 1:
+                    print(f"  -> early stopping na época {epoch} (sem melhora por {patience} épocas)")
+                break
+
+        # recarrega os melhores pesos encontrados durante o treino
+        if best_state is not None:
+            self.load_state_dict(best_state)
+
+        return history
+
+    # ------------------------------------------------------------------
+    # Avaliação interna (usada no fit apenas para validação)
+
+    @torch.no_grad()
+    def _evaluate(self, loader, criterion, device):
+        self.eval()
+        running_loss = 0.0
+        n_samples = 0
+        all_preds, all_true = [], []
+
+        for imgs, y_is, c_is, n_is in loader:
+            imgs, y_is = imgs.to(device), y_is.to(device)
+
+            logits = self(imgs)
+            loss = criterion(logits, y_is)
+            running_loss += loss.item() * imgs.size(0)
+            n_samples += imgs.size(0)
+
+            preds = torch.argmax(logits, dim=1)
+
+            all_preds.append(preds.cpu())
+            all_true.append(y_is.cpu())
+
+        avg_loss = running_loss / n_samples
+        preds = torch.cat(all_preds).numpy()
+        true = torch.cat(all_true).numpy()
+
+        return self._compute_metrics_from_preds(avg_loss, preds, true)
+
+    # ------------------------------------------------------------------
+    # Predição
+
+    @torch.no_grad()
+    def predict(self, loader, device="cuda"):
+        self.to(device)
+        self.eval()
+
+        all_probs, all_preds, all_true = [], [], []
+        all_species, all_names = [], []
+
+        for imgs, y_is, c_is, n_is in loader:
+            imgs = imgs.to(device)
+            logits = self(imgs)
+            probs = torch.softmax(logits, dim=1)
+            preds = torch.argmax(probs, dim=1)
+
+            all_probs.append(probs.cpu())
+            all_preds.append(preds.cpu())
+            all_true.append(y_is)
+            all_species.extend(c_is)
+            all_names.extend(n_is)
+
+        return {
+            "probs": torch.cat(all_probs).numpy(),
+            "preds": torch.cat(all_preds).numpy(),
+            "true": torch.cat(all_true).numpy(),
+            "species": all_species,
+            "filenames": all_names,
+        }
+
+    # ------------------------------------------------------------------
+    # Carregamento genérico (o checkpoint carrega sua própria config)
+
+    @classmethod
+    def load(cls, checkpoint_path, device="cuda"):
+        checkpoint = torch.load(checkpoint_path, map_location=device)
+        model = cls(**checkpoint["config"])
+        model.load_state_dict(checkpoint["state_dict"])
+        model.to(device)
+        model.eval()
+        return model
+
+    
+#======================================================================
+#======================================================================
 # Modelo - EfficientNet-B0 - Multiclass (single-label)
 # requer: pip install timm
 
@@ -2300,11 +2984,45 @@ class MulticlassEfficientNetB0(nn.Module):
         }
 
         # ---- cria o backbone EfficientNet-B0 já com a cabeça ajustada para num_classes ----
+        
+        #-------------------------------------------------------------------
+        # Geral
+        # backbone = timm.create_model(
+        #     "efficientnet_b0",
+        #     pretrained=pretrained,
+        #     num_classes=num_classes,
+        # )
+
+        # ---- cria o backbone EfficientNet-B0 ----
         backbone = timm.create_model(
             "efficientnet_b0",
-            pretrained=pretrained,
+            pretrained=False,
             num_classes=num_classes,
         )
+
+        if pretrained:
+            weights_path = r"D:\Marcelo\models\efficientnet_b0\efficientnet_b0.ra_in1k.pth"
+
+            state_dict = torch.load(
+                weights_path,
+                map_location="cpu",
+                weights_only=True,
+            )
+
+            # Remove os pesos da cabeça original do ImageNet
+            state_dict.pop("classifier.weight", None)
+            state_dict.pop("classifier.bias", None)
+
+            missing_keys, unexpected_keys = backbone.load_state_dict(
+                state_dict,
+                strict=False,
+            )
+
+            print("\nEfficientNet-B0 pretrained weights loaded locally.")
+            print("Missing keys:", missing_keys)
+            print("Unexpected keys:", unexpected_keys)
+
+        #-------------------------------------------------------------------
 
         # ---- adapta o stem (primeira conv) para aceitar 5 bandas em vez de 3 (RGB) ----
         old_conv = backbone.conv_stem  # Conv2d(3, 32, kernel=3, stride=2, padding=1, bias=False)
@@ -2630,6 +3348,7 @@ class MulticlassResNet18(nn.Module):
             "seed_model": seed_model,
         }
 
+        
         weights = "IMAGENET1K_V1" if pretrained else None
         backbone = resnet18(weights=weights)
 
@@ -5453,10 +6172,15 @@ def model_class_function(MODEL_NAME: str):
         return MulticlassViTSmall
     elif MODEL_NAME == "ViTBase":
         return MulticlassViTBase
+    elif MODEL_NAME == "ShuffleNetV2x1_0":
+        return MulticlassShuffleNetV2X1_0
+    elif MODEL_NAME == "RegNetY400MF":
+        return MulticlassRegNetY400MF
     else:
         raise ValueError(
             "MODEL_NAME not in list [SmallCNN, MobileNetV3Small, MobileNetV3Large, "
-            "EfficientNetB0, ResNet18, ResNet50, ConvNeXtTiny, ViTTiny, ViTSmall, ViTBase]"
+            "EfficientNetB0, ResNet18, ResNet50, ConvNeXtTiny, ViTTiny, ViTSmall, ViTBase," \
+            "ShuffleNetV2x1_0, RegNetY400MF]"
         )
     
 #======================================================================

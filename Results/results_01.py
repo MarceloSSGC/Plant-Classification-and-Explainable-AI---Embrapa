@@ -139,7 +139,7 @@ print(df_grouped)
 
 
 
-
+h(df[(df["AUGMENTATION"] == True) & (df["NICKNAME"] == "RGB_NIR_RE_entropy_v2")][inter_cols], 20)
 
 
 
