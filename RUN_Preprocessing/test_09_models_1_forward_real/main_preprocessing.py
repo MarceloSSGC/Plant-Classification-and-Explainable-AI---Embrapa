@@ -34,8 +34,8 @@ def run_preprocessing(config):
     print(f"\t  PC: \033[96;95m{PC} \033[0m")
     print(f"\t  PC_DIR: \033[96;95m{PC_DIR} \033[0m")
     print(f"\t  Interactive: \033[96;95m{INTERACTIVE} \033[0m")
-    print(f"\t  SEED: \033[96;95m{SEED} \033[0m")
     print(f"\t  MULTIVIEW_DATA_NICKNAME: \033[96;95m{MULTIVIEW_DATA_NICKNAME} \033[0m\n")
+    print(f"\t  SEED: \033[96;95m{SEED} \033[0m")
 
     if PC not in ["NITRO", "HELIOS", "DANTE", "EUROPA", "EMBRAPA"]:
         raise ValueError("PC not indentified")

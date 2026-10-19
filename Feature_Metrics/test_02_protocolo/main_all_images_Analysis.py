@@ -9,16 +9,35 @@ from aux_feature_metrics import *
 
 #======================================================================
 #======================================================================
-# Dataset
 
-PC = "NITRO"
+# ============================================================
+# PC
+# ============================================================
 
-if PC == "NITRO":
-    PC_DIR = "/media/marcelo/HD_8t/Marcelo__Seagate_8tb/Embrapa/Embrapa_Experimentos"
-elif PC == "DANTE":
-    PC_DIR = "/home/u14696181/Documents/Datasets/Embrapa_Experimentos"
-else:
-    PC_DIR = "/media/marcelo/HD_8t/Marcelo__Seagate_8tb/Embrapa/Embrapa_Experimentos"
+pcs_dir_list = [
+    # NITRO
+    "/media/marcelo/HD_8t/Marcelo__Seagate_8tb/Embrapa/Embrapa_Experimentos",
+    # HELIOS
+    "/run/media/marcelo/HD_8t/Marcelo__Seagate_8tb/Embrapa/Embrapa_Experimentos",
+    # EUROPA
+    "/home/u1469618/Documentos/Datasets/Embrapa_Experimentos",
+    # EMBRAPA
+    "D:/Marcelo/Datasets/Planta_Daninha",
+    # DANTE
+    "/home/u14696181/Documents/Datasets/Embrapa_Experimentos"
+]
+
+for ith_PC_DIR in pcs_dir_list:
+
+    try:
+        PC = Path(os.path.join(ith_PC_DIR, "machine_name.txt")).read_text(encoding="utf-8").strip()
+        PC_DIR = ith_PC_DIR
+    except Exception as e:
+        # print(f"Erro: {e}")
+        A=7
+
+print(f"\n PC: \033[96;94m{PC}\033[0m")
+print(f" PC_DIR: \033[96;94m{PC_DIR}\033[0m \n")
 
 #======================================================================
 # DATA_DIR

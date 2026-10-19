@@ -619,8 +619,6 @@ def run_training(config):
         df_metrics_test = df_metrics_test[df_metrics_test_col]
         df_metrics_test.to_csv(df_metric_test_dir, index=False)
 
-        print(f"\n\t ✅✅✅ TEST: \033[96;93m{str(df_metrics_test.loc[0, 'MODEL_NAME'])} - {round(100*float(df_metrics_test.loc[0, 'acuracia']), 4)}\033[0m ✅✅✅")
-
         labels_test_real = [especies[i] for i in y_test_real]
         labels_test_pred = [especies[i] for i in y_test_pred]
         cl_report_test = classification_report(labels_test_real, labels_test_pred)
@@ -630,9 +628,13 @@ def run_training(config):
         with open(cl_report_test_dir, "w") as file:
             file.write(cl_report_test)
 
+        print(f"\n\t ✅✅✅ TEST: \033[96;93m{str(df_metrics_test.loc[0, 'MODEL_NAME'])} - {round(100*float(df_metrics_test.loc[0, 'acuracia']), 4)}\033[0m ✅✅✅")
+
+        sleep(2)
     else:
         df_metrics_test = pd.read_csv(df_metric_test_dir)
         print(f"\n\t ✅✅✅ TEST: \033[96;93m{str(df_metrics_test.loc[0, 'MODEL_NAME'])} - {round(100*float(df_metrics_test.loc[0, 'acuracia']), 4)}\033[0m ✅✅✅")
+        sleep(2)
 
         # print("\n Metrics & Infos ✅\n")
 
@@ -838,8 +840,6 @@ def run_training(config):
         #==================================================================================================
         #==================================================================================================
 
-    else:
-        print(f"APPLY_SHAP: {APPLY_SHAP}")
 
 
 

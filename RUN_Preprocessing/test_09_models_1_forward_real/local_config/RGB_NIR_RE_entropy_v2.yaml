@@ -6,7 +6,7 @@ INTERACTIVE: True
 # Base Data
 
 # NITRO
-BASE_DATA_DIR: /media/marcelo/HD_8t/Marcelo__Seagate_8tb/Embrapa/Embrapa_Experimentos/Datasets/PlantaDaninha_BoaVista
+# BASE_DATA_DIR: /media/marcelo/HD_8t/Marcelo__Seagate_8tb/Embrapa/Embrapa_Experimentos/Datasets/PlantaDaninha_BoaVista
 
 #--------------------------------------------------------
 # Alignment

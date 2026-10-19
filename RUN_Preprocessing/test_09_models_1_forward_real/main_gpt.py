@@ -8,15 +8,7 @@ from time import sleep
 from itertools import product
 from math import prod
 
-# python -m RUN_Preprocessing.test_09_models_1_forward_real.main_gpt
 
-
-# Start-Process -FilePath python `
-#     -ArgumentList "-m RUN_Preprocessing.test_09_models_1_forward_real.main_gpt" `
-#     -WorkingDirectory "D:\Marcelo\python_projects\Planta_Daninha" `
-#     -RedirectStandardOutput "D:\Marcelo\train_out.log" `
-#     -RedirectStandardError "D:\Marcelo\train_err.log" `
-#     -WindowStyle Hidden
 
 # ============================================================
 # Configurações gerais
@@ -24,7 +16,7 @@ from math import prod
 
 TEST_NUMBER = "test_09_models_1_forward_real"
 
-SLEEP_BETWEEN_RUNS = 5
+SLEEP_BETWEEN_RUNS = 2
 
 
 # ============================================================
@@ -107,7 +99,7 @@ def build_grid():
     return {
 
         "multiview_data_nickname": [
-            "RGB_NIR_RE.yaml",
+            # "RGB_NIR_RE.yaml",
             # "RGB.yaml",
             # "RGB_entropy_v2.yaml",
             "RGB_NIR_RE_entropy_v2.yaml",
@@ -120,7 +112,7 @@ def build_grid():
         ],
 
         "augmentation": [
-            True, False
+            True
         ],
 
         "dropout": [
@@ -128,7 +120,7 @@ def build_grid():
         ],
 
         "batch_size": [
-            4
+            8
         ],
 
         "lr": [
@@ -147,7 +139,7 @@ def build_grid():
             "SmallCNN",
             "MobileNetV3Small",
             "ResNet18",
-            # "ConvNeXtTiny",
+            "ConvNeXtTiny",
             "ViTTiny",
         ],
     }
@@ -391,3 +383,29 @@ if __name__ == "__main__":
     mp.freeze_support()
 
     main()
+
+
+# print("\n\n\t --- FIM ---\n")
+
+# ============================================================
+# ============================================================
+
+Comments = """
+python -m RUN_Preprocessing.test_09_models_1_forward_real.main_gpt
+
+
+Start-Process -FilePath python `
+    -ArgumentList "-m RUN_Preprocessing.test_09_models_1_forward_real.main_gpt" `
+    -WorkingDirectory "D:\Marcelo\python_projects\Planta_Daninha" `
+    -RedirectStandardOutput "D:\Marcelo\train_out.log" `
+    -RedirectStandardError "D:\Marcelo\train_err.log" `
+    -WindowStyle Hidden
+
+Get-CimInstance Win32_Process -Filter "name = 'python.exe'" |
+Where-Object { $_.CommandLine -like "*RUN_Preprocessing.test_09_models_1_forward_real.main_gpt*" } |
+Select-Object ProcessId, CommandLine
+
+Get-Content "D:\Marcelo\train_out.log" -Tail 30
+Get-Content "D:\Marcelo\train_err.log" -Tail 30
+
+"""
